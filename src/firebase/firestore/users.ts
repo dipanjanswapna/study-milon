@@ -1,0 +1,50 @@
+import {
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  serverTimestamp,
+  type Firestore,
+} from 'firebase/firestore';
+import type { User } from 'firebase/auth';
+
+type UserProfile = {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  createdAt: any;
+};
+
+export async function createUserProfile(
+  db: Firestore,
+  user: User
+): Promise<void> {
+  const userRef = doc(db, 'users', user.uid);
+  const userSnap = await getDoc(userRef);
+
+  if (!userSnap.exists()) {
+    const { uid, email, displayName, photoURL } = user;
+    const createdAt = serverTimestamp();
+    try {
+      await setDoc(userRef, {
+        uid,
+        email,
+        displayName,
+        photoURL,
+        createdAt,
+      });
+    } catch (error) {
+      console.error('Error creating user profile:', error);
+    }
+  }
+}
+
+export async function updateUserProfile(
+  db: Firestore,
+  uid: string,
+  data: Partial<UserProfile>
+) {
+  const userRef = doc(db, 'users', uid);
+  await updateDoc(userRef, data);
+}
