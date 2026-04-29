@@ -15,7 +15,7 @@ export function Footer() {
               Track your hustle to the first million minutes.
             </p>
           </div>
-          <div className="md:col-start-3">
+          <div>
             <h4 className="font-semibold mb-3 font-headline">Links</h4>
             <ul className="space-y-2 text-sm">
               <li>
@@ -48,6 +48,19 @@ export function Footer() {
                   className="text-muted-foreground hover:text-foreground"
                 >
                   Terms of Service
+                </Link>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-3 font-headline">Admin</h4>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link
+                  href="/admin"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Admin Login
                 </Link>
               </li>
             </ul>

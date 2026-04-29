@@ -8,12 +8,13 @@ import {
 } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 
-type UserProfile = {
+export type UserProfile = {
   uid: string;
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
   createdAt: any;
+  role: 'student' | 'admin';
 };
 
 export async function createUserProfile(
@@ -33,11 +34,24 @@ export async function createUserProfile(
         displayName,
         photoURL,
         createdAt,
+        role: 'student', // Default role
       });
     } catch (error) {
       console.error('Error creating user profile:', error);
     }
   }
+}
+
+export async function getUserProfile(
+  db: Firestore,
+  uid: string
+): Promise<UserProfile | null> {
+  const userRef = doc(db, 'users', uid);
+  const docSnap = await getDoc(userRef);
+  if (docSnap.exists()) {
+    return docSnap.data() as UserProfile;
+  }
+  return null;
 }
 
 export async function updateUserProfile(

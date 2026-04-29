@@ -38,6 +38,7 @@ type UserProfile = {
   email: string;
   photoURL: string;
   createdAt: any;
+  role?: 'student' | 'admin';
 };
 
 export default function ProfilePage() {

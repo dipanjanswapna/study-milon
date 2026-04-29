@@ -27,11 +27,17 @@
           "type": "string",
           "format": "date-time",
           "description": "The timestamp when the user account was created."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user, e.g., 'student' or 'admin'.",
+          "enum": ["student", "admin"]
         }
       },
       "required": [
         "uid",
-        "email"
+        "email",
+        "role"
       ]
     }
   },
