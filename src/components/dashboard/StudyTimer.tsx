@@ -6,6 +6,8 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardFooter,
+  CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,12 +17,14 @@ import {
   Coffee,
   BookOpenCheck,
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
-const WORK_MINUTES = 25;
 const BREAK_MINUTES = 5;
 
 export function StudyTimer() {
-  const [minutes, setMinutes] = useState(WORK_MINUTES);
+  const [workDuration, setWorkDuration] = useState(25);
+  const [minutes, setMinutes] = useState(workDuration);
   const [seconds, setSeconds] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
@@ -32,9 +36,9 @@ export function StudyTimer() {
   const reset = useCallback(() => {
     setIsActive(false);
     setIsBreak(false);
-    setMinutes(WORK_MINUTES);
+    setMinutes(workDuration);
     setSeconds(0);
-  }, []);
+  }, [workDuration]);
 
   const startBreak = useCallback(() => {
     setIsActive(true);
@@ -42,6 +46,13 @@ export function StudyTimer() {
     setMinutes(BREAK_MINUTES);
     setSeconds(0);
   }, []);
+
+  useEffect(() => {
+    if (!isActive) {
+      setMinutes(workDuration);
+      setSeconds(0);
+    }
+  }, [workDuration, isActive]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -85,7 +96,7 @@ export function StudyTimer() {
     }
   }, []);
 
-  const totalSeconds = (isBreak ? BREAK_MINUTES : WORK_MINUTES) * 60;
+  const totalSeconds = (isBreak ? BREAK_MINUTES : workDuration) * 60;
   const remainingSeconds = minutes * 60 + seconds;
   const progress =
     totalSeconds > 0 ? 100 - (remainingSeconds / totalSeconds) * 100 : 0;
@@ -144,6 +155,26 @@ export function StudyTimer() {
           </Button>
         </div>
       </CardContent>
+      <CardFooter className="flex-col items-start gap-2 pt-4 border-t">
+        <div className="grid w-full items-center gap-1.5">
+          <Label htmlFor="duration">Study Duration (minutes)</Label>
+          <Input
+            id="duration"
+            type="number"
+            value={workDuration}
+            onChange={(e) => {
+              const val = parseInt(e.target.value, 10);
+              if (val > 0) setWorkDuration(val);
+            }}
+            disabled={isActive}
+            min="1"
+            className="max-w-xs"
+          />
+          <CardDescription>
+            Set your focus time. The timer updates when reset or on page load.
+          </CardDescription>
+        </div>
+      </CardFooter>
     </Card>
   );
 }
