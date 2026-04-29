@@ -35,6 +35,13 @@
             "student",
             "admin"
           ]
+        },
+        "subjects": {
+          "type": "array",
+          "description": "A list of the user's study subjects.",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [

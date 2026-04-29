@@ -15,6 +15,7 @@ export type UserProfile = {
   photoURL: string | null;
   createdAt: any;
   role: 'student' | 'admin';
+  subjects?: string[];
 };
 
 export async function createUserProfile(
@@ -35,6 +36,7 @@ export async function createUserProfile(
         photoURL,
         createdAt,
         role: 'student', // Default role
+        subjects: [],
       });
     } catch (error) {
       console.error('Error creating user profile:', error);

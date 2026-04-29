@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useUser, useFirestore } from '@/firebase';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useUser, useFirestore, useDoc } from '@/firebase';
 import { addStudySession } from '@/firebase/firestore/studySessions';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -16,6 +16,16 @@ import { Button } from '@/components/ui/button';
 import { Play, Pause, RotateCcw, Coffee, BookOpenCheck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import type { UserProfile } from '@/firebase/firestore/users';
+import { doc } from 'firebase/firestore';
+import { Skeleton } from '../ui/skeleton';
 
 const BREAK_MINUTES = 5;
 
@@ -31,12 +41,18 @@ export function StudyTimer() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  const userDocRef = useMemo(
+    () => (user ? doc(firestore, 'users', user.uid) : null),
+    [user, firestore]
+  );
+  const { data: profile, loading: profileLoading } = useDoc<UserProfile>(userDocRef);
+
   const toggle = () => {
     if (!subject && !isActive && !isBreak) {
       toast({
         variant: 'destructive',
         title: 'Subject Required',
-        description: 'Please enter a subject before starting the timer.',
+        description: 'Please select a subject before starting the timer.',
       });
       return;
     }
@@ -68,7 +84,6 @@ export function StudyTimer() {
           title: 'Session Logged!',
           description: `Logged ${workDuration} minutes for ${subject}.`,
         });
-        setSubject('');
       } catch (e: any) {
         toast({
           variant: 'destructive',
@@ -199,14 +214,33 @@ export function StudyTimer() {
       <CardFooter className="flex-col items-start gap-4 pt-4 border-t">
         <div className="grid w-full max-w-xs items-center gap-1.5">
           <Label htmlFor="subject">Subject</Label>
-          <Input
-            id="subject"
-            type="text"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            disabled={isActive}
-            placeholder="What are you studying?"
-          />
+          {profileLoading ? (
+            <Skeleton className="h-10 w-full" />
+          ) : (
+            <Select
+              onValueChange={setSubject}
+              defaultValue={subject}
+              disabled={isActive}
+            >
+              <SelectTrigger id="subject">
+                <SelectValue placeholder="Select a subject" />
+              </SelectTrigger>
+              <SelectContent>
+                {profile?.subjects && profile.subjects.length > 0 ? (
+                  profile.subjects.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <div className="p-4 text-sm text-muted-foreground">
+                    No subjects added yet. Please add subjects on your profile
+                    page.
+                  </div>
+                )}
+              </SelectContent>
+            </Select>
+          )}
         </div>
         <div className="grid w-full max-w-xs items-center gap-1.5">
           <Label htmlFor="duration">Study Duration (minutes)</Label>
