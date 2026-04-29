@@ -67,6 +67,31 @@
         "completed",
         "createdAt"
       ]
+    },
+    "StudySession": {
+      "title": "Study Session",
+      "description": "Represents a single study session for a user.",
+      "type": "object",
+      "properties": {
+        "duration": {
+          "type": "number",
+          "description": "The duration of the study session in minutes."
+        },
+        "subject": {
+          "type": "string",
+          "description": "The subject studied during the session."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the study session was completed."
+        }
+      },
+      "required": [
+        "duration",
+        "subject",
+        "createdAt"
+      ]
     }
   },
   "auth": {
@@ -87,6 +112,12 @@
         "$ref": "#/entities/Goal"
       },
       "description": "Stores the daily goals for a specific user."
+    },
+    "/users/{userId}/studySessions/{sessionId}": {
+      "schema": {
+        "$ref": "#/entities/StudySession"
+      },
+      "description": "Stores the study sessions for a specific user."
     }
   }
 }

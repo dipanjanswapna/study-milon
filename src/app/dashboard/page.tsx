@@ -13,6 +13,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import type { Goal } from '@/firebase/firestore/goals';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { AnalyticsDashboard } from '@/components/dashboard/AnalyticsDashboard';
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -70,6 +71,8 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
+          
+          <AnalyticsDashboard />
 
           <div>
             <AiPromptGenerator />

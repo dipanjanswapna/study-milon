@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useUser, useFirestore } from '@/firebase';
+import { addStudySession } from '@/firebase/firestore/studySessions';
+import { useToast } from '@/hooks/use-toast';
 import {
   Card,
   CardContent,
@@ -10,13 +13,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  Play,
-  Pause,
-  RotateCcw,
-  Coffee,
-  BookOpenCheck,
-} from 'lucide-react';
+import { Play, Pause, RotateCcw, Coffee, BookOpenCheck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -24,12 +21,25 @@ const BREAK_MINUTES = 5;
 
 export function StudyTimer() {
   const [workDuration, setWorkDuration] = useState(25);
+  const [subject, setSubject] = useState('');
   const [minutes, setMinutes] = useState(workDuration);
   const [seconds, setSeconds] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
 
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+
   const toggle = () => {
+    if (!subject && !isActive && !isBreak) {
+      toast({
+        variant: 'destructive',
+        title: 'Subject Required',
+        description: 'Please enter a subject before starting the timer.',
+      });
+      return;
+    }
     setIsActive(!isActive);
   };
 
@@ -46,6 +56,28 @@ export function StudyTimer() {
     setMinutes(BREAK_MINUTES);
     setSeconds(0);
   }, []);
+
+  const handleSessionEnd = useCallback(async () => {
+    if (user && subject) {
+      try {
+        await addStudySession(firestore, user.uid, {
+          duration: workDuration,
+          subject,
+        });
+        toast({
+          title: 'Session Logged!',
+          description: `Logged ${workDuration} minutes for ${subject}.`,
+        });
+        setSubject('');
+      } catch (e: any) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: e.message || 'Could not log session.',
+        });
+      }
+    }
+  }, [user, firestore, workDuration, subject, toast]);
 
   useEffect(() => {
     if (!isActive) {
@@ -67,6 +99,7 @@ export function StudyTimer() {
             if (isBreak) {
               reset();
             } else {
+              handleSessionEnd();
               startBreak();
             }
           } else {
@@ -84,7 +117,15 @@ export function StudyTimer() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isActive, seconds, minutes, isBreak, reset, startBreak]);
+  }, [
+    isActive,
+    seconds,
+    minutes,
+    isBreak,
+    reset,
+    startBreak,
+    handleSessionEnd,
+  ]);
 
   useEffect(() => {
     if (
@@ -155,8 +196,19 @@ export function StudyTimer() {
           </Button>
         </div>
       </CardContent>
-      <CardFooter className="flex-col items-start gap-2 pt-4 border-t">
-        <div className="grid w-full items-center gap-1.5">
+      <CardFooter className="flex-col items-start gap-4 pt-4 border-t">
+        <div className="grid w-full max-w-xs items-center gap-1.5">
+          <Label htmlFor="subject">Subject</Label>
+          <Input
+            id="subject"
+            type="text"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            disabled={isActive}
+            placeholder="What are you studying?"
+          />
+        </div>
+        <div className="grid w-full max-w-xs items-center gap-1.5">
           <Label htmlFor="duration">Study Duration (minutes)</Label>
           <Input
             id="duration"
@@ -168,7 +220,6 @@ export function StudyTimer() {
             }}
             disabled={isActive}
             min="1"
-            className="max-w-xs"
           />
           <CardDescription>
             Set your focus time. The timer updates when reset or on page load.
