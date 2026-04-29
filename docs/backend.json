@@ -92,6 +92,41 @@
         "subject",
         "createdAt"
       ]
+    },
+    "Resource": {
+      "title": "Resource",
+      "description": "A study resource, such as a link or a document URL.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "The title of the resource."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "The URL of the resource."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of resource.",
+          "enum": [
+            "link",
+            "pdf"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the resource was added."
+        }
+      },
+      "required": [
+        "title",
+        "url",
+        "type",
+        "createdAt"
+      ]
     }
   },
   "auth": {
@@ -118,6 +153,12 @@
         "$ref": "#/entities/StudySession"
       },
       "description": "Stores the study sessions for a specific user."
+    },
+    "/users/{userId}/resources/{resourceId}": {
+      "schema": {
+        "$ref": "#/entities/Resource"
+      },
+      "description": "Stores saved resources like links and documents for a user."
     }
   }
 }

@@ -13,6 +13,7 @@ import {
   LogOut,
   User as UserIcon,
   LayoutDashboard,
+  Bookmark,
 } from 'lucide-react';
 import { useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -66,6 +67,12 @@ export function Header() {
               <Link href="/dashboard">
                 <LayoutDashboard className="mr-2 h-4 w-4" />
                 Dashboard
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/resources">
+                <Bookmark className="mr-2 h-4 w-4" />
+                Resource Library
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
