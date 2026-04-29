@@ -5,6 +5,12 @@
       "description": "A person studying at a clean desk with a laptop and notebook.",
       "imageUrl": "https://picsum.photos/seed/1/1200/300",
       "imageHint": "study desk"
+    },
+    {
+      "id": "hero-dashboard-preview",
+      "description": "A preview of the Study Million student dashboard showing progress and stats.",
+      "imageUrl": "https://picsum.photos/seed/dashboard/800/600",
+      "imageHint": "dashboard preview"
     }
   ]
 }
