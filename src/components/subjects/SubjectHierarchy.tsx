@@ -9,7 +9,16 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
-import { Plus, Edit, Trash2, Loader2, Book, Folder, FileText } from 'lucide-react';
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Loader2,
+  Book,
+  Folder,
+  FileText,
+  RefreshCw,
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -32,8 +41,11 @@ import {
   addTopic,
   updateTopic,
   deleteTopic,
+  updateTopicStatus,
 } from '@/firebase/firestore/hierarchy';
 import { Skeleton } from '../ui/skeleton';
+import { Checkbox } from '../ui/checkbox';
+import { Badge } from '../ui/badge';
 
 // Main component to display the entire hierarchy
 export function SubjectHierarchy() {
@@ -117,6 +129,7 @@ function SubjectItem({ subject }: { subject: any }) {
               onSubmit={async (name) => updateSubject(firestore, user!.uid, subject.id, name)}
             />
             <DeleteDialog
+              trigger={<Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
               onDelete={async () => deleteSubject(firestore, user!.uid, subject.id)}
               itemName={subject.name}
             />
@@ -180,6 +193,7 @@ function ChapterItem({ subjectId, chapter }: { subjectId: string, chapter: any }
                 onSubmit={async (name) => updateChapter(firestore, user!.uid, subjectId, chapter.id, name)}
             />
             <DeleteDialog
+              trigger={<Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
               onDelete={async () => deleteChapter(firestore, user!.uid, subjectId, chapter.id)}
               itemName={chapter.name}
             />
@@ -213,32 +227,156 @@ function ChapterItem({ subjectId, chapter }: { subjectId: string, chapter: any }
 }
 
 // Component for a single topic
-function TopicItem({ subjectId, chapterId, topic }: { subjectId: string, chapterId: string, topic: any }) {
-    const { user } = useUser();
-    const firestore = useFirestore();
-    
-    return (
-        <li className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50">
-            <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-muted-foreground" />
-              <span>{topic.name}</span>
-            </div>
-            <div className="flex items-center gap-2">
-                 <CrudDialog
-                    trigger={
-                        <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
-                    }
-                    title="Edit Topic"
-                    initialValue={topic.name}
-                    onSubmit={async (name) => updateTopic(firestore, user!.uid, subjectId, chapterId, topic.id, name)}
-                />
-                <DeleteDialog
-                    onDelete={async () => deleteTopic(firestore, user!.uid, subjectId, chapterId, topic.id)}
-                    itemName={topic.name}
-                />
-            </div>
-        </li>
-    )
+function TopicItem({
+  subjectId,
+  chapterId,
+  topic,
+}: {
+  subjectId: string;
+  chapterId: string;
+  topic: any;
+}) {
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+
+  const handleStatusChange = async (completed: boolean) => {
+    if (!user) return;
+    // When a completed topic is unchecked, it goes back to 'pending'
+    // When a pending/revision topic is checked, it becomes 'completed'
+    const newStatus = completed ? 'completed' : 'pending';
+    try {
+      await updateTopicStatus(
+        firestore,
+        user.uid,
+        subjectId,
+        chapterId,
+        topic.id,
+        newStatus
+      );
+      toast({
+        title: `Topic marked as ${newStatus}${
+          topic.status === 'revision' && newStatus === 'completed'
+            ? '. Revision complete!'
+            : ''
+        }`,
+      });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Error updating status' });
+      console.error(error);
+    }
+  };
+
+  const handleSetToRevision = async () => {
+    if (!user) return;
+    try {
+      await updateTopicStatus(
+        firestore,
+        user.uid,
+        subjectId,
+        chapterId,
+        topic.id,
+        'revision'
+      );
+      toast({ title: 'Topic marked for revision' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Error setting to revision' });
+      console.error(error);
+    }
+  };
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'default';
+      case 'revision':
+        return 'secondary';
+      case 'pending':
+      default:
+        return 'outline';
+    }
+  };
+
+  return (
+    <li className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 group">
+      <div className="flex items-center gap-3">
+        <Checkbox
+          id={`topic-${topic.id}`}
+          checked={topic.status === 'completed'}
+          onCheckedChange={(checked) => handleStatusChange(Boolean(checked))}
+        />
+        <label
+          htmlFor={`topic-${topic.id}`}
+          className="flex items-center gap-2 cursor-pointer"
+        >
+          <FileText className="h-5 w-5 text-muted-foreground" />
+          <span className={topic.status === 'completed' ? 'line-through text-muted-foreground' : ''}>{topic.name}</span>
+          {topic.revision_count > 0 && (
+            <span className="text-xs text-muted-foreground">
+              (rev: {topic.revision_count})
+            </span>
+          )}
+        </label>
+      </div>
+      <div className="flex items-center gap-2">
+        <Badge variant={getStatusBadgeVariant(topic.status)} className="capitalize">
+          {topic.status}
+        </Badge>
+
+        {topic.status === 'completed' && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleSetToRevision}
+                  className="h-8 w-8"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Mark for Revision</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
+        <CrudDialog
+          trigger={
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 opacity-0 group-hover:opacity-100"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          }
+          title="Edit Topic"
+          initialValue={topic.name}
+          onSubmit={async (name) =>
+            updateTopic(firestore, user!.uid, subjectId, chapterId, topic.id, name)
+          }
+        />
+        <DeleteDialog
+          trigger={
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 opacity-0 group-hover:opacity-100"
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          }
+          onDelete={async () =>
+            deleteTopic(firestore, user!.uid, subjectId, chapterId, topic.id)
+          }
+          itemName={topic.name}
+        />
+      </div>
+    </li>
+  );
 }
 
 
@@ -312,7 +450,15 @@ function CrudDialog({
 }
 
 // Reusable dialog for Delete confirmation
-function DeleteDialog({ onDelete, itemName }: { onDelete: () => Promise<void>, itemName: string }) {
+function DeleteDialog({
+  trigger,
+  onDelete,
+  itemName,
+}: {
+  trigger: React.ReactNode;
+  onDelete: () => Promise<void>;
+  itemName: string;
+}) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -334,7 +480,7 @@ function DeleteDialog({ onDelete, itemName }: { onDelete: () => Promise<void>, i
   return (
      <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-            <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+            {trigger}
         </DialogTrigger>
         <DialogContent>
             <DialogHeader>

@@ -9,6 +9,8 @@ import {
   doc,
   writeBatch,
   getDocs,
+  getDoc,
+  increment,
 } from 'firebase/firestore';
 
 // Subject CRUD
@@ -51,17 +53,34 @@ export async function deleteChapter(db: Firestore, userId: string, subjectId: st
 // Topic CRUD
 export async function addTopic(db: Firestore, userId: string, subjectId: string, chapterId: string, name: string) {
   const topicsRef = collection(db, 'users', userId, 'subjects', subjectId, 'chapters', chapterId, 'topics');
-  await addDoc(topicsRef, { 
-    name, 
+  await addDoc(topicsRef, {
+    name,
     status: 'pending',
     time_spent: 0,
-    createdAt: serverTimestamp() 
+    createdAt: serverTimestamp(),
+    revision_count: 0,
   });
 }
 
 export async function updateTopic(db: Firestore, userId: string, subjectId: string, chapterId: string, topicId: string, name: string) {
   const topicRef = doc(db, 'users', userId, 'subjects', subjectId, 'chapters', chapterId, 'topics', topicId);
   await updateDoc(topicRef, { name });
+}
+
+export async function updateTopicStatus(db: Firestore, userId: string, subjectId: string, chapterId: string, topicId: string, newStatus: 'pending' | 'completed' | 'revision') {
+    const topicRef = doc(db, 'users', userId, 'subjects', subjectId, 'chapters', chapterId, 'topics', topicId);
+    const updatePayload: any = { status: newStatus };
+
+    // If we are completing a revision
+    if (newStatus === 'completed') {
+      const topicSnap = await getDoc(topicRef);
+      if (topicSnap.exists() && topicSnap.data().status === 'revision') {
+        updatePayload.revision_count = increment(1);
+        updatePayload.last_revision_date = serverTimestamp();
+      }
+    }
+  
+    await updateDoc(topicRef, updatePayload);
 }
 
 export async function deleteTopic(db: Firestore, userId: string, subjectId: string, chapterId: string, topicId: string) {

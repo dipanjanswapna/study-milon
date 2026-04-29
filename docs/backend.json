@@ -120,13 +120,18 @@
         "createdAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "revision_count": {
+          "type": "number",
+          "description": "Number of times this topic has been revised."
         }
       },
       "required": [
         "name",
         "status",
         "time_spent",
-        "createdAt"
+        "createdAt",
+        "revision_count"
       ]
     }
   },
