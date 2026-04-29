@@ -36,7 +36,7 @@ const features = [
 export function Features() {
   return (
     <section className="py-20 md:py-28 bg-secondary">
-      <div className="container">
+      <div className="container px-4 md:px-6">
         <div className="text-center max-w-2xl mx-auto mb-12">
           <h2 className="text-3xl font-bold font-headline md:text-4xl">
             Why Use Study Million?

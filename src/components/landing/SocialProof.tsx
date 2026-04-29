@@ -21,7 +21,7 @@ const stats = [
 export function SocialProof() {
   return (
     <section className="py-20 md:py-28 bg-secondary">
-      <div className="container">
+      <div className="container px-4 md:px-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
           {stats.map((stat) => (
             <div key={stat.label}>

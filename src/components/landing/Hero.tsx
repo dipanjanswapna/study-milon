@@ -9,8 +9,8 @@ export function Hero() {
   );
 
   return (
-    <section className="container grid lg:grid-cols-2 gap-12 items-center py-20 md:py-32">
-      <div className="flex flex-col items-start gap-6">
+    <section className="container grid lg:grid-cols-2 gap-12 items-center py-20 md:py-32 px-4 md:px-6">
+      <div className="flex flex-col items-center text-center lg:items-start lg:text-left gap-6">
         <h1 className="text-4xl font-extrabold tracking-tight font-headline md:text-5xl lg:text-6xl text-foreground">
           Track Your Hustle to the First Million Minutes.
         </h1>
