@@ -36,12 +36,18 @@
             "admin"
           ]
         },
-        "subjects": {
-          "type": "array",
-          "description": "A list of the user's study subjects.",
-          "items": {
-            "type": "string"
-          }
+        "total_study_minutes": {
+          "type": "number",
+          "description": "Total study minutes since the beginning."
+        },
+        "daily_study_minutes": {
+          "type": "number",
+          "description": "Total study minutes for the current day."
+        },
+        "last_active_date": {
+          "type": "string",
+          "format": "date",
+          "description": "Last date the user was active to reset daily minutes."
         }
       },
       "required": [
@@ -50,88 +56,76 @@
         "role"
       ]
     },
-    "Goal": {
-      "title": "User Goal",
-      "description": "A daily goal for a user.",
+    "Subject": {
+      "title": "Subject",
+      "description": "Represents a user-defined study subject.",
       "type": "object",
       "properties": {
-        "text": {
+        "name": {
           "type": "string",
-          "description": "The content of the goal."
-        },
-        "completed": {
-          "type": "boolean",
-          "description": "Whether the goal has been completed."
+          "description": "Name of the subject."
         },
         "createdAt": {
           "type": "string",
-          "format": "date-time",
-          "description": "The timestamp when the goal was created."
+          "format": "date-time"
         }
       },
       "required": [
-        "text",
-        "completed",
+        "name",
         "createdAt"
       ]
     },
-    "StudySession": {
-      "title": "Study Session",
-      "description": "Represents a single study session for a user.",
+    "Chapter": {
+      "title": "Chapter",
+      "description": "Represents a chapter within a subject.",
       "type": "object",
       "properties": {
-        "duration": {
-          "type": "number",
-          "description": "The duration of the study session in minutes."
-        },
-        "subject": {
-          "type": "string",
-          "description": "The subject studied during the session."
+        "name": {
+          "type": "string"
         },
         "createdAt": {
           "type": "string",
-          "format": "date-time",
-          "description": "The timestamp when the study session was completed."
+          "format": "date-time"
         }
       },
       "required": [
-        "duration",
-        "subject",
+        "name",
         "createdAt"
       ]
     },
-    "Resource": {
-      "title": "Resource",
-      "description": "A study resource, such as a link or a document URL.",
+    "Topic": {
+      "title": "Topic",
+      "description": "Represents a topic within a chapter.",
       "type": "object",
       "properties": {
-        "title": {
-          "type": "string",
-          "description": "The title of the resource."
+        "name": {
+          "type": "string"
         },
-        "url": {
+        "status": {
           "type": "string",
-          "format": "uri",
-          "description": "The URL of the resource."
-        },
-        "type": {
-          "type": "string",
-          "description": "The type of resource.",
           "enum": [
-            "link",
-            "pdf"
+            "pending",
+            "completed",
+            "revision"
           ]
         },
+        "time_spent": {
+          "type": "number",
+          "description": "in minutes"
+        },
+        "last_revision_date": {
+          "type": "string",
+          "format": "date-time"
+        },
         "createdAt": {
           "type": "string",
-          "format": "date-time",
-          "description": "The timestamp when the resource was added."
+          "format": "date-time"
         }
       },
       "required": [
-        "title",
-        "url",
-        "type",
+        "name",
+        "status",
+        "time_spent",
         "createdAt"
       ]
     }
@@ -149,23 +143,23 @@
       },
       "description": "Stores user profile information."
     },
-    "/users/{userId}/goals/{goalId}": {
+    "/users/{userId}/subjects/{subjectId}": {
       "schema": {
-        "$ref": "#/entities/Goal"
+        "$ref": "#/entities/Subject"
       },
-      "description": "Stores the daily goals for a specific user."
+      "description": "Stores the subjects for a specific user."
     },
-    "/users/{userId}/studySessions/{sessionId}": {
+    "/users/{userId}/subjects/{subjectId}/chapters/{chapterId}": {
       "schema": {
-        "$ref": "#/entities/StudySession"
+        "$ref": "#/entities/Chapter"
       },
-      "description": "Stores the study sessions for a specific user."
+      "description": "Stores the chapters for a specific subject."
     },
-    "/users/{userId}/resources/{resourceId}": {
+    "/users/{userId}/subjects/{subjectId}/chapters/{chapterId}/topics/{topicId}": {
       "schema": {
-        "$ref": "#/entities/Resource"
+        "$ref": "#/entities/Topic"
       },
-      "description": "Stores saved resources like links and documents for a user."
+      "description": "Stores the topics for a specific chapter."
     }
   }
 }

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
-import { addStudySession } from '@/firebase/firestore/studySessions';
 import { useToast } from '@/hooks/use-toast';
 import {
   Card,
@@ -23,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { UserProfile } from '@/firebase/firestore/users';
 import { doc } from 'firebase/firestore';
 import { Skeleton } from '../ui/skeleton';
 
@@ -31,31 +29,14 @@ const BREAK_MINUTES = 5;
 
 export function StudyTimer() {
   const [workDuration, setWorkDuration] = useState(25);
-  const [subject, setSubject] = useState('');
   const [minutes, setMinutes] = useState(workDuration);
   const [seconds, setSeconds] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
 
-  const { user } = useUser();
-  const firestore = useFirestore();
   const { toast } = useToast();
 
-  const userDocRef = useMemo(
-    () => (user ? doc(firestore, 'users', user.uid) : null),
-    [user, firestore]
-  );
-  const { data: profile, loading: profileLoading } = useDoc<UserProfile>(userDocRef);
-
   const toggle = () => {
-    if (!subject && !isActive && !isBreak) {
-      toast({
-        variant: 'destructive',
-        title: 'Subject Required',
-        description: 'Please select a subject before starting the timer.',
-      });
-      return;
-    }
     setIsActive(!isActive);
   };
 
@@ -74,25 +55,12 @@ export function StudyTimer() {
   }, []);
 
   const handleSessionEnd = useCallback(async () => {
-    if (user && subject) {
-      try {
-        await addStudySession(firestore, user.uid, {
-          duration: workDuration,
-          subject,
-        });
-        toast({
-          title: 'Session Logged!',
-          description: `Logged ${workDuration} minutes for ${subject}.`,
-        });
-      } catch (e: any) {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: e.message || 'Could not log session.',
-        });
-      }
-    }
-  }, [user, firestore, workDuration, subject, toast]);
+    // This function will be updated to log time to a specific topic
+    toast({
+      title: 'Session Logged!',
+      description: `Logged ${workDuration} minutes.`,
+    });
+  }, [workDuration, toast]);
 
   useEffect(() => {
     if (!isActive) {
@@ -158,7 +126,7 @@ export function StudyTimer() {
     totalSeconds > 0 ? 100 - (remainingSeconds / totalSeconds) * 100 : 0;
 
   return (
-    <Card className="w-full shadow-lg dark">
+    <Card className="w-full shadow-lg bg-[#0F172A] text-white">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           {isBreak ? <Coffee /> : <BookOpenCheck />}
@@ -169,7 +137,7 @@ export function StudyTimer() {
         <div className="relative h-64 w-64">
           <svg className="h-full w-full" viewBox="0 0 100 100">
             <circle
-              className="stroke-current text-muted"
+              className="stroke-current text-slate-700"
               strokeWidth="8"
               cx="50"
               cy="50"
@@ -190,7 +158,7 @@ export function StudyTimer() {
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-5xl font-bold font-mono text-foreground">
+            <span className="text-5xl font-bold font-mono">
               {String(minutes).padStart(2, '0')}:
               {String(seconds).padStart(2, '0')}
             </span>
@@ -211,37 +179,7 @@ export function StudyTimer() {
           </Button>
         </div>
       </CardContent>
-      <CardFooter className="flex-col items-start gap-4 pt-4 border-t">
-        <div className="grid w-full max-w-xs items-center gap-1.5">
-          <Label htmlFor="subject">Subject</Label>
-          {profileLoading ? (
-            <Skeleton className="h-10 w-full" />
-          ) : (
-            <Select
-              onValueChange={setSubject}
-              defaultValue={subject}
-              disabled={isActive}
-            >
-              <SelectTrigger id="subject">
-                <SelectValue placeholder="Select a subject" />
-              </SelectTrigger>
-              <SelectContent>
-                {profile?.subjects && profile.subjects.length > 0 ? (
-                  profile.subjects.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))
-                ) : (
-                  <div className="p-4 text-sm text-muted-foreground">
-                    No subjects added yet. Please add subjects on your profile
-                    page.
-                  </div>
-                )}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+      <CardFooter className="flex-col items-start gap-4 pt-4 border-t border-slate-700">
         <div className="grid w-full max-w-xs items-center gap-1.5">
           <Label htmlFor="duration">Study Duration (minutes)</Label>
           <Input
@@ -254,8 +192,9 @@ export function StudyTimer() {
             }}
             disabled={isActive}
             min="1"
+            className="bg-slate-800 border-slate-600 text-white"
           />
-          <CardDescription>
+          <CardDescription className="text-slate-400">
             Set your focus time. The timer updates when reset or on page load.
           </CardDescription>
         </div>

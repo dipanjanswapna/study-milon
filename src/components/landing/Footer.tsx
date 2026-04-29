@@ -9,7 +9,7 @@ export function Footer() {
           <div className="flex flex-col gap-4">
             <Link href="/" className="flex items-center gap-2">
               <BrainCircuit className="h-6 w-6 text-primary" />
-              <span className="font-bold text-lg font-headline">Study Million</span>
+              <span className="font-bold text-lg font-headline">FocusFlow</span>
             </Link>
             <p className="text-sm text-muted-foreground">
               Track your hustle to the first million minutes.
@@ -82,7 +82,7 @@ export function Footer() {
         </div>
         <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
           <p>
-            &copy; {new Date().getFullYear()} Study Million. All rights
+            &copy; {new Date().getFullYear()} FocusFlow. All rights
             reserved.
           </p>
         </div>

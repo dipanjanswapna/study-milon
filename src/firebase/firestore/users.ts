@@ -15,7 +15,9 @@ export type UserProfile = {
   photoURL: string | null;
   createdAt: any;
   role: 'student' | 'admin';
-  subjects?: string[];
+  total_study_minutes?: number;
+  daily_study_minutes?: number;
+  last_active_date?: any;
 };
 
 export async function createUserProfile(
@@ -36,7 +38,9 @@ export async function createUserProfile(
         photoURL,
         createdAt,
         role: 'student', // Default role
-        subjects: [],
+        total_study_minutes: 0,
+        daily_study_minutes: 0,
+        last_active_date: serverTimestamp(),
       });
     } catch (error) {
       console.error('Error creating user profile:', error);

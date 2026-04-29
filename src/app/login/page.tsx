@@ -98,7 +98,7 @@ export default function LoginPage() {
           <BrainCircuit className="mx-auto h-12 w-12 text-primary" />
           <CardTitle className="text-2xl mt-4">Welcome Back</CardTitle>
           <CardDescription>
-            Log in to your Study Million account to continue.
+            Log in to your FocusFlow account to continue.
           </CardDescription>
         </CardHeader>
         <CardContent>

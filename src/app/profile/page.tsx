@@ -7,15 +7,8 @@ import { z } from 'zod';
 import {
   doc,
   onSnapshot,
-  updateDoc,
-  arrayUnion,
-  arrayRemove,
-  collection,
-  query,
-  where,
-  Timestamp,
 } from 'firebase/firestore';
-import { useAuth, useFirestore, useUser, useCollection } from '@/firebase';
+import { useAuth, useFirestore, useUser } from '@/firebase';
 import { updateUserProfile } from '@/firebase/firestore/users';
 import { updateProfile as updateAuthProfile } from 'firebase/auth';
 
@@ -28,17 +21,13 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, X, Book, Clock } from 'lucide-react';
+import { Loader2, Book, Clock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { StudySession } from '@/firebase/firestore/studySessions';
-import { startOfDay } from 'date-fns';
 
 const profileSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
@@ -53,7 +42,8 @@ type UserProfile = {
   photoURL: string;
   createdAt: any;
   role?: 'student' | 'admin';
-  subjects?: string[];
+  total_study_minutes?: number;
+  daily_study_minutes?: number;
 };
 
 export default function ProfilePage() {
@@ -63,17 +53,6 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [newSubject, setNewSubject] = useState('');
-
-  const sessionsQuery = useMemo(() => {
-    if (!user) return null;
-    return query(
-      collection(firestore, 'users', user.uid, 'studySessions')
-    );
-  }, [user, firestore]);
-
-  const { data: sessions, loading: sessionsLoading } =
-    useCollection<StudySession>(sessionsQuery);
 
   const {
     register,
@@ -132,52 +111,6 @@ export default function ProfilePage() {
     }
   };
 
-  const handleAddSubject = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newSubject.trim() === '' || !user) return;
-    const userRef = doc(firestore, 'users', user.uid);
-    try {
-      await updateDoc(userRef, {
-        subjects: arrayUnion(newSubject.trim()),
-      });
-      setNewSubject('');
-      toast({ title: 'Subject added!' });
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error adding subject',
-        description: error.message,
-      });
-    }
-  };
-
-  const handleRemoveSubject = async (subjectToRemove: string) => {
-    if (!user) return;
-    const userRef = doc(firestore, 'users', user.uid);
-    try {
-      await updateDoc(userRef, {
-        subjects: arrayRemove(subjectToRemove),
-      });
-      toast({ title: 'Subject removed' });
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error removing subject',
-        description: error.message,
-      });
-    }
-  };
-
-  const { totalStudyMinutes, todayStudyMinutes } = useMemo(() => {
-    if (!sessions) return { totalStudyMinutes: 0, todayStudyMinutes: 0 };
-    const today = startOfDay(new Date());
-    const total = sessions.reduce((acc, s) => acc + s.duration, 0);
-    const todayTotal = sessions
-      .filter((s) => s.createdAt && s.createdAt.toDate() >= today)
-      .reduce((acc, s) => acc + s.duration, 0);
-    return { totalStudyMinutes: total, todayStudyMinutes: todayTotal };
-  }, [sessions]);
-
   const getInitials = (name: string | null | undefined) => {
     if (!name) return 'U';
     return name
@@ -186,9 +119,12 @@ export default function ProfilePage() {
       .join('');
   };
 
+  const totalStudyMinutes = profile?.total_study_minutes || 0;
+  const todayStudyMinutes = profile?.daily_study_minutes || 0;
+
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-card text-card-foreground">
+      <div className="min-h-screen bg-background text-foreground">
         <Header />
         <main className="p-4 md:p-8">
           <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -274,40 +210,6 @@ export default function ProfilePage() {
                   )}
                 </CardContent>
               </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>My Subjects</CardTitle>
-                  <CardDescription>
-                    Add and manage your study subjects.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleAddSubject} className="flex gap-2">
-                    <Input
-                      placeholder="Add a new subject"
-                      value={newSubject}
-                      onChange={(e) => setNewSubject(e.target.value)}
-                    />
-                    <Button type="submit" size="icon">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </form>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {profile?.subjects?.map((subject) => (
-                      <Badge key={subject} variant="secondary" className="pl-2">
-                        {subject}
-                        <button
-                          onClick={() => handleRemoveSubject(subject)}
-                          className="ml-1 rounded-full p-0.5 hover:bg-destructive/50"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
             </div>
             <div className="space-y-8">
               <Card>
@@ -315,7 +217,7 @@ export default function ProfilePage() {
                   <CardTitle>Study Statistics</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {sessionsLoading ? (
+                  {loading || userLoading ? (
                     <>
                       <Skeleton className="h-16 w-full" />
                       <Skeleton className="h-16 w-full" />
@@ -329,7 +231,7 @@ export default function ProfilePage() {
                             {todayStudyMinutes.toLocaleString()} min
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Today&apos;s Study
+                            Today's Study
                           </p>
                         </div>
                       </div>

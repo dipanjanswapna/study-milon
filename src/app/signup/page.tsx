@@ -112,7 +112,7 @@ export default function SignupPage() {
           <BrainCircuit className="mx-auto h-12 w-12 text-primary" />
           <CardTitle className="text-2xl mt-4">Create an Account</CardTitle>
           <CardDescription>
-            Join Study Million and start tracking your progress.
+            Join FocusFlow and start tracking your progress.
           </CardDescription>
         </CardHeader>
         <CardContent>

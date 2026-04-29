@@ -13,7 +13,7 @@ import {
   LogOut,
   User as UserIcon,
   LayoutDashboard,
-  Bookmark,
+  BookCopy,
 } from 'lucide-react';
 import { useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -42,10 +42,10 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 flex items-center justify-between p-4 border-b bg-card">
-      <div className="flex items-center gap-3">
+      <Link href="/dashboard" className="flex items-center gap-3">
         <BrainCircuit className="h-8 w-8 text-primary" />
-        <h1 className="text-2xl font-bold text-foreground">Study Million</h1>
-      </div>
+        <h1 className="text-2xl font-bold text-foreground">FocusFlow</h1>
+      </Link>
       {loading ? (
         <Skeleton className="h-10 w-10 rounded-full" />
       ) : user ? (
@@ -70,9 +70,9 @@ export function Header() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/resources">
-                <Bookmark className="mr-2 h-4 w-4" />
-                Resource Library
+              <Link href="/subjects">
+                <BookCopy className="mr-2 h-4 w-4" />
+                Subjects
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

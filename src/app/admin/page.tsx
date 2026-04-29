@@ -69,7 +69,7 @@ export default function AdminLoginPage() {
           <BrainCircuit className="mx-auto h-12 w-12 text-primary" />
           <CardTitle className="text-2xl mt-4">Admin Panel</CardTitle>
           <CardDescription>
-            Log in to the Study Million Admin Panel.
+            Log in to the FocusFlow Admin Panel.
           </CardDescription>
         </CardHeader>
         <CardContent>
