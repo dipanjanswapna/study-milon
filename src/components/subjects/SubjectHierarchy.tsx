@@ -46,6 +46,12 @@ import {
 import { Skeleton } from '../ui/skeleton';
 import { Checkbox } from '../ui/checkbox';
 import { Badge } from '../ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 // Main component to display the entire hierarchy
 export function SubjectHierarchy() {
@@ -115,27 +121,39 @@ function SubjectItem({ subject }: { subject: any }) {
 
   return (
     <AccordionItem value={subject.id} className="border rounded-md px-4 mb-2 bg-card">
-      <AccordionTrigger className="hover:no-underline">
-        <div className="flex items-center gap-3 w-full">
-          <Book className="h-5 w-5 text-primary" />
-          <span className="font-semibold text-lg flex-grow text-left">{subject.name}</span>
-          <div className="flex items-center gap-2 mr-4">
-            <CrudDialog
-              trigger={
-                <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
-              }
-              title="Edit Subject"
-              initialValue={subject.name}
-              onSubmit={async (name) => updateSubject(firestore, user!.uid, subject.id, name)}
-            />
-            <DeleteDialog
-              trigger={<Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
-              onDelete={async () => deleteSubject(firestore, user!.uid, subject.id)}
-              itemName={subject.name}
-            />
+      <div className="flex items-center" >
+        <AccordionTrigger className="hover:no-underline flex-1">
+          <div className="flex items-center gap-3 w-full">
+            <Book className="h-5 w-5 text-primary" />
+            <span className="font-semibold text-lg flex-grow text-left">{subject.name}</span>
           </div>
+        </AccordionTrigger>
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <CrudDialog
+            trigger={
+              <Button asChild variant="ghost" size="icon">
+                <span>
+                  <Edit className="h-4 w-4" />
+                </span>
+              </Button>
+            }
+            title="Edit Subject"
+            initialValue={subject.name}
+            onSubmit={async (name) => updateSubject(firestore, user!.uid, subject.id, name)}
+          />
+          <DeleteDialog
+            trigger={
+              <Button asChild variant="ghost" size="icon">
+                <span>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </span>
+              </Button>
+            }
+            onDelete={async () => deleteSubject(firestore, user!.uid, subject.id)}
+            itemName={subject.name}
+          />
         </div>
-      </AccordionTrigger>
+      </div>
       <AccordionContent className="pl-8">
         <div className="mb-2 text-right">
             <CrudDialog
@@ -179,27 +197,37 @@ function ChapterItem({ subjectId, chapter }: { subjectId: string, chapter: any }
 
   return (
     <AccordionItem value={chapter.id} className="border-l pl-4 my-1">
-      <AccordionTrigger className="hover:no-underline py-2">
-      <div className="flex items-center gap-3 w-full">
-          <Folder className="h-5 w-5 text-secondary-foreground" />
-          <span className="font-medium flex-grow text-left">{chapter.name}</span>
-          <div className="flex items-center gap-2 mr-4">
-            <CrudDialog
-                trigger={
-                    <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
-                }
-                title="Edit Chapter"
-                initialValue={chapter.name}
-                onSubmit={async (name) => updateChapter(firestore, user!.uid, subjectId, chapter.id, name)}
-            />
-            <DeleteDialog
-              trigger={<Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
-              onDelete={async () => deleteChapter(firestore, user!.uid, subjectId, chapter.id)}
-              itemName={chapter.name}
-            />
-          </div>
+       <div className="flex items-center">
+        <AccordionTrigger className="hover:no-underline py-2 flex-1">
+          <div className="flex items-center gap-3 w-full">
+              <Folder className="h-5 w-5 text-secondary-foreground" />
+              <span className="font-medium flex-grow text-left">{chapter.name}</span>
+            </div>
+        </AccordionTrigger>
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <CrudDialog
+              trigger={
+                  <Button asChild variant="ghost" size="icon">
+                    <span><Edit className="h-4 w-4" /></span>
+                  </Button>
+              }
+              title="Edit Chapter"
+              initialValue={chapter.name}
+              onSubmit={async (name) => updateChapter(firestore, user!.uid, subjectId, chapter.id, name)}
+          />
+          <DeleteDialog
+            trigger={
+              <Button asChild variant="ghost" size="icon">
+                <span>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </span>
+              </Button>
+            }
+            onDelete={async () => deleteChapter(firestore, user!.uid, subjectId, chapter.id)}
+            itemName={chapter.name}
+          />
         </div>
-      </AccordionTrigger>
+      </div>
       <AccordionContent className="pl-8">
         <div className="mb-2 text-right">
             <CrudDialog
