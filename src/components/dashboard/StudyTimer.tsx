@@ -158,7 +158,7 @@ export function StudyTimer() {
     totalSeconds > 0 ? 100 - (remainingSeconds / totalSeconds) * 100 : 0;
 
   return (
-    <Card className="w-full shadow-lg">
+    <Card className="w-full shadow-lg dark">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           {isBreak ? <Coffee /> : <BookOpenCheck />}
