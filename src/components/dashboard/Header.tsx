@@ -13,7 +13,6 @@ import {
   LogOut,
   User as UserIcon,
   LayoutDashboard,
-  BookCopy,
 } from 'lucide-react';
 import { useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -70,15 +69,9 @@ export function Header() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/subjects">
-                <BookCopy className="mr-2 h-4 w-4" />
-                Subjects
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
               <Link href="/profile">
                 <UserIcon className="mr-2 h-4 w-4" />
-                Profile
+                Profile & Subjects
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

@@ -26,7 +26,7 @@ export function WelcomeBanner() {
           {user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}!
         </h2>
         <p className="text-lg text-white/80 mt-2">
-          Ready to get into the flow?
+          Ready to start your focus session?
         </p>
       </div>
     </Card>

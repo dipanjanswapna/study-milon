@@ -83,24 +83,6 @@
         "name": {
           "type": "string"
         },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "name",
-        "createdAt"
-      ]
-    },
-    "Topic": {
-      "title": "Topic",
-      "description": "Represents a topic within a chapter.",
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
         "status": {
           "type": "string",
           "enum": [
@@ -113,6 +95,9 @@
           "type": "number",
           "description": "in minutes"
         },
+        "revision_count": {
+          "type": "number"
+        },
         "last_revision_date": {
           "type": "string",
           "format": "date-time"
@@ -120,17 +105,13 @@
         "createdAt": {
           "type": "string",
           "format": "date-time"
-        },
-        "revision_count": {
-          "type": "number",
-          "description": "Number of times this topic has been revised."
         }
       },
       "required": [
         "name",
+        "createdAt",
         "status",
         "time_spent",
-        "createdAt",
         "revision_count"
       ]
     }
@@ -159,12 +140,6 @@
         "$ref": "#/entities/Chapter"
       },
       "description": "Stores the chapters for a specific subject."
-    },
-    "/users/{userId}/subjects/{subjectId}/chapters/{chapterId}/topics/{topicId}": {
-      "schema": {
-        "$ref": "#/entities/Topic"
-      },
-      "description": "Stores the topics for a specific chapter."
     }
   }
 }
