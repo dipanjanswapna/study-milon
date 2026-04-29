@@ -1,3 +1,10 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "welcome-banner",
+      "description": "A person studying at a clean desk with a laptop and notebook.",
+      "imageUrl": "https://picsum.photos/seed/1/1200/300",
+      "imageHint": "study desk"
+    }
+  ]
 }
