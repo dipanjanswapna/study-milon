@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useEffect, useRef, useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { useToast } from '@/hooks/use-toast';
 import { getStudyPrompts } from '@/app/actions';
 
@@ -42,7 +42,7 @@ function SubmitButton() {
 }
 
 export function AiPromptGenerator() {
-  const [state, formAction] = useFormState(getStudyPrompts, initialState);
+  const [state, formAction] = useActionState(getStudyPrompts, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
 
