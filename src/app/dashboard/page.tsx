@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { Header } from '@/components/dashboard/Header';
 import { WelcomeBanner } from '@/components/dashboard/WelcomeBanner';
-import { AiPromptGenerator } from '@/components/dashboard/AiPromptGenerator';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,10 +33,6 @@ export default function DashboardPage() {
               </Button>
             </CardContent>
           </Card>
-
-          <div>
-            <AiPromptGenerator />
-          </div>
         </main>
       </div>
     </ProtectedRoute>
