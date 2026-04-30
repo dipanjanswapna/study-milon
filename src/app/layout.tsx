@@ -34,14 +34,22 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <SidebarProvider defaultOpen={true}>
             <div className="flex h-screen w-full overflow-hidden bg-background">
+              {/* Sidebar stays fixed to the left */}
               <AppSidebar />
-              <div className="flex-1 flex flex-col min-w-0 h-full">
-                <div className="flex-1 overflow-y-auto">
-                  <main className="min-h-full pb-20 md:pb-0">
+              
+              {/* Main container for content and bottom nav */}
+              <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+                {/* Content area: the only part that scrolls */}
+                <div className="flex-1 overflow-y-auto overflow-x-hidden">
+                  <main className="min-h-full pb-20 md:pb-4">
                     {children}
                   </main>
                 </div>
-                <BottomNav />
+                
+                {/* Bottom Navigation: Fixed at the bottom of the flex container */}
+                <div className="flex-none">
+                  <BottomNav />
+                </div>
               </div>
             </div>
           </SidebarProvider>
