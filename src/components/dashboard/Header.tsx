@@ -13,6 +13,7 @@ import {
   LogOut,
   User as UserIcon,
   LayoutDashboard,
+  BookMarked
 } from 'lucide-react';
 import { useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -40,50 +41,63 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between p-4 border-b bg-card">
-      <Link href="/dashboard" className="flex items-center gap-3">
-        <BrainCircuit className="h-8 w-8 text-primary" />
-        <h1 className="text-2xl font-bold text-foreground">FocusFlow</h1>
+    <header className="sticky top-0 z-50 flex items-center justify-between px-4 py-2 border-b bg-card/80 backdrop-blur-md">
+      <Link href="/dashboard" className="flex items-center gap-2">
+        <BrainCircuit className="h-6 w-6 text-primary" />
+        <h1 className="text-xl font-bold tracking-tight text-foreground font-headline">Study Million</h1>
       </Link>
+      
       {loading ? (
-        <Skeleton className="h-10 w-10 rounded-full" />
+        <Skeleton className="h-8 w-8 rounded-full" />
       ) : user ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Avatar className="cursor-pointer">
-              <AvatarImage
-                src={user.photoURL || ''}
-                alt={user.displayName || 'User avatar'}
-                data-ai-hint="user avatar"
-              />
-              <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
-            </Avatar>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/dashboard">
-                <LayoutDashboard className="mr-2 h-4 w-4" />
-                Dashboard
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/profile">
-                <UserIcon className="mr-2 h-4 w-4" />
-                Profile & Subjects
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Logout</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-4">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Avatar className="h-8 w-8 cursor-pointer ring-2 ring-primary/10 hover:ring-primary/30 transition-all">
+                <AvatarImage
+                  src={user.photoURL || ''}
+                  alt={user.displayName || 'User avatar'}
+                />
+                <AvatarFallback className="text-xs">{getInitials(user.displayName)}</AvatarFallback>
+              </Avatar>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{user.displayName}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard">
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  Dashboard
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/resources">
+                  <BookMarked className="mr-2 h-4 w-4" />
+                  Resource Library
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/profile">
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  Profile & Subjects
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Logout</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       ) : (
-        <Avatar>
-          <AvatarFallback>U</AvatarFallback>
+        <Avatar className="h-8 w-8">
+          <AvatarFallback className="text-xs">U</AvatarFallback>
         </Avatar>
       )}
     </header>

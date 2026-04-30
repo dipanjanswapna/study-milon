@@ -2,9 +2,10 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { BottomNav } from '@/components/navigation/BottomNav';
 
 export const metadata: Metadata = {
-  title: 'FocusFlow',
+  title: 'Study Million',
   description: 'Track your hustle to the first million minutes.',
 };
 
@@ -27,9 +28,10 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="font-body antialiased">
+      <body className="font-body antialiased pb-20 md:pb-0">
         <FirebaseClientProvider>
           {children}
+          <BottomNav />
           <Toaster />
         </FirebaseClientProvider>
       </body>

@@ -9,7 +9,7 @@ export function Footer() {
           <div className="flex flex-col gap-4">
             <Link href="/" className="flex items-center gap-2">
               <BrainCircuit className="h-6 w-6 text-primary" />
-              <span className="font-bold text-lg font-headline">FocusFlow</span>
+              <span className="font-bold text-lg font-headline">Study Million</span>
             </Link>
             <p className="text-sm text-muted-foreground">
               Track your hustle to the first million minutes.
@@ -69,20 +69,20 @@ export function Footer() {
             <h4 className="font-semibold mb-3 font-headline">Social</h4>
             <div className="flex space-x-4">
               <Link href="#" className="text-muted-foreground hover:text-foreground">
-                <Twitter />
+                <Twitter className="h-5 w-5" />
               </Link>
               <Link href="#" className="text-muted-foreground hover:text-foreground">
-                <Facebook />
+                <Facebook className="h-5 w-5" />
               </Link>
               <Link href="#" className="text-muted-foreground hover:text-foreground">
-                <Instagram />
+                <Instagram className="h-5 w-5" />
               </Link>
             </div>
           </div>
         </div>
         <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
           <p>
-            &copy; {new Date().getFullYear()} FocusFlow. All rights
+            &copy; {new Date().getFullYear()} Study Million. All rights
             reserved.
           </p>
         </div>
