@@ -13,7 +13,8 @@ import {
   LogOut,
   User as UserIcon,
   LayoutDashboard,
-  BookMarked
+  BookMarked,
+  Menu
 } from 'lucide-react';
 import { useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -21,6 +22,8 @@ import { useAuth } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Skeleton } from '../ui/skeleton';
+import { SidebarTrigger } from '../ui/sidebar';
+import { Button } from '../ui/button';
 
 export function Header() {
   const { user, loading } = useUser();
@@ -43,16 +46,16 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center justify-between px-4 border-b bg-card/80 backdrop-blur-md md:px-6">
-      <div className="flex items-center gap-2 md:hidden">
-        <Link href="/dashboard" className="flex items-center gap-2">
+      <div className="flex items-center gap-2">
+        {/* Sidebar Toggle for Desktop */}
+        <SidebarTrigger className="hidden md:flex h-9 w-9 text-muted-foreground hover:text-primary transition-colors" />
+        
+        <Link href="/dashboard" className="flex items-center gap-2 md:hidden">
           <BrainCircuit className="h-6 w-6 text-primary" />
           <h1 className="text-xl font-bold tracking-tight text-foreground font-headline">Study Million</h1>
         </Link>
       </div>
       
-      {/* Spacer for desktop when sidebar branding is visible */}
-      <div className="hidden md:block" />
-
       {loading ? (
         <Skeleton className="h-8 w-8 rounded-full" />
       ) : user ? (

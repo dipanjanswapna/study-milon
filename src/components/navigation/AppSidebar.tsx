@@ -15,12 +15,15 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { useUser } from '@/firebase';
+import { cn } from '@/lib/utils';
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { user } = useUser();
+  const { state } = useSidebar();
 
   const isAuthPage =
     pathname === '/login' || pathname === '/signup' || pathname === '/admin';
@@ -47,13 +50,15 @@ export function AppSidebar() {
   ];
 
   return (
-    <Sidebar collapsible="none" className="hidden md:flex border-r bg-card">
-      <SidebarHeader className="h-14 flex items-center px-4 border-b">
+    <Sidebar collapsible="icon" className="hidden md:flex border-r bg-card transition-all duration-300">
+      <SidebarHeader className="h-14 flex items-center px-4 border-b overflow-hidden">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <BrainCircuit className="h-6 w-6 text-primary" />
-          <span className="font-bold text-lg font-headline tracking-tight">
-            Study Million
-          </span>
+          <BrainCircuit className="h-6 w-6 text-primary shrink-0" />
+          {state === 'expanded' && (
+            <span className="font-bold text-lg font-headline tracking-tight whitespace-nowrap">
+              Study Million
+            </span>
+          )}
         </Link>
       </SidebarHeader>
       <SidebarContent className="py-4">
@@ -67,15 +72,17 @@ export function AppSidebar() {
                 <SidebarMenuButton
                   asChild
                   isActive={isActive}
-                  className={
+                  tooltip={item.label}
+                  className={cn(
+                    "transition-all duration-200",
                     isActive
                       ? 'bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary'
                       : 'text-muted-foreground hover:text-foreground'
-                  }
+                  )}
                 >
                   <Link href={item.href} className="flex items-center gap-3">
-                    <Icon className="h-5 w-5" />
-                    <span className="font-medium">{item.label}</span>
+                    <Icon className="h-5 w-5 shrink-0" />
+                    {state === 'expanded' && <span className="font-medium">{item.label}</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
