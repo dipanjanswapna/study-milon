@@ -30,14 +30,16 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="font-body antialiased">
+      <body className="font-body antialiased overflow-hidden">
         <FirebaseClientProvider>
           <SidebarProvider defaultOpen={true}>
-            <div className="flex min-h-screen w-full bg-background">
+            <div className="flex h-screen w-full overflow-hidden bg-background">
               <AppSidebar />
-              <div className="flex-1 flex flex-col min-w-0">
-                <div className="flex-1 pb-20 md:pb-0">
-                  {children}
+              <div className="flex-1 flex flex-col min-w-0 h-full">
+                <div className="flex-1 overflow-y-auto">
+                  <main className="min-h-full pb-20 md:pb-0">
+                    {children}
+                  </main>
                 </div>
                 <BottomNav />
               </div>
