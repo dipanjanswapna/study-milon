@@ -3,6 +3,8 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { BottomNav } from '@/components/navigation/BottomNav';
+import { AppSidebar } from '@/components/navigation/AppSidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 export const metadata: Metadata = {
   title: 'Study Million',
@@ -28,10 +30,19 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="font-body antialiased pb-20 md:pb-0">
+      <body className="font-body antialiased">
         <FirebaseClientProvider>
-          {children}
-          <BottomNav />
+          <SidebarProvider defaultOpen={true}>
+            <div className="flex min-h-screen w-full bg-background">
+              <AppSidebar />
+              <div className="flex-1 flex flex-col min-w-0">
+                <div className="flex-1 pb-20 md:pb-0">
+                  {children}
+                </div>
+                <BottomNav />
+              </div>
+            </div>
+          </SidebarProvider>
           <Toaster />
         </FirebaseClientProvider>
       </body>
