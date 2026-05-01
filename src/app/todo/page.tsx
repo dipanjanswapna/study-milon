@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -11,13 +10,12 @@ import { Header } from '@/components/dashboard/Header';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -40,9 +38,9 @@ import {
   Trash2, 
   Play, 
   CheckCircle2, 
-  Calendar as CalendarIcon,
-  ChevronLeft,
-  ChevronRight
+  ChevronLeft, 
+  ChevronRight,
+  Clock
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -59,7 +57,7 @@ export default function TodoPage() {
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
-  // Fetch all tasks for the current month to show indicators on the calendar
+  // Month tasks query
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const monthTasksQuery = useMemo(() => {
@@ -72,9 +70,7 @@ export default function TodoPage() {
   }, [user, firestore, currentMonth]);
   const { data: monthTasks } = useCollection<StudyTask>(monthTasksQuery);
 
-  // Fetch tasks for the specifically selected date
-  // Fixed: Removed orderBy('createdAt', 'asc') to avoid composite index requirement.
-  // We will sort the results locally instead.
+  // Day tasks query
   const tasksQuery = useMemo(() => {
     if (!user) return null;
     return query(
@@ -85,7 +81,7 @@ export default function TodoPage() {
 
   const { data: rawTasks, loading: tasksLoading } = useCollection<StudyTask>(tasksQuery);
 
-  // Local sorting for tasks
+  // Client-side sort
   const tasks = useMemo(() => {
     if (!rawTasks) return null;
     return [...rawTasks].sort((a, b) => {
@@ -98,15 +94,15 @@ export default function TodoPage() {
   // Form State
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<string | null>(null);
+  const [plannedDuration, setPlannedDuration] = useState<string>('25');
 
-  // Fetch Subjects
+  // Subjects & Chapters
   const subjectsQuery = useMemo(() => {
     if (!user) return null;
     return query(collection(firestore, 'users', user.uid, 'subjects'), orderBy('createdAt', 'asc'));
   }, [user, firestore]);
   const { data: subjects } = useCollection(subjectsQuery);
 
-  // Fetch Chapters
   const chaptersQuery = useMemo(() => {
     if (!user || !selectedSubject) return null;
     return query(collection(firestore, 'users', user.uid, 'subjects', selectedSubject, 'chapters'), orderBy('createdAt', 'asc'));
@@ -129,10 +125,12 @@ export default function TodoPage() {
         subjectName: subject.name,
         chapterName: chapter.name,
         date: dateStr,
+        duration: parseInt(plannedDuration, 10) || 25,
       });
       setIsDialogOpen(false);
       setSelectedSubject(null);
       setSelectedChapter(null);
+      setPlannedDuration('25');
       toast({ title: 'Task added successfully!' });
     } catch (error) {
       toast({ variant: 'destructive', title: 'Error adding task' });
@@ -160,22 +158,8 @@ export default function TodoPage() {
     }
   };
 
-  // Calendar Logic
   const nextMonth = () => setCurrentMonth(addDays(endOfMonth(currentMonth), 1));
   const prevMonth = () => setCurrentMonth(addDays(startOfMonth(currentMonth), -1));
-
-  const renderDays = () => {
-    const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-    return (
-      <div className="grid grid-cols-7 mb-4">
-        {days.map((day, index) => (
-          <div key={index} className={cn("text-center text-sm font-bold", index === 6 ? "text-destructive" : "text-white/60")}>
-            {day}
-          </div>
-        ))}
-      </div>
-    );
-  };
 
   const renderCells = () => {
     const monthStart = startOfMonth(currentMonth);
@@ -245,13 +229,13 @@ export default function TodoPage() {
     <ProtectedRoute>
       <div className="min-h-screen bg-background text-foreground">
         <Header />
-        <main className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <main className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
-            {/* Custom Styled Calendar Card */}
-            <div className="lg:col-span-7">
+            {/* Calendar Section */}
+            <div className="lg:col-span-7 xl:col-span-8">
               <Card className="bg-[#2A2D5B] border-none shadow-2xl rounded-[2rem] p-6 md:p-8">
-                <div className="flex justify-between items-center mb-8">
+                <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
                   <h2 className="text-2xl font-black text-white/90 tracking-tighter uppercase">
                     {format(currentMonth, 'MMMM yyyy')}
                   </h2>
@@ -265,45 +249,52 @@ export default function TodoPage() {
                   </div>
                 </div>
 
-                {renderDays()}
+                <div className="grid grid-cols-7 mb-4 text-center">
+                  {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, idx) => (
+                    <div key={idx} className={cn("text-xs md:text-sm font-bold", idx === 6 ? "text-destructive" : "text-white/60")}>
+                      {day}
+                    </div>
+                  ))}
+                </div>
+                
                 {renderCells()}
 
-                <div className="mt-8 space-y-2">
+                <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <div className="flex items-center gap-3">
                       <div className="w-3 h-3 rounded-full bg-destructive" />
-                      <span className="text-sm text-white/70 font-medium">লেভেল ৩: উভয় টাস্ক সাবমিট</span>
+                      <span className="text-xs text-white/70 font-medium">লেভেল ৩: উভয় টাস্ক সাবমিট</span>
                    </div>
                    <div className="flex items-center gap-3">
                       <div className="w-3 h-3 rounded-full bg-orange-500" />
-                      <span className="text-sm text-white/70 font-medium">লেভেল ২: যেকোনো একটি সাবমিট</span>
+                      <span className="text-xs text-white/70 font-medium">লেভেল ২: যেকোনো একটি সাবমিট</span>
                    </div>
                 </div>
               </Card>
             </div>
 
-            {/* Task Management Section */}
-            <div className="lg:col-span-5 space-y-6">
-              <div className="flex items-center justify-between">
+            {/* Task Section */}
+            <div className="lg:col-span-5 xl:col-span-4 space-y-6">
+              <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row items-start sm:items-center lg:items-start xl:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-2xl font-black tracking-tight font-headline">
-                    {format(selectedDate, 'EEEE, MMMM do')}
+                  <h2 className="text-xl md:text-2xl font-black tracking-tight font-headline">
+                    {format(selectedDate, 'EEEE, MMM do')}
                   </h2>
-                  <p className="text-muted-foreground">{tasks?.length || 0} tasks planned</p>
+                  <p className="text-muted-foreground text-sm">{tasks?.length || 0} tasks planned</p>
                 </div>
                 
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button className="rounded-full shadow-lg bg-primary hover:bg-primary/90">
+                    <Button className="rounded-full shadow-lg bg-primary hover:bg-primary/90 w-full sm:w-auto">
                       <Plus className="mr-2 h-4 w-4" /> Add Task
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-md">
                     <DialogHeader>
-                      <DialogTitle>Add Study Task</DialogTitle>
+                      <DialogTitle>Plan Your Study Session</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
+                    <div className="space-y-6 py-4">
                       <div className="space-y-2">
-                        <Label>Select Subject</Label>
+                        <Label>Subject</Label>
                         <Select onValueChange={(val) => {setSelectedSubject(val); setSelectedChapter(null);}}>
                           <SelectTrigger>
                             <SelectValue placeholder="Choose a subject" />
@@ -314,7 +305,7 @@ export default function TodoPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label>Select Chapter</Label>
+                        <Label>Chapter</Label>
                         <Select onValueChange={setSelectedChapter} disabled={!selectedSubject}>
                           <SelectTrigger>
                             <SelectValue placeholder="Choose a chapter" />
@@ -323,6 +314,21 @@ export default function TodoPage() {
                             {chapters?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Planned Duration (Minutes)</Label>
+                        <div className="relative">
+                          <Input 
+                            type="number" 
+                            min="1" 
+                            max="300" 
+                            value={plannedDuration} 
+                            onChange={(e) => setPlannedDuration(e.target.value)}
+                            className="pr-10"
+                          />
+                          <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">This will automatically set your study timer.</p>
                       </div>
                     </div>
                     <DialogFooter>
@@ -335,23 +341,24 @@ export default function TodoPage() {
                 </Dialog>
               </div>
 
-              {/* Completion Progress Card */}
+              {/* Progress Summary Card */}
               <Card className="bg-primary text-primary-foreground overflow-hidden border-none shadow-xl">
                 <CardContent className="p-6">
                     <div className="flex justify-between items-center">
                         <div>
-                            <p className="text-primary-foreground/70 text-xs font-bold uppercase tracking-widest">Completion Rate</p>
-                            <h3 className="text-4xl font-black">
+                            <p className="text-primary-foreground/70 text-[10px] font-bold uppercase tracking-widest">Today's Target</p>
+                            <h3 className="text-3xl font-black">
                                 {tasks && tasks.length > 0 
                                     ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100) 
                                     : 0}%
                             </h3>
                         </div>
-                        <CheckCircle2 className="h-12 w-12 opacity-20" />
+                        <CheckCircle2 className="h-10 w-10 opacity-20" />
                     </div>
                 </CardContent>
               </Card>
 
+              {/* Task List */}
               <div className="space-y-3">
                 {tasksLoading ? (
                   Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-20 bg-muted animate-pulse rounded-xl" />)
@@ -361,28 +368,34 @@ export default function TodoPage() {
                       "transition-all border-none shadow-sm",
                       task.completed ? "bg-success/5" : "bg-card"
                     )}>
-                      <CardContent className="p-4 flex items-center gap-4">
+                      <CardContent className="p-4 flex items-center gap-3">
                         <Checkbox 
                           checked={task.completed} 
                           onCheckedChange={() => handleToggle(task.id, task.completed)}
-                          className="h-6 w-6 rounded-full border-primary"
+                          className="h-5 w-5 rounded-full border-primary"
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-black text-primary uppercase tracking-widest">{task.subjectName}</p>
+                          <div className="flex items-center gap-2">
+                             <p className="text-[9px] font-black text-primary uppercase tracking-widest truncate">{task.subjectName}</p>
+                             <div className="flex items-center gap-1 text-muted-foreground">
+                                <Clock className="h-2.5 w-2.5" />
+                                <span className="text-[9px] font-bold">{task.duration}m</span>
+                             </div>
+                          </div>
                           <h4 className={cn(
-                            "text-lg font-bold truncate",
+                            "text-base font-bold truncate",
                             task.completed ? "line-through text-muted-foreground" : "text-foreground"
                           )}>
                             {task.chapterName}
                           </h4>
                         </div>
                         <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" asChild className="text-primary hover:text-primary hover:bg-primary/10">
-                                <Link href={`/dashboard?subjectId=${task.subjectId}&chapterId=${task.chapterId}`}>
-                                    <Play className="h-5 w-5 fill-current" />
+                            <Button variant="ghost" size="icon" asChild className="text-primary hover:text-primary hover:bg-primary/10 h-9 w-9">
+                                <Link href={`/dashboard?subjectId=${task.subjectId}&chapterId=${task.chapterId}&duration=${task.duration}`}>
+                                    <Play className="h-4 w-4 fill-current" />
                                 </Link>
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(task.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(task.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10 h-9 w-9">
                                 <Trash2 className="h-4 w-4" />
                             </Button>
                         </div>
@@ -390,12 +403,12 @@ export default function TodoPage() {
                     </Card>
                   ))
                 ) : (
-                  <div className="text-center py-16 bg-secondary/20 rounded-3xl border-2 border-dashed border-muted">
-                    <div className="mx-auto w-12 h-12 bg-secondary rounded-full flex items-center justify-center mb-4">
-                        <Plus className="text-muted-foreground h-6 w-6" />
+                  <div className="text-center py-12 md:py-16 bg-secondary/20 rounded-3xl border-2 border-dashed border-muted">
+                    <div className="mx-auto w-10 h-10 bg-secondary rounded-full flex items-center justify-center mb-4">
+                        <Plus className="text-muted-foreground h-5 w-5" />
                     </div>
-                    <h3 className="text-lg font-bold">No tasks for today</h3>
-                    <p className="text-muted-foreground text-sm">Select a subject and chapter to begin.</p>
+                    <h3 className="text-base font-bold">Empty Schedule</h3>
+                    <p className="text-muted-foreground text-xs px-4">Select a subject and duration to get started.</p>
                   </div>
                 )}
               </div>

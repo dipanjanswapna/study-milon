@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "UserProfile": {
@@ -126,6 +125,7 @@
         "subjectName": { "type": "string" },
         "chapterName": { "type": "string" },
         "date": { "type": "string", "format": "date" },
+        "duration": { "type": "number", "description": "planned duration in minutes" },
         "completed": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" }
       },

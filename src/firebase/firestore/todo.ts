@@ -1,4 +1,3 @@
-
 'use client';
 import {
   collection,
@@ -17,6 +16,7 @@ export type StudyTask = {
   subjectName: string;
   chapterName: string;
   date: string; // YYYY-MM-DD
+  duration: number; // in minutes
   completed: boolean;
   createdAt: any;
 };

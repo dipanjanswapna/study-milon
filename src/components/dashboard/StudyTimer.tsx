@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { logStudyTime } from '@/firebase/firestore/hierarchy';
@@ -55,13 +54,36 @@ export function StudyTimer() {
   }, [user, firestore, selectedSubject]);
   const { data: chapters, loading: chaptersLoading } = useCollection(chaptersQuery);
 
-  // Deep linking from To-Do List
+  // Deep linking logic with auto-start support
+  const initializedFromParams = useRef(false);
+  
   useEffect(() => {
     const subId = searchParams.get('subjectId');
     const chapId = searchParams.get('chapterId');
+    const durationParam = searchParams.get('duration');
+
     if (subId) setSelectedSubject(subId);
     if (chapId) setSelectedChapter(chapId);
-  }, [searchParams]);
+    
+    if (durationParam) {
+      const d = parseInt(durationParam, 10);
+      if (!isNaN(d) && d > 0) {
+        setWorkDuration(d);
+        setMinutes(d);
+        setSeconds(0);
+        
+        // Auto-start if it's the first time processing these params
+        if (!initializedFromParams.current && subId && chapId) {
+            setIsActive(true);
+            initializedFromParams.current = true;
+            toast({
+                title: "Session Started!",
+                description: `Focused study for ${d} minutes.`,
+            });
+        }
+      }
+    }
+  }, [searchParams, toast]);
 
   const reset = useCallback(() => {
     setIsActive(false);
@@ -86,18 +108,14 @@ export function StudyTimer() {
     try {
         await logStudyTime(firestore, user.uid, selectedSubject, selectedChapter, 1);
     } catch (error) {
-        console.error("Failed to log study time:", error);
+        // Silently fail logging in background to avoid interrupting flow
     }
   }, [user, firestore, selectedSubject, selectedChapter]);
 
   useEffect(() => {
-    reset();
-  }, [workDuration, reset]);
-
-  useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
-    if (isActive && minutes * 60 + seconds > 0) {
+    if (isActive && (minutes > 0 || seconds > 0)) {
       interval = setInterval(() => {
         if (seconds === 0) {
           if (minutes > 0) {
@@ -145,7 +163,7 @@ export function StudyTimer() {
       <CardHeader className="bg-slate-800/50 pb-4">
         <CardTitle className="flex items-center gap-2 text-xl font-headline">
           {isBreak ? <Coffee className="text-orange-400" /> : <BookOpenCheck className="text-primary" />}
-          <span>{isBreak ? 'Break' : 'Focus'}</span>
+          <span>{isBreak ? 'Break' : 'Focus Session'}</span>
         </CardTitle>
       </CardHeader>
       
@@ -188,10 +206,10 @@ export function StudyTimer() {
       <CardFooter className="flex-col items-start gap-6 p-6 md:p-8 bg-slate-800/30 border-t border-slate-700">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
             <div className="space-y-2">
-                <Label htmlFor="subject" className="text-slate-400 text-xs font-bold uppercase tracking-widest">Select Subject</Label>
+                <Label className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Subject</Label>
                 <Select value={selectedSubject || ''} onValueChange={(value) => {setSelectedSubject(value); setSelectedChapter(null);}} disabled={isActive}>
                     <SelectTrigger className="bg-slate-800 border-slate-700 text-white h-11">
-                        <SelectValue placeholder="Subject" />
+                        <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent className="bg-slate-800 border-slate-700 text-white">
                         {subjectsLoading ? <SelectItem value="loading" disabled>Loading...</SelectItem> : 
@@ -201,10 +219,10 @@ export function StudyTimer() {
                 </Select>
             </div>
             <div className="space-y-2">
-                <Label htmlFor="chapter" className="text-slate-400 text-xs font-bold uppercase tracking-widest">Select Chapter</Label>
+                <Label className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Chapter</Label>
                  <Select onValueChange={setSelectedChapter} value={selectedChapter || ''} disabled={!selectedSubject || isActive || chaptersLoading}>
                     <SelectTrigger className="bg-slate-800 border-slate-700 text-white h-11">
-                        <SelectValue placeholder="Chapter" />
+                        <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent className="bg-slate-800 border-slate-700 text-white">
                         {chaptersLoading ? <SelectItem value="loading" disabled>Loading...</SelectItem> :
@@ -217,15 +235,18 @@ export function StudyTimer() {
 
         <div className="space-y-2 w-full">
           <div className="flex items-center justify-between">
-            <Label htmlFor="duration" className="text-slate-400 text-xs font-bold uppercase tracking-widest flex items-center gap-1.5">
-              <Settings2 className="h-3.5 w-3.5" /> Duration (min)
+            <Label className="text-slate-400 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5">
+              <Settings2 className="h-3.5 w-3.5" /> Work Duration (min)
             </Label>
             <span className="text-xs font-mono text-primary">{workDuration}m</span>
           </div>
-          <Input id="duration" type="number" value={workDuration}
+          <Input type="number" value={workDuration}
             onChange={(e) => {
               const val = parseInt(e.target.value, 10);
-              if (val > 0) setWorkDuration(val);
+              if (val > 0) {
+                setWorkDuration(val);
+                if (!isActive) setMinutes(val);
+              }
             }}
             disabled={isActive} min="1"
             className="bg-slate-800 border-slate-700 text-white h-11"
