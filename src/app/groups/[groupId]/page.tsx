@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -30,23 +29,20 @@ import { Progress } from '@/components/ui/progress';
 import { 
   Users2, 
   MessageSquare, 
-  LayoutDashboard, 
   ShieldCheck, 
   Plus, 
   CheckCircle2, 
-  ExternalLink,
-  Clock,
-  LogOut,
-  UserPlus,
-  Loader2,
-  Trash2,
+  Flame, 
+  AlertTriangle,
+  Settings,
+  Notebook,
   Megaphone,
   Send,
   Trophy,
-  Flame,
-  AlertTriangle,
-  Settings,
-  Notebook
+  Trash2,
+  UserPlus,
+  Loader2,
+  LogOut
 } from 'lucide-react';
 import { 
   approveRequest, 
@@ -83,6 +79,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 export default function GroupDashboardPage() {
   const { groupId } = useParams();
