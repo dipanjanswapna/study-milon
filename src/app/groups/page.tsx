@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
-import { collection, query, orderBy, where } from 'firebase/firestore';
+import { useMemo, useState, useEffect } from 'react';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useFirestore, useCollection, useUser, useDoc } from '@/firebase';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { ProfileSetupGate } from '@/components/dashboard/ProfileSetupGate';
@@ -37,18 +37,14 @@ import {
   Users, 
   Search, 
   Plus, 
-  ArrowRight, 
-  ShieldCheck, 
-  Lock, 
   Loader2,
-  ExternalLink,
   Users2
 } from 'lucide-react';
 import { createGroup, sendJoinRequest, type StudyGroup } from '@/firebase/firestore/groups';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import Link from 'next/link';
+import { Label } from '@/components/ui/label';
 
 export default function GroupsPage() {
   const { user } = useUser();
@@ -63,6 +59,13 @@ export default function GroupsPage() {
   // User's group info
   const userRef = useMemo(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: profile } = useDoc<any>(userRef as any);
+
+  // REDIRECTION FIX: Move router logic to useEffect to prevent state update during render
+  useEffect(() => {
+    if (profile?.groupId) {
+      router.replace(`/groups/${profile.groupId}`);
+    }
+  }, [profile?.groupId, router]);
 
   // Fetch all groups
   const groupsQuery = useMemo(() => {
@@ -120,9 +123,13 @@ export default function GroupsPage() {
     }
   };
 
+  // If user already belongs to a group, show a loader while the redirection effect takes place
   if (profile?.groupId) {
-    router.replace(`/groups/${profile.groupId}`);
-    return null;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
@@ -252,6 +259,3 @@ export default function GroupsPage() {
     </ProtectedRoute>
   );
 }
-
-import { doc } from 'firebase/firestore';
-import { Label } from '@/components/ui/label';
