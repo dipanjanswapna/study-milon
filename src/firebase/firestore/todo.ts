@@ -16,6 +16,7 @@ export type StudyTask = {
   chapterId: string;
   subjectName: string;
   chapterName: string;
+  note?: string;
   date: string; // YYYY-MM-DD
   duration: number; // in minutes
   completed: boolean;

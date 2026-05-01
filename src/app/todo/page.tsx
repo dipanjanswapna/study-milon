@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -16,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -41,6 +43,7 @@ import {
   ChevronLeft, 
   ChevronRight,
   Clock,
+  Notebook
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -94,6 +97,7 @@ export default function TodoPage() {
   // Form State
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<string | null>(null);
+  const [taskNote, setTaskNote] = useState<string>('');
   const [plannedHours, setPlannedHours] = useState<string>('0');
   const [plannedMinutes, setPlannedMinutes] = useState<string>('25');
 
@@ -132,12 +136,14 @@ export default function TodoPage() {
         chapterId: selectedChapter,
         subjectName: subject.name,
         chapterName: chapter.name,
+        note: taskNote.trim(),
         date: dateStr,
         duration: totalMinutes,
       });
       setIsDialogOpen(false);
       setSelectedSubject(null);
       setSelectedChapter(null);
+      setTaskNote('');
       setPlannedHours('0');
       setPlannedMinutes('25');
       toast({ title: 'Task added successfully!' });
@@ -335,6 +341,17 @@ export default function TodoPage() {
                                 </SelectContent>
                               </Select>
                             </div>
+                            <div className="space-y-2">
+                              <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                                <Notebook className="h-3 w-3" /> Note
+                              </Label>
+                              <Textarea 
+                                placeholder="Add instructions or session notes..." 
+                                className="min-h-[80px] rounded-xl resize-none"
+                                value={taskNote}
+                                onChange={(e) => setTaskNote(e.target.value)}
+                              />
+                            </div>
                             <div className="space-y-3">
                               <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Planned Duration</Label>
                               <div className="grid grid-cols-2 gap-4">
@@ -428,6 +445,11 @@ export default function TodoPage() {
                             )}>
                               {task.chapterName}
                             </h4>
+                            {task.note && (
+                              <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5 italic">
+                                "{task.note}"
+                              </p>
+                            )}
                           </div>
                           <div className="flex items-center gap-1">
                               <Button variant="ghost" size="icon" asChild className="text-primary hover:text-primary hover:bg-primary/10 h-9 w-9">

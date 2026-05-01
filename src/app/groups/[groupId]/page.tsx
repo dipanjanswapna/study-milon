@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -44,7 +45,8 @@ import {
   Trophy,
   Flame,
   AlertTriangle,
-  Settings
+  Settings,
+  Notebook
 } from 'lucide-react';
 import { 
   approveRequest, 
@@ -252,10 +254,15 @@ export default function GroupDashboardPage() {
   // Task Creation State
   const [taskSub, setTaskSub] = useState('');
   const [taskChap, setTaskChap] = useState('');
-  const [taskDur, setTaskDur] = useState('60');
+  const [taskNote, setTaskNote] = useState('');
+  const [taskDurHours, setTaskDurHours] = useState('1');
+  const [taskDurMins, setTaskDurMins] = useState('0');
 
   const handleAddTask = async () => {
     if (!taskSub || !taskChap) return;
+    const totalMinutes = (parseInt(taskDurHours) * 60) + parseInt(taskDurMins);
+    if (totalMinutes <= 0) return;
+    
     setLoading(true);
     try {
       await addGroupTask(firestore, groupId as string, {
@@ -263,12 +270,14 @@ export default function GroupDashboardPage() {
         chapterId: 'group-task-' + Date.now(),
         subjectName: taskSub,
         chapterName: taskChap,
+        note: taskNote.trim(),
         date: new Date().toISOString().split('T')[0],
-        duration: parseInt(taskDur)
+        duration: totalMinutes
       });
       setIsTaskOpen(false);
       setTaskSub('');
       setTaskChap('');
+      setTaskNote('');
       toast({ title: "Task Pushed!", description: "All guild members received this task." });
     } catch (e: any) {
       toast({ variant: 'destructive', title: "Error", description: e.message });
@@ -626,22 +635,44 @@ export default function GroupDashboardPage() {
                         <DialogHeader>
                           <DialogTitle className="text-3xl font-black tracking-tighter">Set Guild Task</DialogTitle>
                         </DialogHeader>
-                        <div className="space-y-6 py-6">
-                          <div className="space-y-2">
-                            <Label className="font-black text-xs uppercase tracking-widest opacity-50">Subject</Label>
-                            <Input placeholder="e.g. Higher Math" className="h-12 rounded-xl" value={taskSub} onChange={e => setTaskSub(e.target.value)} />
+                        <ScrollArea className="max-h-[60vh] px-1">
+                          <div className="space-y-6 py-6">
+                            <div className="space-y-2">
+                              <Label className="font-black text-xs uppercase tracking-widest opacity-50">Subject</Label>
+                              <Input placeholder="e.g. Higher Math" className="h-12 rounded-xl" value={taskSub} onChange={e => setTaskSub(e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="font-black text-xs uppercase tracking-widest opacity-50">Specific Goal / Chapter</Label>
+                              <Input placeholder="e.g. Calculus Practice" className="h-12 rounded-xl" value={taskChap} onChange={e => setTaskChap(e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="font-black text-xs uppercase tracking-widest opacity-50 flex items-center gap-1.5">
+                                <Notebook className="h-3 w-3" /> Note
+                              </Label>
+                              <Textarea 
+                                placeholder="Instructions for the guild members..." 
+                                className="min-h-[100px] rounded-xl resize-none"
+                                value={taskNote}
+                                onChange={e => setTaskNote(e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-3">
+                              <Label className="font-black text-xs uppercase tracking-widest opacity-50">Planned Duration</Label>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                  <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Hours</Label>
+                                  <Input type="number" min="0" value={taskDurHours} onChange={e => setTaskDurHours(e.target.value)} className="h-12 rounded-xl" />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Minutes</Label>
+                                  <Input type="number" min="0" max="59" value={taskDurMins} onChange={e => setTaskDurMins(e.target.value)} className="h-12 rounded-xl" />
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div className="space-y-2">
-                            <Label className="font-black text-xs uppercase tracking-widest opacity-50">Specific Goal</Label>
-                            <Input placeholder="e.g. Calculus Practice" className="h-12 rounded-xl" value={taskChap} onChange={e => setTaskChap(e.target.value)} />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="font-black text-xs uppercase tracking-widest opacity-50">Target Duration (min)</Label>
-                            <Input type="number" className="h-12 rounded-xl" value={taskDur} onChange={e => setTaskDur(e.target.value)} />
-                          </div>
-                        </div>
-                        <DialogFooter>
-                          <Button onClick={handleAddTask} disabled={loading} className="w-full h-14 font-black text-lg rounded-2xl shadow-xl shadow-primary/20">
+                        </ScrollArea>
+                        <DialogFooter className="pt-4 border-t">
+                          <Button onClick={handleAddTask} disabled={loading || !taskSub || !taskChap} className="w-full h-14 font-black text-lg rounded-2xl shadow-xl shadow-primary/20">
                             Push to All Members
                           </Button>
                         </DialogFooter>

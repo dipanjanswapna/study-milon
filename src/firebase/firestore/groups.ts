@@ -1,3 +1,4 @@
+
 'use client';
 import {
   collection,
@@ -119,7 +120,7 @@ export async function declineRequest(db: Firestore, groupId: string, requestId: 
 export async function addGroupTask(
   db: Firestore,
   groupId: string,
-  taskData: { subjectId: string; chapterId: string; subjectName: string; chapterName: string; date: string; duration: number }
+  taskData: { subjectId: string; chapterId: string; subjectName: string; chapterName: string; note?: string; date: string; duration: number }
 ) {
   const groupRef = doc(db, 'groups', groupId);
   const groupSnap = await getDoc(groupRef);

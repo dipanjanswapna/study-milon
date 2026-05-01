@@ -99,6 +99,7 @@
         "chapterId": { "type": "string" },
         "subjectName": { "type": "string" },
         "chapterName": { "type": "string" },
+        "note": { "type": "string", "description": "Instructions or context for the task." },
         "date": { "type": "string", "format": "date" },
         "duration": { "type": "number" },
         "completed": { "type": "boolean" },
