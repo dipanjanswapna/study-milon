@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { useMemo, useState, useEffect } from 'react';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { useFirestore, useCollection, useUser } from '@/firebase';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Header } from '@/components/dashboard/Header';
@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Trophy, Medal, Crown, Star, Filter, Clock } from 'lucide-react';
+import { Trophy, Medal, Crown, Star, Filter, Clock, Users2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -42,6 +42,20 @@ export default function LeaderboardPage() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('daily');
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('All');
   const [batchFilter, setBatchFilter] = useState<string>('All');
+  const [groupMap, setGroupMap] = useState<Record<string, string>>({});
+
+  // Fetch group names to display on leaderboard
+  useEffect(() => {
+    const fetchGroups = async () => {
+      const snap = await getDocs(collection(firestore, 'groups'));
+      const mapping: Record<string, string> = {};
+      snap.forEach(doc => {
+        mapping[doc.id] = doc.data().name;
+      });
+      setGroupMap(mapping);
+    };
+    fetchGroups();
+  }, [firestore]);
 
   // Fetch top performers
   const leaderboardQuery = useMemo(() => {
@@ -167,6 +181,11 @@ export default function LeaderboardPage() {
                         </div>
                         <div className="text-center px-1">
                             <p className="font-black text-[10px] md:text-base truncate max-w-[80px] md:max-w-[120px]">{top3[1].displayName}</p>
+                            {top3[1].groupId && groupMap[top3[1].groupId] && (
+                                <p className="text-[8px] md:text-[9px] font-black text-muted-foreground uppercase flex items-center justify-center gap-1">
+                                    <Users2 className="h-2 w-2" /> {groupMap[top3[1].groupId]}
+                                </p>
+                            )}
                             <p className="text-primary font-black text-[10px] md:text-xs uppercase">
                                 {formatTime(timeFilter === 'daily' ? top3[1].daily_study_minutes : top3[1].total_study_minutes)}
                             </p>
@@ -194,6 +213,11 @@ export default function LeaderboardPage() {
                         </div>
                         <div className="text-center px-1">
                             <p className="font-black text-xs md:text-xl truncate max-w-[100px] md:max-w-[150px]">{top3[0].displayName}</p>
+                            {top3[0].groupId && groupMap[top3[0].groupId] && (
+                                <p className="text-[9px] md:text-xs font-black text-muted-foreground uppercase flex items-center justify-center gap-1 mb-1">
+                                    <Users2 className="h-3 w-3" /> {groupMap[top3[0].groupId]}
+                                </p>
+                            )}
                             <Badge className="font-black text-[10px] md:text-sm uppercase bg-yellow-500 hover:bg-yellow-600 px-2 md:px-4 py-0 md:py-1">
                                 {formatTime(timeFilter === 'daily' ? top3[0].daily_study_minutes : top3[0].total_study_minutes)}
                             </Badge>
@@ -218,6 +242,11 @@ export default function LeaderboardPage() {
                         </div>
                         <div className="text-center px-1">
                             <p className="font-black text-[10px] md:text-base truncate max-w-[80px] md:max-w-[120px]">{top3[2].displayName}</p>
+                            {top3[2].groupId && groupMap[top3[2].groupId] && (
+                                <p className="text-[8px] md:text-[9px] font-black text-muted-foreground uppercase flex items-center justify-center gap-1">
+                                    <Users2 className="h-2 w-2" /> {groupMap[top3[2].groupId]}
+                                </p>
+                            )}
                             <p className="text-primary font-black text-[10px] md:text-xs uppercase">
                                 {formatTime(timeFilter === 'daily' ? top3[2].daily_study_minutes : top3[2].total_study_minutes)}
                             </p>
@@ -239,6 +268,8 @@ export default function LeaderboardPage() {
                     <div className="divide-y">
                         {rankings.map((contender: any, idx) => {
                             const currentMinutes = timeFilter === 'daily' ? contender.daily_study_minutes : contender.total_study_minutes;
+                            const userGuildName = contender.groupId ? groupMap[contender.groupId] : null;
+
                             return (
                                 <div 
                                     key={contender.uid} 
@@ -273,6 +304,11 @@ export default function LeaderboardPage() {
                                                 <Badge variant="secondary" className="text-[8px] md:text-[10px] font-bold tracking-tighter uppercase px-1.5 h-4 md:h-5">
                                                     {contender.category || 'SSC'} {contender.batch || ''}
                                                 </Badge>
+                                                {userGuildName && (
+                                                  <Badge variant="outline" className="text-[8px] md:text-[10px] font-black uppercase tracking-tighter px-1.5 h-4 md:h-5 border-primary/30 text-primary flex items-center gap-1">
+                                                     <Users2 className="h-2.5 w-2.5" /> {userGuildName}
+                                                  </Badge>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
