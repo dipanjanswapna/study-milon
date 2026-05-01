@@ -26,7 +26,7 @@ export type StudyGroup = {
   members: string[];
   memberCount: number;
   memberLimit: number;
-  discordLink?: string;
+  discordLink: string;
   createdAt: any;
 };
 
@@ -41,8 +41,10 @@ export type GroupAnnouncement = {
 export async function createGroup(
   db: Firestore,
   userId: string,
-  data: { name: string; description: string; category: string; batch: string; discordLink?: string }
+  data: { name: string; description: string; category: string; batch: string; discordLink: string }
 ) {
+  if (!data.discordLink) throw new Error("A Discord server link is required to launch a guild.");
+  
   const groupsRef = collection(db, 'groups');
   const groupDoc = await addDoc(groupsRef, {
     ...data,
@@ -59,6 +61,15 @@ export async function createGroup(
   await updateDoc(userRef, { groupId: groupDoc.id });
 
   return groupDoc.id;
+}
+
+export async function updateGroup(
+  db: Firestore,
+  groupId: string,
+  data: Partial<{ name: string; description: string; category: string; batch: string; discordLink: string }>
+) {
+  const groupRef = doc(db, 'groups', groupId);
+  await updateDoc(groupRef, data);
 }
 
 export async function sendJoinRequest(db: Firestore, groupId: string, user: { uid: string; displayName: string; photoURL: string }) {

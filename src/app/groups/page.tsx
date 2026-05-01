@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -38,13 +37,17 @@ import {
   Search, 
   Plus, 
   Loader2,
-  Users2
+  Users2,
+  ExternalLink,
+  MessageSquare,
+  Info
 } from 'lucide-react';
 import { createGroup, sendJoinRequest, type StudyGroup } from '@/firebase/firestore/groups';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function GroupsPage() {
   const { user } = useUser();
@@ -89,7 +92,10 @@ export default function GroupsPage() {
   const [newDiscord, setNewDiscord] = useState('');
 
   const handleCreate = async () => {
-    if (!user || !newName || !newCat) return;
+    if (!user || !newName || !newCat || !newDiscord) {
+      toast({ variant: 'destructive', title: 'Missing Info', description: 'Guild Name and Discord Link are mandatory.' });
+      return;
+    }
     setLoading(true);
     try {
       const gid = await createGroup(firestore, user.uid, {
@@ -154,50 +160,99 @@ export default function GroupsPage() {
                     <Plus className="mr-2 h-5 w-5" /> Start a Guild
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle className="text-2xl font-black">Create Your Guild</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label>Guild Name</Label>
-                      <Input placeholder="e.g. HSC 26 Science Toppers" value={newName} onChange={e => setNewName(e.target.value)} />
+                <DialogContent className="max-w-xl rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl">
+                  <div className="grid md:grid-cols-5 h-full">
+                    {/* Roadmap Sidebar */}
+                    <div className="md:col-span-2 bg-[#1A1C3D] text-white p-6 space-y-6">
+                       <div className="space-y-2">
+                          <h3 className="text-lg font-black flex items-center gap-2">
+                             <MessageSquare className="h-5 w-5 text-primary" />
+                             Setup Roadmap
+                          </h3>
+                          <p className="text-xs text-white/50 font-medium">Follow these steps to ensure your guild is elite.</p>
+                       </div>
+                       
+                       <div className="space-y-6">
+                          <div className="flex gap-3">
+                             <div className="h-6 w-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-black shrink-0">01</div>
+                             <p className="text-[11px] font-bold text-white/80">Go to Discord and create a new server for your study group.</p>
+                          </div>
+                          <div className="flex gap-3">
+                             <div className="h-6 w-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-black shrink-0">02</div>
+                             <p className="text-[11px] font-bold text-white/80">Create a voice channel named 'Focus Zone' and a text channel 'Study Logs'.</p>
+                          </div>
+                          <div className="flex gap-3">
+                             <div className="h-6 w-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-black shrink-0">03</div>
+                             <p className="text-[11px] font-bold text-white/80">Generate a 'Never Expire' invite link for your server.</p>
+                          </div>
+                          <div className="flex gap-3">
+                             <div className="h-6 w-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-black shrink-0">04</div>
+                             <p className="text-[11px] font-bold text-white/80">Paste the link in the form to the right to launch your guild.</p>
+                          </div>
+                       </div>
+
+                       <div className="pt-6 border-t border-white/10">
+                          <Button variant="ghost" className="w-full text-white/40 hover:text-white text-xs font-bold" asChild>
+                             <a href="https://discord.com" target="_blank">
+                                <ExternalLink className="mr-2 h-3 w-3" /> Visit Discord
+                             </a>
+                          </Button>
+                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Goal / Description</Label>
-                      <Input placeholder="What are we studying?" value={newDesc} onChange={e => setNewDesc(e.target.value)} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Category</Label>
-                        <Select value={newCat} onValueChange={setNewCat}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="SSC">SSC</SelectItem>
-                            <SelectItem value="HSC">HSC</SelectItem>
-                            <SelectItem value="Admission">Admission</SelectItem>
-                            <SelectItem value="Job Prep">Job Prep</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Batch</Label>
-                        <Input placeholder="2026" value={newBatch} onChange={e => setNewBatch(e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Discord Server Link (Optional)</Label>
-                      <Input placeholder="https://discord.gg/..." value={newDiscord} onChange={e => setNewDiscord(e.target.value)} />
+
+                    {/* Form Area */}
+                    <div className="md:col-span-3 p-8 bg-card">
+                       <DialogHeader>
+                        <DialogTitle className="text-2xl font-black">Guild Basics</DialogTitle>
+                      </DialogHeader>
+                      <ScrollArea className="max-h-[500px] pr-2 mt-4">
+                        <div className="space-y-4 pb-4">
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Guild Name *</Label>
+                            <Input placeholder="e.g. HSC 26 Science Toppers" value={newName} onChange={e => setNewName(e.target.value)} />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Goal / Description</Label>
+                            <Input placeholder="What are we studying?" value={newDesc} onChange={e => setNewDesc(e.target.value)} />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Category</Label>
+                              <Select value={newCat} onValueChange={setNewCat}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="SSC">SSC</SelectItem>
+                                  <SelectItem value="HSC">HSC</SelectItem>
+                                  <SelectItem value="Admission">Admission</SelectItem>
+                                  <SelectItem value="Job Prep">Job Prep</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Batch</Label>
+                              <Input placeholder="2026" value={newBatch} onChange={e => setNewBatch(e.target.value)} />
+                            </div>
+                          </div>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                               <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Discord Server Link *</Label>
+                               <span className="text-[9px] font-bold text-muted-foreground italic">Mandatory</span>
+                            </div>
+                            <Input placeholder="https://discord.gg/..." value={newDiscord} onChange={e => setNewDiscord(e.target.value)} />
+                            <p className="text-[9px] text-muted-foreground leading-relaxed mt-1">This link will be used for group voice study and resource sharing.</p>
+                          </div>
+                        </div>
+                      </ScrollArea>
+                      <DialogFooter className="mt-4">
+                        <Button onClick={handleCreate} disabled={loading || !newName || !newDiscord} className="w-full h-12 font-black rounded-xl shadow-xl shadow-primary/20">
+                          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Launch Study Guild
+                        </Button>
+                      </DialogFooter>
                     </div>
                   </div>
-                  <DialogFooter>
-                    <Button onClick={handleCreate} disabled={loading || !newName} className="w-full h-12 font-bold">
-                      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Launch Guild
-                    </Button>
-                  </DialogFooter>
                 </DialogContent>
               </Dialog>
             </div>
@@ -232,9 +287,11 @@ export default function GroupsPage() {
                       <CardDescription className="line-clamp-2 min-h-[40px]">{group.description}</CardDescription>
                     </CardHeader>
                     <CardFooter className="pt-4 flex justify-between items-center">
-                      <div className="flex -space-x-2">
-                        {/* Member Avatars placeholder */}
-                        <div className="w-8 h-8 rounded-full border-2 border-background bg-secondary flex items-center justify-center text-[10px] font-bold">+</div>
+                      <div className="flex items-center gap-2">
+                         <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                            <MessageSquare className="h-4 w-4" />
+                         </div>
+                         <span className="text-[10px] font-bold text-muted-foreground">Discord Enabled</span>
                       </div>
                       <Button onClick={() => handleJoin(group)} variant="secondary" className="rounded-full px-6 font-bold">
                         Request to Join
@@ -259,3 +316,4 @@ export default function GroupsPage() {
     </ProtectedRoute>
   );
 }
+

@@ -43,7 +43,8 @@ import {
   Send,
   Trophy,
   Flame,
-  AlertTriangle
+  AlertTriangle,
+  Settings
 } from 'lucide-react';
 import { 
   approveRequest, 
@@ -53,6 +54,7 @@ import {
   addGroupTask,
   addGroupAnnouncement,
   deleteGroupAnnouncement,
+  updateGroup,
   type StudyGroup,
   type GroupAnnouncement
 } from '@/firebase/firestore/groups';
@@ -71,6 +73,13 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { format } from 'date-fns';
 
 export default function GroupDashboardPage() {
@@ -83,6 +92,7 @@ export default function GroupDashboardPage() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isTaskOpen, setIsTaskOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [announcementText, setAnnouncementText] = useState('');
 
@@ -101,6 +111,23 @@ export default function GroupDashboardPage() {
     return query(collection(firestore, 'groups', groupId as string, 'requests'), where('status', '==', 'pending'));
   }, [firestore, groupId]);
   const { data: requests } = useCollection<any>(requestsQuery);
+
+  // Edit State
+  const [editName, setEditName] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editCat, setEditCat] = useState('');
+  const [editBatch, setEditBatch] = useState('');
+  const [editDiscord, setEditDiscord] = useState('');
+
+  useEffect(() => {
+    if (group) {
+      setEditName(group.name);
+      setEditDesc(group.description);
+      setEditCat(group.category);
+      setEditBatch(group.batch);
+      setEditDiscord(group.discordLink);
+    }
+  }, [group]);
 
   // Group Members detailed info with task stats
   const [memberProfiles, setMemberProfiles] = useState<any[]>([]);
@@ -163,6 +190,26 @@ export default function GroupDashboardPage() {
     if (confirm("Are you sure you want to leave this guild?")) {
       await leaveGroup(firestore, groupId as string, user!.uid);
       router.push('/groups');
+    }
+  };
+
+  const handleUpdateGroup = async () => {
+    if (!editName || !editDiscord) return;
+    setLoading(true);
+    try {
+      await updateGroup(firestore, groupId as string, {
+        name: editName,
+        description: editDesc,
+        category: editCat,
+        batch: editBatch,
+        discordLink: editDiscord
+      });
+      setIsEditOpen(false);
+      toast({ title: "Guild Updated", description: "Your study guild settings have been saved." });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: "Error", description: e.message });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -284,42 +331,99 @@ export default function GroupDashboardPage() {
                       </a>
                     </Button>
                   )}
+                  
                   {(isCreator || isMod) && (
-                    <Dialog open={isAdminOpen} onOpenChange={setIsAdminOpen}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" className="rounded-full font-bold px-6 h-14 bg-white/5 border-white/10 hover:bg-white/10 text-white">
-                          <UserPlus className="mr-2 h-5 w-5" /> Requests ({requests?.length || 0})
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-md rounded-[2rem] border-none">
-                        <DialogHeader>
-                          <DialogTitle className="text-2xl font-black">Join Requests</DialogTitle>
-                        </DialogHeader>
-                        <ScrollArea className="max-h-[400px] py-4">
-                          {requests && requests.length > 0 ? (
-                            <div className="space-y-4">
-                              {requests.map((req: any) => (
-                                <div key={req.id} className="flex items-center justify-between p-5 bg-secondary/30 rounded-3xl border">
-                                  <div className="flex items-center gap-3">
-                                    <Avatar className="h-10 w-10">
-                                      <AvatarImage src={req.userPhoto} />
-                                      <AvatarFallback>{req.userName?.[0]}</AvatarFallback>
-                                    </Avatar>
-                                    <span className="font-bold">{req.userName}</span>
+                    <div className="flex gap-2">
+                       <Dialog open={isAdminOpen} onOpenChange={setIsAdminOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" className="rounded-full font-bold px-6 h-14 bg-white/5 border-white/10 hover:bg-white/10 text-white">
+                            <UserPlus className="mr-2 h-5 w-5" /> Requests ({requests?.length || 0})
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-md rounded-[2rem] border-none">
+                          <DialogHeader>
+                            <DialogTitle className="text-2xl font-black">Join Requests</DialogTitle>
+                          </DialogHeader>
+                          <ScrollArea className="max-h-[400px] py-4">
+                            {requests && requests.length > 0 ? (
+                              <div className="space-y-4">
+                                {requests.map((req: any) => (
+                                  <div key={req.id} className="flex items-center justify-between p-5 bg-secondary/30 rounded-3xl border">
+                                    <div className="flex items-center gap-3">
+                                      <Avatar className="h-10 w-10">
+                                        <AvatarImage src={req.userPhoto} />
+                                        <AvatarFallback>{req.userName?.[0]}</AvatarFallback>
+                                      </Avatar>
+                                      <span className="font-bold">{req.userName}</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <Button size="sm" className="rounded-full font-bold" onClick={() => handleApprove(req.id, req.userId)}>Accept</Button>
+                                      <Button size="sm" variant="ghost" className="rounded-full text-destructive font-bold" onClick={() => handleDecline(req.id)}>Decline</Button>
+                                    </div>
                                   </div>
-                                  <div className="flex gap-2">
-                                    <Button size="sm" className="rounded-full font-bold" onClick={() => handleApprove(req.id, req.userId)}>Accept</Button>
-                                    <Button size="sm" variant="ghost" className="rounded-full text-destructive font-bold" onClick={() => handleDecline(req.id)}>Decline</Button>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center py-10 text-muted-foreground italic">No pending requests.</div>
+                            )}
+                          </ScrollArea>
+                        </DialogContent>
+                      </Dialog>
+
+                      {isCreator && (
+                        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+                          <DialogTrigger asChild>
+                             <Button variant="outline" className="rounded-full h-14 w-14 bg-white/5 border-white/10 hover:bg-white/10 text-white">
+                                <Settings className="h-5 w-5" />
+                             </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-md rounded-[2.5rem] border-none shadow-2xl">
+                             <DialogHeader>
+                                <DialogTitle className="text-2xl font-black">Guild Settings</DialogTitle>
+                             </DialogHeader>
+                             <div className="space-y-4 py-4">
+                                <div className="space-y-1.5">
+                                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Guild Name</Label>
+                                  <Input value={editName} onChange={e => setEditName(e.target.value)} />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Description</Label>
+                                  <Input value={editDesc} onChange={e => setEditDesc(e.target.value)} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-1.5">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Category</Label>
+                                    <Select value={editCat} onValueChange={setEditCat}>
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="SSC">SSC</SelectItem>
+                                        <SelectItem value="HSC">HSC</SelectItem>
+                                        <SelectItem value="Admission">Admission</SelectItem>
+                                        <SelectItem value="Job Prep">Job Prep</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Batch</Label>
+                                    <Input value={editBatch} onChange={e => setEditBatch(e.target.value)} />
                                   </div>
                                 </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="text-center py-10 text-muted-foreground italic">No pending requests.</div>
-                          )}
-                        </ScrollArea>
-                      </DialogContent>
-                    </Dialog>
+                                <div className="space-y-1.5">
+                                  <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Discord Link</Label>
+                                  <Input value={editDiscord} onChange={e => setEditDiscord(e.target.value)} />
+                                </div>
+                             </div>
+                             <DialogFooter>
+                                <Button className="w-full h-12 font-black rounded-xl" onClick={handleUpdateGroup} disabled={loading || !editName || !editDiscord}>
+                                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Changes"}
+                                </Button>
+                             </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                    </div>
                   )}
                   
                   {isCreator ? (
@@ -460,7 +564,7 @@ export default function GroupDashboardPage() {
                                <Avatar className="h-12 w-12 shrink-0 shadow-md">
                                   <AvatarFallback className="bg-primary/10 text-primary font-black">{msg.authorName?.[0]}</AvatarFallback>
                                </Avatar>
-                               <div className="space-y-2 flex-1 min-w-0">
+                               <div className="space-y-2 flex-1 min-0">
                                   <div className="flex items-center justify-between">
                                      <span className="font-black text-base">{msg.authorName}</span>
                                      <div className="flex items-center gap-2">
