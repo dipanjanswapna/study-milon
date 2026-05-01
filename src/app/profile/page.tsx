@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { doc, onSnapshot, collection, query, orderBy } from 'firebase/firestore';
@@ -45,6 +45,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -56,6 +63,7 @@ import {
   Trash2,
   Folder,
   RefreshCw,
+  Trophy,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -70,6 +78,8 @@ import {
 const profileSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
   photoURL: z.string().url('Please enter a valid URL.').or(z.literal('')),
+  category: z.enum(['SSC', 'HSC', 'Admission', 'Job Prep']),
+  batch: z.string().min(1, 'Batch is required.'),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -82,6 +92,9 @@ type UserProfile = {
   role?: 'student' | 'admin';
   total_study_minutes?: number;
   daily_study_minutes?: number;
+  category?: string;
+  batch?: string;
+  points?: number;
 };
 
 export default function ProfilePage() {
@@ -96,9 +109,14 @@ export default function ProfilePage() {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
+    defaultValues: {
+      category: 'HSC',
+      batch: '26',
+    }
   });
 
   useEffect(() => {
@@ -111,6 +129,8 @@ export default function ProfilePage() {
           reset({
             displayName: data.displayName || '',
             photoURL: data.photoURL || '',
+            category: (data.category as any) || 'HSC',
+            batch: data.batch || '',
           });
         }
         setLoading(false);
@@ -127,6 +147,8 @@ export default function ProfilePage() {
       await updateUserProfile(firestore, user.uid, {
         displayName: data.displayName,
         photoURL: data.photoURL,
+        category: data.category as any,
+        batch: data.batch,
       });
 
       if (auth.currentUser) {
@@ -138,7 +160,7 @@ export default function ProfilePage() {
 
       toast({
         title: 'Profile Updated',
-        description: 'Your profile has been successfully updated.',
+        description: 'Your changes have been saved.',
       });
     } catch (error: any) {
       toast({
@@ -159,6 +181,7 @@ export default function ProfilePage() {
 
   const totalStudyMinutes = profile?.total_study_minutes || 0;
   const todayStudyMinutes = profile?.daily_study_minutes || 0;
+  const totalPoints = profile?.points || 0;
 
   return (
     <ProtectedRoute>
@@ -167,12 +190,12 @@ export default function ProfilePage() {
         <main className="p-4 md:p-8">
           <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left Column */}
-            <div className="lg:col-span-1 space-y-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle>My Profile</CardTitle>
+            <div className="lg:col-span-1 space-y-6">
+              <Card className="overflow-hidden border-none shadow-xl">
+                <CardHeader className="bg-primary text-primary-foreground pb-8">
+                  <CardTitle>Student Profile</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="-mt-6">
                   {loading || userLoading ? (
                     <ProfileSkeleton />
                   ) : profile ? (
@@ -181,49 +204,73 @@ export default function ProfilePage() {
                       className="space-y-6"
                     >
                       <div className="flex flex-col items-center space-y-4">
-                        <Avatar className="h-24 w-24">
+                        <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
                           <AvatarImage
                             src={profile.photoURL || ''}
                             alt={profile.displayName || ''}
                           />
-                          <AvatarFallback className="text-3xl">
+                          <AvatarFallback className="text-3xl bg-secondary">
                             {getInitials(profile.displayName)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="text-center">
-                          <h3 className="text-xl font-bold">
+                          <h3 className="text-2xl font-black tracking-tight">
                             {profile.displayName}
                           </h3>
-                          <p className="text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             {profile.email}
                           </p>
                         </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="displayName">Display Name</Label>
-                        <Input id="displayName" {...register('displayName')} />
-                        {errors.displayName && (
-                          <p className="text-sm text-destructive">
-                            {errors.displayName.message}
-                          </p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="photoURL">Photo URL</Label>
-                        <Input
-                          id="photoURL"
-                          placeholder="https://example.com/avatar.png"
-                          {...register('photoURL')}
-                        />
-                        {errors.photoURL && (
-                          <p className="text-sm text-destructive">
-                            {errors.photoURL.message}
-                          </p>
-                        )}
+                      <div className="grid gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="displayName">Display Name</Label>
+                          <Input id="displayName" {...register('displayName')} className="h-11" />
+                          {errors.displayName && (
+                            <p className="text-xs text-destructive">{errors.displayName.message}</p>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="category">Category</Label>
+                            <Controller
+                              name="category"
+                              control={control}
+                              render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <SelectTrigger className="h-11">
+                                    <SelectValue placeholder="Select" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="SSC">SSC</SelectItem>
+                                    <SelectItem value="HSC">HSC</SelectItem>
+                                    <SelectItem value="Admission">Admission</SelectItem>
+                                    <SelectItem value="Job Prep">Job Prep</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="batch">Batch / Year</Label>
+                            <Input id="batch" {...register('batch')} placeholder="e.g. 26" className="h-11" />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="photoURL">Photo URL</Label>
+                          <Input
+                            id="photoURL"
+                            placeholder="https://example.com/avatar.png"
+                            {...register('photoURL')}
+                            className="h-11"
+                          />
+                        </div>
                       </div>
 
-                      <Button type="submit" disabled={isSubmitting} className="w-full">
+                      <Button type="submit" disabled={isSubmitting} className="w-full h-12 font-bold rounded-xl shadow-lg">
                         {isSubmitting && (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         )}
@@ -235,56 +282,47 @@ export default function ProfilePage() {
                   )}
                 </CardContent>
               </Card>
-              <Card>
+
+              {/* Stats Card */}
+              <Card className="border-none shadow-lg bg-[#1E293B] text-white">
                 <CardHeader>
-                  <CardTitle>Study Statistics</CardTitle>
+                  <CardTitle className="text-lg">Achievements</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  {loading || userLoading ? (
-                    <>
-                      <Skeleton className="h-16 w-full" />
-                      <Skeleton className="h-16 w-full" />
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-4">
-                        <Clock className="h-8 w-8 text-primary" />
-                        <div>
-                          <p className="text-2xl font-bold">
-                            {todayStudyMinutes.toLocaleString()} min
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Today's Study
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <Book className="h-8 w-8 text-primary" />
-                        <div>
-                          <p className="text-2xl font-bold">
-                            {(totalStudyMinutes / 60).toFixed(1)} hrs
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Total Study Time
-                          </p>
-                        </div>
-                      </div>
-                    </>
-                  )}
+                <CardContent className="space-y-6">
+                  <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl">
+                    <div className="p-3 bg-yellow-500/20 rounded-xl">
+                      <Trophy className="h-6 w-6 text-yellow-500" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-black">{totalPoints.toLocaleString()}</p>
+                      <p className="text-[10px] text-white/50 uppercase font-bold tracking-widest">Total Points</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white/5 p-4 rounded-2xl">
+                      <p className="text-xl font-bold">{todayStudyMinutes}m</p>
+                      <p className="text-[10px] text-white/50 uppercase font-bold tracking-widest">Today</p>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-2xl">
+                      <p className="text-xl font-bold">{(totalStudyMinutes / 60).toFixed(1)}h</p>
+                      <p className="text-[10px] text-white/50 uppercase font-bold tracking-widest">Total</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
 
             {/* Right Column */}
             <div className="lg:col-span-2 space-y-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle>My Study Plan</CardTitle>
+              <Card className="border-none shadow-xl rounded-[2rem]">
+                <CardHeader className="p-8 pb-0">
+                  <CardTitle className="text-2xl font-black">My Study Plan</CardTitle>
                   <CardDescription>
-                    Organize your learning by adding subjects and chapters.
+                    Organize your academic goals by adding subjects and chapters.
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-8">
                   <SubjectManagement />
                 </CardContent>
               </Card>
@@ -339,10 +377,10 @@ function SubjectManagement() {
 
   return (
     <div>
-      <div className="mb-4 text-right">
+      <div className="mb-6 flex justify-end">
         <CrudDialog
           trigger={
-            <Button>
+            <Button className="rounded-full shadow-lg h-11 px-6">
               <Plus className="mr-2 h-4 w-4" /> Add Subject
             </Button>
           }
@@ -351,15 +389,18 @@ function SubjectManagement() {
         />
       </div>
       {subjects && subjects.length > 0 ? (
-        <Accordion type="multiple" className="w-full space-y-2">
+        <Accordion type="multiple" className="w-full space-y-4">
           {subjects.map((subject) => (
             <SubjectItem key={subject.id} subject={subject} />
           ))}
         </Accordion>
       ) : (
-        <p className="text-center text-muted-foreground py-8">
-          No subjects added yet. Click "Add Subject" to start.
-        </p>
+        <div className="text-center py-20 border-2 border-dashed rounded-[2rem] bg-secondary/20">
+          <Book className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
+          <p className="text-muted-foreground font-medium">
+            No subjects added yet. Start by adding your first subject.
+          </p>
+        </div>
       )}
     </div>
   );
@@ -393,25 +434,27 @@ function SubjectItem({ subject }: { subject: any }) {
   }, [chapters]);
 
   return (
-    <Card>
+    <Card className="border-none bg-secondary/30 overflow-hidden rounded-2xl">
       <AccordionItem value={subject.id} className="border-0">
-        <div className="flex items-center p-4">
+        <div className="flex items-center p-4 md:p-6">
           <AccordionTrigger className="hover:no-underline flex-1 py-0">
-            <div className="flex flex-col gap-2 w-full">
+            <div className="flex flex-col gap-3 w-full text-left">
                 <div className="flex items-center gap-3">
-                    <Book className="h-5 w-5 text-primary" />
-                    <span className="font-semibold text-lg">{subject.name}</span>
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                        <Book className="h-5 w-5 text-primary" />
+                    </div>
+                    <span className="font-bold text-xl tracking-tight">{subject.name}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Progress value={progress} className="w-24 h-1.5" />
-                    <span className="text-xs text-muted-foreground">{Math.round(progress)}% complete</span>
+                <div className="flex items-center gap-4">
+                    <Progress value={progress} className="w-32 h-2" />
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{Math.round(progress)}% done</span>
                 </div>
             </div>
           </AccordionTrigger>
           <div className="flex items-center gap-1">
             <CrudDialog
               trigger={
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="h-10 w-10">
                   <Edit className="h-4 w-4" />
                 </Button>
               }
@@ -429,13 +472,13 @@ function SubjectItem({ subject }: { subject: any }) {
             />
           </div>
         </div>
-        <AccordionContent className="px-4 pb-4">
-          <div className="border-t pt-4">
-            <div className="flex justify-between items-center mb-2">
-              <h4 className="font-semibold">Chapters</h4>
+        <AccordionContent className="px-6 pb-6">
+          <div className="border-t border-secondary-foreground/10 pt-6">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Chapters</h4>
               <CrudDialog
                 trigger={
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="rounded-full">
                     <Plus className="mr-2 h-4 w-4" /> Add Chapter
                   </Button>
                 }
@@ -448,7 +491,7 @@ function SubjectItem({ subject }: { subject: any }) {
             {loading ? (
               <Skeleton className="h-10 w-full" />
             ) : chapters && chapters.length > 0 ? (
-                <ul className="space-y-2">
+                <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {chapters.map((chapter) => (
                     <ChapterItem
                         key={chapter.id}
@@ -458,8 +501,8 @@ function SubjectItem({ subject }: { subject: any }) {
                     ))}
               </ul>
             ) : (
-              <p className="text-center text-sm text-muted-foreground py-4">
-                No chapters yet.
+              <p className="text-center text-sm text-muted-foreground py-8 bg-background/50 rounded-xl italic">
+                No chapters added to this subject yet.
               </p>
             )}
           </div>
@@ -480,11 +523,8 @@ function ChapterItem({ subjectId, chapter }: { subjectId: string; chapter: any }
       try {
         await updateChapterStatus(firestore, user.uid, subjectId, chapter.id, newStatus);
         toast({
-          title: `Chapter marked as ${newStatus}${
-            chapter.status === 'revision' && newStatus === 'completed'
-              ? '. Revision complete!'
-              : ''
-          }`,
+          title: `Status: ${newStatus}`,
+          description: completed ? "You earned 50 points! 🚀" : "Points removed.",
         });
       } catch (error) {
         toast({ variant: 'destructive', title: 'Error updating status' });
@@ -520,28 +560,31 @@ function ChapterItem({ subjectId, chapter }: { subjectId: string; chapter: any }
       };
   
     return (
-      <li className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 group bg-secondary/50">
+      <li className="flex items-center justify-between p-3 rounded-xl hover:bg-white transition-all group bg-background/60 border border-transparent hover:border-primary/20 shadow-sm">
         <div className="flex items-center gap-3">
           <Checkbox
             id={`chapter-${chapter.id}`}
             checked={chapter.status === 'completed'}
             onCheckedChange={(checked) => handleStatusChange(Boolean(checked))}
+            className="rounded-full"
           />
           <label
             htmlFor={`chapter-${chapter.id}`}
-            className="flex items-center gap-2 cursor-pointer"
+            className="flex flex-col cursor-pointer"
           >
-            <Folder className="h-5 w-5 text-muted-foreground" />
-            <span className={chapter.status === 'completed' ? 'line-through text-muted-foreground' : ''}>{chapter.name}</span>
+            <span className={cn(
+                "font-bold text-sm",
+                chapter.status === 'completed' ? 'line-through text-muted-foreground' : ''
+            )}>{chapter.name}</span>
             {chapter.revision_count > 0 && (
-              <span className="text-xs text-muted-foreground">
-                (rev: {chapter.revision_count})
+              <span className="text-[10px] text-primary font-black uppercase">
+                Revision #{chapter.revision_count}
               </span>
             )}
           </label>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant={getStatusBadgeVariant(chapter.status)} className="capitalize">
+        <div className="flex items-center gap-1">
+          <Badge variant={getStatusBadgeVariant(chapter.status)} className="capitalize text-[10px] h-5 px-1.5">
             {chapter.status}
           </Badge>
   
@@ -553,7 +596,7 @@ function ChapterItem({ subjectId, chapter }: { subjectId: string; chapter: any }
                     variant="ghost"
                     size="icon"
                     onClick={handleSetToRevision}
-                    className="h-8 w-8"
+                    className="h-8 w-8 text-primary"
                   >
                     <RefreshCw className="h-4 w-4" />
                   </Button>
@@ -616,9 +659,8 @@ function CrudDialog({
     try {
       await onSubmit(name.trim());
       toast({
-        title: `${title.split(' ')[1]} ${
-          initialValue ? 'updated' : 'added'
-        }!`,
+        title: "Success",
+        description: `${title.split(' ')[1]} has been saved.`,
       });
       setName('');
       setOpen(false);
@@ -638,23 +680,20 @@ function CrudDialog({
       <DialogTrigger asChild onClick={() => setName(initialValue)}>
         {trigger}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="rounded-[2rem]">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="h-11"
+              autoFocus
+            />
           </div>
           <DialogFooter>
             <DialogClose asChild>
@@ -662,9 +701,9 @@ function CrudDialog({
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="font-bold">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save
+              Save Changes
             </Button>
           </DialogFooter>
         </form>
@@ -689,7 +728,7 @@ function DeleteDialog({
     setLoading(true);
     try {
       await onDelete();
-      toast({ title: `${itemName} deleted.` });
+      toast({ title: "Deleted", description: `${itemName} has been removed.` });
       setOpen(false);
     } catch (error: any) {
       toast({
@@ -705,19 +744,20 @@ function DeleteDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <Trash2 className="h-4 w-4 text-destructive" />
+        <Button variant="ghost" size="icon" className="h-10 w-10 text-destructive/50 hover:text-destructive">
+          <Trash2 className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="rounded-[2rem]">
         <DialogHeader>
-          <DialogTitle>Are you sure?</DialogTitle>
+          <DialogTitle>Delete Confirmation</DialogTitle>
         </DialogHeader>
-        <p>
-          This action cannot be undone. This will permanently delete the
-          <strong> {itemName}</strong> and all its contents.
-        </p>
-        <DialogFooter>
+        <div className="py-4">
+            <p className="text-muted-foreground">
+            Are you sure you want to delete <strong>{itemName}</strong>? This will permanently remove all associated data.
+            </p>
+        </div>
+        <DialogFooter className="gap-2 sm:gap-0">
           <DialogClose asChild>
             <Button type="button" variant="secondary">
               Cancel
@@ -727,9 +767,10 @@ function DeleteDialog({
             variant="destructive"
             onClick={handleDelete}
             disabled={loading}
+            className="font-bold"
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Delete
+            Yes, Delete
           </Button>
         </DialogFooter>
       </DialogContent>

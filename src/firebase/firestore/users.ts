@@ -8,6 +8,8 @@ import {
 } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 
+export type AcademicCategory = 'SSC' | 'HSC' | 'Admission' | 'Job Prep';
+
 export type UserProfile = {
   uid: string;
   email: string | null;
@@ -18,6 +20,9 @@ export type UserProfile = {
   total_study_minutes?: number;
   daily_study_minutes?: number;
   last_active_date?: any;
+  category?: AcademicCategory;
+  batch?: string;
+  points: number;
 };
 
 export async function createUserProfile(
@@ -37,10 +42,11 @@ export async function createUserProfile(
         displayName,
         photoURL,
         createdAt,
-        role: 'student', // Default role
+        role: 'student',
         total_study_minutes: 0,
         daily_study_minutes: 0,
         last_active_date: serverTimestamp(),
+        points: 0,
       });
     } catch (error) {
       console.error('Error creating user profile:', error);

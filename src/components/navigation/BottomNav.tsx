@@ -1,9 +1,8 @@
-
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, User, BookMarked, CalendarCheck } from 'lucide-react';
+import { LayoutDashboard, User, BookMarked, CalendarCheck, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/firebase';
 
@@ -26,6 +25,11 @@ export function BottomNav() {
       label: 'Planner',
       href: '/todo',
       icon: CalendarCheck,
+    },
+    {
+        label: 'Leaderboard',
+        href: '/leaderboard',
+        icon: Trophy,
     },
     {
       label: 'Library',

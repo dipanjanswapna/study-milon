@@ -48,6 +48,16 @@
           "type": "string",
           "format": "date",
           "description": "Last date the user was active to reset daily minutes."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["SSC", "HSC", "Admission", "Job Prep"]
+        },
+        "batch": {
+          "type": "string"
+        },
+        "points": {
+          "type": "number"
         }
       },
       "required": [
