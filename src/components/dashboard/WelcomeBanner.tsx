@@ -3,13 +3,29 @@ import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useUser } from '@/firebase';
+import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
+import { Clock, Calendar as CalendarIcon } from 'lucide-react';
 
 export function WelcomeBanner() {
   const welcomeImage = PlaceHolderImages.find((p) => p.id === 'welcome-banner');
   const { user } = useUser();
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
+
+  useEffect(() => {
+    // Set initial time on mount to avoid hydration mismatch
+    setCurrentTime(new Date());
+    
+    // Update every minute
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   return (
-    <Card className="relative w-full h-40 md:h-56 lg:h-64 overflow-hidden rounded-2xl shadow-lg border-none">
+    <Card className="relative w-full h-52 md:h-64 lg:h-72 overflow-hidden rounded-[2rem] shadow-2xl border-none">
       {welcomeImage && (
         <Image
           src={welcomeImage.imageUrl}
@@ -20,14 +36,39 @@ export function WelcomeBanner() {
           priority
         />
       )}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent p-6 md:p-10 flex flex-col justify-center">
-        <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white tracking-tight font-headline">
-          Welcome back
-          {user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}!
-        </h2>
-        <p className="text-base md:text-xl text-white/80 mt-2 max-w-md">
-          Success is built one session at a time. Ready to dive back in?
-        </p>
+      
+      {/* Dynamic Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent p-6 md:p-10 flex flex-col justify-center">
+        <div className="flex flex-col gap-4 md:gap-6">
+          
+          {/* Responsive Date and Time Badges */}
+          <div className="flex flex-wrap items-center gap-2 md:gap-3">
+             {currentTime ? (
+               <>
+                 <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 text-[10px] md:text-xs lg:text-sm font-bold text-white uppercase tracking-wider">
+                    <CalendarIcon className="h-3.5 w-3.5 text-primary" />
+                    {format(currentTime, 'EEEE, MMM do')}
+                 </div>
+                 <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 text-[10px] md:text-xs lg:text-sm font-bold text-white uppercase tracking-wider">
+                    <Clock className="h-3.5 w-3.5 text-primary" />
+                    {format(currentTime, 'h:mm a')}
+                 </div>
+               </>
+             ) : (
+               <div className="h-8 w-32 bg-white/10 animate-pulse rounded-full" />
+             )}
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tighter font-headline leading-none">
+              Welcome back
+              {user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}!
+            </h2>
+            <p className="text-sm md:text-lg text-white/80 max-w-lg font-medium leading-relaxed">
+              Success is built one session at a time. Ready to dive back in and crush your goals?
+            </p>
+          </div>
+        </div>
       </div>
     </Card>
   );
