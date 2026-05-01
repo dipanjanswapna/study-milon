@@ -1,4 +1,3 @@
-
 'use client';
 import {
   collection,
@@ -150,6 +149,25 @@ export async function leaveGroup(db: Firestore, groupId: string, userId: string)
   });
 
   batch.update(userRef, { groupId: null });
+
+  await batch.commit();
+}
+
+/**
+ * Deletes a study group and removes the groupId reference from all members.
+ */
+export async function deleteGroup(db: Firestore, groupId: string, memberIds: string[]) {
+  const batch = writeBatch(db);
+  const groupRef = doc(db, 'groups', groupId);
+
+  // 1. Remove groupId from all members
+  for (const mid of memberIds) {
+    const userRef = doc(db, 'users', mid);
+    batch.update(userRef, { groupId: null });
+  }
+
+  // 2. Delete the group document
+  batch.delete(groupRef);
 
   await batch.commit();
 }
