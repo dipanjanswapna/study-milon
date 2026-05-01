@@ -31,6 +31,14 @@ export type StudyGroup = {
   createdAt: any;
 };
 
+export type GroupAnnouncement = {
+  id: string;
+  authorId: string;
+  authorName: string;
+  content: string;
+  createdAt: any;
+};
+
 export async function createGroup(
   db: Firestore,
   userId: string,
@@ -144,4 +152,25 @@ export async function leaveGroup(db: Firestore, groupId: string, userId: string)
   batch.update(userRef, { groupId: null });
 
   await batch.commit();
+}
+
+export async function addGroupAnnouncement(
+  db: Firestore,
+  groupId: string,
+  authorId: string,
+  authorName: string,
+  content: string
+) {
+  const announcementsRef = collection(db, 'groups', groupId, 'announcements');
+  await addDoc(announcementsRef, {
+    authorId,
+    authorName,
+    content,
+    createdAt: serverTimestamp(),
+  });
+}
+
+export async function deleteGroupAnnouncement(db: Firestore, groupId: string, announcementId: string) {
+  const announcementRef = doc(db, 'groups', groupId, 'announcements', announcementId);
+  await deleteDoc(announcementRef);
 }

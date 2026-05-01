@@ -54,6 +54,18 @@
         "createdAt": { "type": "string", "format": "date-time" }
       }
     },
+    "GroupAnnouncement": {
+      "title": "Group Announcement",
+      "description": "A notice or announcement posted within a study group.",
+      "type": "object",
+      "properties": {
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorId", "content", "createdAt"]
+    },
     "Subject": {
       "title": "Subject",
       "description": "Represents a user-defined study subject.",
@@ -124,6 +136,10 @@
     "/groups/{groupId}/requests/{requestId}": {
       "schema": { "$ref": "#/entities/GroupRequest" },
       "description": "Stores join requests for a group."
+    },
+    "/groups/{groupId}/announcements/{announcementId}": {
+      "schema": { "$ref": "#/entities/GroupAnnouncement" },
+      "description": "Stores announcements for a study group."
     }
   }
 }
