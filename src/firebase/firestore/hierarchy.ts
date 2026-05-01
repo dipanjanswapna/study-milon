@@ -1,3 +1,4 @@
+
 'use client';
 import {
   collection,
@@ -167,16 +168,11 @@ export async function logStudyTime(
             dailyMinutesUpdate = minutes;
         }
 
-        // Point System: 1 hour (60 min) = 100 points
-        // 1 min = 1.666 points. We use floor to keep points as integers.
-        const earnedPoints = Math.floor((minutes / 60) * 100);
-
         // Update user aggregate stats
         batch.update(userRef, {
             total_study_minutes: increment(minutes),
             daily_study_minutes: dailyMinutesUpdate,
-            last_active_date: serverTimestamp(),
-            points: increment(earnedPoints)
+            last_active_date: serverTimestamp()
         });
 
         // Update chapter aggregate time

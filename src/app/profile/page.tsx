@@ -62,9 +62,7 @@ import {
   Plus,
   Edit,
   Trash2,
-  Folder,
   RefreshCw,
-  Trophy,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -96,10 +94,8 @@ type UserProfile = {
   daily_study_minutes?: number;
   category?: string;
   batch?: string;
-  points?: number;
 };
 
-// Generate years from 2023 to 2040 for the batch selection
 const YEARS = Array.from({ length: 18 }, (_, i) => (2023 + i).toString());
 
 export default function ProfilePage() {
@@ -186,7 +182,6 @@ export default function ProfilePage() {
 
   const totalStudyMinutes = profile?.total_study_minutes || 0;
   const todayStudyMinutes = profile?.daily_study_minutes || 0;
-  const totalPoints = profile?.points || 0;
 
   return (
     <ProtectedRoute>
@@ -194,12 +189,11 @@ export default function ProfilePage() {
         <Header />
         <main className="p-4 md:p-8">
           <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Column */}
             <div className="lg:col-span-1 space-y-6">
               <Card className="overflow-hidden border-none shadow-xl">
                 <CardHeader className="bg-primary text-primary-foreground pb-8">
                   <CardTitle>Student Profile</CardTitle>
-                </CardHeader>
+                </Header>
                 <CardContent className="-mt-6">
                   {loading || userLoading ? (
                     <ProfileSkeleton />
@@ -304,22 +298,11 @@ export default function ProfilePage() {
                 </CardContent>
               </Card>
 
-              {/* Stats Card */}
               <Card className="border-none shadow-lg bg-[#1E293B] text-white">
                 <CardHeader>
-                  <CardTitle className="text-lg">Achievements</CardTitle>
+                  <CardTitle className="text-lg">Study Statistics</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl">
-                    <div className="p-3 bg-yellow-500/20 rounded-xl">
-                      <Trophy className="h-6 w-6 text-yellow-500" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-black">{totalPoints.toLocaleString()}</p>
-                      <p className="text-[10px] text-white/50 uppercase font-bold tracking-widest">Total Points</p>
-                    </div>
-                  </div>
-                  
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-white/5 p-4 rounded-2xl">
                       <p className="text-xl font-bold">{todayStudyMinutes}m</p>
@@ -334,7 +317,6 @@ export default function ProfilePage() {
               </Card>
             </div>
 
-            {/* Right Column */}
             <div className="lg:col-span-2 space-y-8">
               <Card className="border-none shadow-xl rounded-[2rem]">
                 <CardHeader className="p-8 pb-0">
@@ -545,7 +527,7 @@ function ChapterItem({ subjectId, chapter }: { subjectId: string; chapter: any }
         await updateChapterStatus(firestore, user.uid, subjectId, chapter.id, newStatus);
         toast({
           title: `Status: ${newStatus}`,
-          description: completed ? "You earned 50 points! 🚀" : "Points removed.",
+          description: completed ? "Chapter completed! 🚀" : "Status updated.",
         });
       } catch (error) {
         toast({ variant: 'destructive', title: 'Error updating status' });
@@ -656,7 +638,6 @@ function ChapterItem({ subjectId, chapter }: { subjectId: string; chapter: any }
     );
   }
 
-// Reusable dialog for Create/Update operations
 function CrudDialog({
   trigger,
   title,
@@ -733,7 +714,6 @@ function CrudDialog({
   );
 }
 
-// Reusable dialog for Delete confirmation
 function DeleteDialog({
   onDelete,
   itemName,

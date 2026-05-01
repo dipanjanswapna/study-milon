@@ -62,9 +62,6 @@
         },
         "batch": {
           "type": "string"
-        },
-        "points": {
-          "type": "number"
         }
       },
       "required": [

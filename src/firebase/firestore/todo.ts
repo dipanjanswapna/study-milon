@@ -1,3 +1,4 @@
+
 'use client';
 import {
   collection,
@@ -7,8 +8,6 @@ import {
   serverTimestamp,
   type Firestore,
   doc,
-  increment,
-  writeBatch,
 } from 'firebase/firestore';
 
 export type StudyTask = {
@@ -44,19 +43,7 @@ export async function updateTaskStatus(
   completed: boolean
 ): Promise<void> {
   const taskRef = doc(db, 'users', userId, 'tasks', taskId);
-  const userRef = doc(db, 'users', userId);
-  
-  const batch = writeBatch(db);
-  
-  // Point System: Chapter completed = 50 points
-  const pointIncrement = completed ? 50 : -50;
-
-  batch.update(taskRef, { completed });
-  batch.update(userRef, { 
-    points: increment(pointIncrement) 
-  });
-
-  await batch.commit();
+  await updateDoc(taskRef, { completed });
 }
 
 export async function deleteTask(

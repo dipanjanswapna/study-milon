@@ -23,7 +23,6 @@ export type UserProfile = {
   last_active_date?: any;
   category?: AcademicCategory;
   batch?: string;
-  points: number;
 };
 
 export async function createUserProfile(
@@ -47,7 +46,6 @@ export async function createUserProfile(
         total_study_minutes: 0,
         daily_study_minutes: 0,
         last_active_date: serverTimestamp(),
-        points: 0,
       });
     } catch (error) {
       console.error('Error creating user profile:', error);
