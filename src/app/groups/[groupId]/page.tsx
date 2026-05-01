@@ -104,7 +104,7 @@ export default function GroupDashboardPage() {
 
   // Announcements
   const announcementsQuery = useMemo(() => {
-    return query(collection(firestore, 'groups', groupId as string, 'announcements'), orderBy('createdAt', 'desc'), limit(10));
+    return query(collection(firestore, 'groups', groupId as string, 'announcements'), orderBy('createdAt', 'desc'), limit(15));
   }, [firestore, groupId]);
   const { data: announcements } = useCollection<GroupAnnouncement>(announcementsQuery);
 
@@ -305,7 +305,7 @@ export default function GroupDashboardPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-background text-foreground">
+      <div className="min-h-screen bg-background text-foreground pb-20 md:pb-10">
         <Header />
         <main className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
           
@@ -314,7 +314,7 @@ export default function GroupDashboardPage() {
             <div className="absolute top-0 right-0 p-8 opacity-5">
               <Users2 className="h-48 w-48" />
             </div>
-            <CardContent className="p-8 md:p-12 space-y-6 relative">
+            <CardContent className="p-6 md:p-12 space-y-6 relative">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center gap-2">
@@ -329,12 +329,12 @@ export default function GroupDashboardPage() {
                     </div>
                   </div>
                   <h1 className="text-4xl md:text-7xl font-black tracking-tighter leading-none text-white">{group.name}</h1>
-                  <p className="text-white/60 font-medium max-w-2xl text-lg">{group.description}</p>
+                  <p className="text-white/60 font-medium max-w-2xl text-base md:text-lg">{group.description}</p>
                 </div>
                 
                 <div className="flex flex-wrap gap-3">
                   {group.discordLink && (
-                    <Button asChild variant="secondary" className="rounded-full font-bold px-8 h-14 text-base shadow-lg shadow-primary/20 transition-all hover:scale-105">
+                    <Button asChild variant="secondary" className="rounded-full font-bold px-6 md:px-8 h-12 md:h-14 text-sm md:text-base shadow-lg shadow-primary/20 transition-all hover:scale-105">
                       <a href={group.discordLink} target="_blank">
                         <MessageSquare className="mr-2 h-5 w-5" /> Discord Guild
                       </a>
@@ -345,8 +345,8 @@ export default function GroupDashboardPage() {
                     <div className="flex gap-2">
                        <Dialog open={isAdminOpen} onOpenChange={setIsAdminOpen}>
                         <DialogTrigger asChild>
-                          <Button variant="outline" className="rounded-full font-bold px-6 h-14 bg-white/5 border-white/10 hover:bg-white/10 text-white">
-                            <UserPlus className="mr-2 h-5 w-5" /> Requests ({requests?.length || 0})
+                          <Button variant="outline" className="rounded-full font-bold px-5 h-12 md:h-14 bg-white/5 border-white/10 hover:bg-white/10 text-white text-sm">
+                            <UserPlus className="mr-2 h-4 w-4 md:h-5 md:w-5" /> Requests ({requests?.length || 0})
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-md rounded-[2rem] border-none">
@@ -382,7 +382,7 @@ export default function GroupDashboardPage() {
                       {isCreator && (
                         <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
                           <DialogTrigger asChild>
-                             <Button variant="outline" className="rounded-full h-14 w-14 bg-white/5 border-white/10 hover:bg-white/10 text-white">
+                             <Button variant="outline" className="rounded-full h-12 w-12 md:h-14 md:w-14 bg-white/5 border-white/10 hover:bg-white/10 text-white">
                                 <Settings className="h-5 w-5" />
                              </Button>
                           </DialogTrigger>
@@ -438,7 +438,7 @@ export default function GroupDashboardPage() {
                   {isCreator ? (
                     <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
                       <DialogTrigger asChild>
-                         <Button variant="ghost" className="text-white/40 hover:bg-destructive/20 hover:text-white rounded-full h-14 w-14">
+                         <Button variant="ghost" className="text-white/40 hover:bg-destructive/20 hover:text-white rounded-full h-12 w-12 md:h-14 md:w-14">
                             <Trash2 className="h-5 w-5" />
                          </Button>
                       </DialogTrigger>
@@ -460,7 +460,7 @@ export default function GroupDashboardPage() {
                       </DialogContent>
                     </Dialog>
                   ) : (
-                    <Button variant="ghost" className="text-white/40 hover:bg-destructive/20 hover:text-white rounded-full h-14 w-14" onClick={handleLeave}>
+                    <Button variant="ghost" className="text-white/40 hover:bg-destructive/20 hover:text-white rounded-full h-12 w-12 md:h-14 md:w-14" onClick={handleLeave}>
                       <LogOut className="h-5 w-5" />
                     </Button>
                   )}
@@ -476,50 +476,63 @@ export default function GroupDashboardPage() {
               
               {/* Member Activity Tracker */}
               <Card className="rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
-                <CardHeader className="flex flex-row items-center justify-between border-b bg-secondary/10 pb-6">
+                <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b bg-secondary/10 pb-6 gap-4">
                   <div>
                     <CardTitle className="text-2xl font-black tracking-tight flex items-center gap-2">
                       <Trophy className="h-6 w-6 text-primary" /> Member Rankings
                     </CardTitle>
                     <CardDescription className="font-bold text-xs uppercase tracking-widest">Today's Guild Leaders</CardDescription>
                   </div>
+                  <Badge variant="outline" className="font-black border-primary/20 text-primary uppercase text-[10px]">
+                    {memberProfiles.length} Members Active
+                  </Badge>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="divide-y">
                     {memberProfiles.map((member, idx) => {
                       const studyProgress = Math.min(100, (member.daily_study_minutes || 0) / (member.daily_goal_minutes || 360) * 100);
                       return (
-                        <div key={member.uid} className="p-6 hover:bg-secondary/10 transition-all group">
-                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                            <div className="flex items-center gap-5">
-                              <span className="font-black text-2xl italic text-muted-foreground/20 w-8 group-hover:text-primary transition-colors">#{idx + 1}</span>
-                              <Avatar className="h-14 w-14 ring-2 ring-background shadow-lg">
-                                <AvatarImage src={member.photoURL} />
-                                <AvatarFallback className="font-black text-lg">{member.displayName?.[0]}</AvatarFallback>
-                              </Avatar>
-                              <div className="space-y-1">
-                                <p className="font-black text-lg tracking-tight">{member.displayName}</p>
+                        <div key={member.uid} className="p-4 md:p-6 hover:bg-secondary/10 transition-all group">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                            <div className="flex items-center gap-4 md:gap-5">
+                              <span className="font-black text-xl md:text-2xl italic text-muted-foreground/20 w-8 group-hover:text-primary transition-colors">#{idx + 1}</span>
+                              <div className="relative">
+                                <Avatar className="h-12 w-12 md:h-14 md:w-14 ring-2 ring-background shadow-lg">
+                                  <AvatarImage src={member.photoURL} />
+                                  <AvatarFallback className="font-black text-lg">{member.displayName?.[0]}</AvatarFallback>
+                                </Avatar>
+                                {idx < 3 && (
+                                  <div className={cn(
+                                    "absolute -top-1 -right-1 h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-black shadow-sm",
+                                    idx === 0 ? "bg-yellow-400 text-white" : idx === 1 ? "bg-slate-300 text-slate-700" : "bg-orange-400 text-white"
+                                  )}>
+                                    <Trophy className="h-3 w-3" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="space-y-1 min-w-0">
+                                <p className="font-black text-base md:text-lg tracking-tight truncate">{member.displayName}</p>
                                 <div className="flex flex-wrap items-center gap-2">
-                                   <Badge variant="secondary" className="text-[10px] h-5 uppercase font-black tracking-tighter bg-primary/5 text-primary border-none">
+                                   <Badge variant="secondary" className="text-[9px] h-4 uppercase font-black tracking-tighter bg-primary/5 text-primary border-none">
                                       {member.daily_study_minutes || 0}m studied
                                    </Badge>
-                                   <Badge variant={member.taskProgress === 100 ? 'default' : 'outline'} className="text-[10px] h-5 uppercase font-black tracking-tighter">
+                                   <Badge variant={member.taskProgress === 100 ? 'default' : 'outline'} className="text-[9px] h-4 uppercase font-black tracking-tighter">
                                       {member.completedTasks}/{member.totalTasks} Tasks
                                    </Badge>
                                 </div>
                               </div>
                             </div>
                             
-                            <div className="flex-1 max-w-[240px] space-y-3">
+                            <div className="flex-1 sm:max-w-[240px] space-y-3">
                                <div className="space-y-1.5">
-                                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                                     <span>Guild Objective</span>
+                                  <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                     <span>Guild Objectives</span>
                                      <span>{Math.round(member.taskProgress)}%</span>
                                   </div>
                                   <Progress value={member.taskProgress} className="h-2" />
                                </div>
                                <div className="space-y-1.5">
-                                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-primary">
+                                  <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-primary">
                                      <span>Daily Grind</span>
                                      <span>{Math.round(studyProgress)}%</span>
                                   </div>
@@ -546,10 +559,10 @@ export default function GroupDashboardPage() {
                 </CardHeader>
                 <CardContent className="p-0">
                    {(isCreator || isMod) && (
-                     <div className="p-6 border-b bg-primary/5 space-y-4">
+                     <div className="p-5 md:p-6 border-b bg-primary/5 space-y-4">
                         <Textarea 
                           placeholder="Post a guild notice or motivational quote..." 
-                          className="min-h-[100px] rounded-2xl border-none shadow-inner resize-none bg-white text-base font-medium"
+                          className="min-h-[100px] rounded-2xl border-none shadow-inner resize-none bg-white text-base font-medium focus-visible:ring-1 focus-visible:ring-primary/20"
                           value={announcementText}
                           onChange={e => setAnnouncementText(e.target.value)}
                         />
@@ -565,45 +578,45 @@ export default function GroupDashboardPage() {
                         </div>
                      </div>
                    )}
-                   <ScrollArea className="h-[500px]">
-                      <div className="p-8 space-y-8">
+                   <ScrollArea className="h-[400px] md:h-[500px]">
+                      <div className="p-6 md:p-8 space-y-8">
                         {announcements && announcements.length > 0 ? (
                           announcements.map((msg) => (
-                            <div key={msg.id} className="flex gap-4 group">
-                               <Avatar className="h-12 w-12 shrink-0 shadow-md">
-                                  <AvatarFallback className="bg-primary/10 text-primary font-black">{msg.authorName?.[0]}</AvatarFallback>
+                            <div key={msg.id} className="flex gap-3 md:gap-4 group">
+                               <Avatar className="h-10 w-10 md:h-12 md:w-12 shrink-0 shadow-md">
+                                  <AvatarFallback className="bg-primary/10 text-primary font-black text-sm">{msg.authorName?.[0]}</AvatarFallback>
                                </Avatar>
-                               <div className="space-y-2 flex-1 min-0">
+                               <div className="space-y-2 flex-1 min-w-0">
                                   <div className="flex items-center justify-between">
-                                     <span className="font-black text-base">{msg.authorName}</span>
-                                     <div className="flex items-center gap-2">
-                                        <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+                                     <span className="font-black text-sm md:text-base truncate pr-2">{msg.authorName}</span>
+                                     <div className="flex items-center gap-2 shrink-0">
+                                        <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest">
                                           {msg.createdAt ? format(msg.createdAt.toDate(), 'MMM d, h:mm a') : 'Just now'}
                                         </span>
                                         {(isCreator || isMod) && (
                                           <Button 
                                             variant="ghost" 
                                             size="icon" 
-                                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-destructive rounded-full hover:bg-destructive/10"
+                                            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-destructive rounded-full hover:bg-destructive/10"
                                             onClick={() => handleDeleteAnnouncement(msg.id)}
                                           >
-                                            <Trash2 className="h-4 w-4" />
+                                            <Trash2 className="h-3.5 w-3.5" />
                                           </Button>
                                         )}
                                      </div>
                                   </div>
-                                  <div className="p-5 rounded-3xl rounded-tl-none bg-secondary/30 text-base font-medium leading-relaxed shadow-sm">
+                                  <div className="p-4 md:p-5 rounded-3xl rounded-tl-none bg-secondary/30 text-sm md:text-base font-medium leading-relaxed shadow-sm">
                                      {msg.content}
                                   </div>
                                </div>
                             </div>
                           ))
                         ) : (
-                          <div className="text-center py-24 text-muted-foreground italic space-y-4">
-                             <div className="bg-secondary/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto">
-                                <Megaphone className="h-10 w-10 opacity-20" />
+                          <div className="text-center py-20 text-muted-foreground italic space-y-4">
+                             <div className="bg-secondary/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                                <Megaphone className="h-8 w-8 opacity-20" />
                              </div>
-                             <p className="text-xs font-black opacity-30 tracking-[0.2em] uppercase">No broadcasts from leadership</p>
+                             <p className="text-[10px] font-black opacity-30 tracking-[0.2em] uppercase">No broadcasts from leadership</p>
                           </div>
                         )}
                       </div>
@@ -620,8 +633,8 @@ export default function GroupDashboardPage() {
                 <div className="absolute -bottom-10 -right-10 opacity-10">
                    <CheckCircle2 className="h-40 w-40" />
                 </div>
-                <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-white/10 p-8">
-                  <CardTitle className="text-2xl font-black flex items-center gap-2">
+                <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-white/10 p-6 md:p-8">
+                  <CardTitle className="text-xl md:text-2xl font-black flex items-center gap-2">
                     <CheckCircle2 className="h-6 w-6 text-primary" /> Objectives
                   </CardTitle>
                   {(isCreator || isMod) && (
@@ -631,7 +644,7 @@ export default function GroupDashboardPage() {
                           <Plus className="h-5 w-5" />
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="rounded-[2.5rem] border-none">
+                      <DialogContent className="rounded-[2.5rem] border-none max-w-md">
                         <DialogHeader>
                           <DialogTitle className="text-3xl font-black tracking-tighter">Set Guild Task</DialogTitle>
                         </DialogHeader>
@@ -680,7 +693,7 @@ export default function GroupDashboardPage() {
                     </Dialog>
                   )}
                 </CardHeader>
-                <CardContent className="p-8 space-y-8 relative">
+                <CardContent className="p-6 md:p-8 space-y-8 relative">
                    <div className="space-y-2">
                       <p className="text-xs text-white/50 font-black uppercase tracking-widest italic">Guild Strategy</p>
                       <p className="text-sm font-medium leading-relaxed text-white/80">
@@ -689,17 +702,23 @@ export default function GroupDashboardPage() {
                    </div>
                    
                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-white/5 rounded-3xl p-6 border border-white/10 text-center space-y-2">
-                         <h4 className="text-3xl font-black">{memberProfiles.length}</h4>
-                         <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Active Squad</p>
+                      <div className="bg-white/5 rounded-3xl p-5 md:p-6 border border-white/10 text-center space-y-2">
+                         <h4 className="text-2xl md:text-3xl font-black">{memberProfiles.length}</h4>
+                         <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest opacity-40">Active Squad</p>
                       </div>
-                      <div className="bg-white/5 rounded-3xl p-6 border border-white/10 text-center space-y-2">
-                         <h4 className="text-3xl font-black">{totalGuildMinutesToday}</h4>
-                         <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Squad Mins</p>
+                      <div className="bg-white/5 rounded-3xl p-5 md:p-6 border border-white/10 text-center space-y-2">
+                         <h4 className="text-2xl md:text-3xl font-black">{totalGuildMinutesToday}</h4>
+                         <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest opacity-40">Squad Mins</p>
                       </div>
                    </div>
 
-                   <Progress value={(memberProfiles.length / (group.memberLimit || 15)) * 100} className="h-2 bg-white/10" />
+                   <div className="space-y-2">
+                     <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-white/50">
+                        <span>Squad Capacity</span>
+                        <span>{memberProfiles.length}/{group.memberLimit || 15}</span>
+                     </div>
+                     <Progress value={(memberProfiles.length / (group.memberLimit || 15)) * 100} className="h-2 bg-white/10" />
+                   </div>
                    
                    <div className="p-5 bg-primary/10 rounded-3xl border border-primary/20">
                       <p className="text-xs font-bold leading-relaxed text-primary-foreground">
@@ -711,20 +730,20 @@ export default function GroupDashboardPage() {
 
               {/* Rules & Guidelines */}
               <Card className="rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
-                <CardHeader className="p-8 pb-4">
+                <CardHeader className="p-6 md:p-8 pb-4">
                   <CardTitle className="text-2xl font-black tracking-tighter">Guild Laws</CardTitle>
                 </CardHeader>
-                <CardContent className="p-8 pt-0 space-y-6">
+                <CardContent className="p-6 md:p-8 pt-0 space-y-6">
                   <div className="flex gap-4 items-start">
-                     <span className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-black shrink-0">01</span>
+                     <span className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-black shrink-0">01</span>
                      <p className="text-sm font-bold text-muted-foreground leading-relaxed">Maximum focus during sessions. No slackers allowed.</p>
                   </div>
                   <div className="flex gap-4 items-start">
-                     <span className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-black shrink-0">02</span>
+                     <span className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-black shrink-0">02</span>
                      <p className="text-sm font-bold text-muted-foreground leading-relaxed">Guild tasks must be completed within 24 hours of being pushed.</p>
                   </div>
                   <div className="flex gap-4 items-start">
-                     <span className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-black shrink-0">03</span>
+                     <span className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-black shrink-0">03</span>
                      <p className="text-sm font-bold text-muted-foreground leading-relaxed">Support your squad. Share resources in the guild library.</p>
                   </div>
                 </CardContent>
