@@ -62,6 +62,7 @@ import {
   Edit,
   Trash2,
   RefreshCw,
+  MoreVertical,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -184,30 +185,30 @@ export default function ProfilePage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-background text-foreground">
+      <div className="min-h-screen bg-background text-foreground pb-20 md:pb-10">
         <Header />
         <main className="p-4 md:p-8">
           <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 space-y-6">
-              <Card className="overflow-hidden border-none shadow-xl">
-                <CardHeader className="bg-primary text-primary-foreground pb-8">
-                  <CardTitle>Student Profile</CardTitle>
+              <Card className="overflow-hidden border-none shadow-xl rounded-[2rem]">
+                <CardHeader className="bg-primary text-primary-foreground pb-12">
+                  <CardTitle className="font-black">Student Profile</CardTitle>
                 </CardHeader>
-                <CardContent className="-mt-6">
+                <CardContent className="-mt-8">
                   {loading || userLoading ? (
                     <ProfileSkeleton />
                   ) : profile ? (
                     <form
                       onSubmit={handleSubmit(onSubmit)}
-                      className="space-y-6"
+                      className="space-y-6 bg-card rounded-[1.5rem] p-6 shadow-lg"
                     >
                       <div className="flex flex-col items-center space-y-4">
-                        <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
+                        <Avatar className="h-28 w-28 border-4 border-background shadow-xl">
                           <AvatarImage
                             src={profile.photoURL || ''}
                             alt={profile.displayName || ''}
                           />
-                          <AvatarFallback className="text-3xl bg-secondary">
+                          <AvatarFallback className="text-3xl bg-secondary font-black">
                             {getInitials(profile.displayName)}
                           </AvatarFallback>
                         </Avatar>
@@ -215,7 +216,7 @@ export default function ProfilePage() {
                           <h3 className="text-2xl font-black tracking-tight">
                             {profile.displayName}
                           </h3>
-                          <p className="text-muted-foreground text-sm">
+                          <p className="text-muted-foreground text-sm font-medium">
                             {profile.email}
                           </p>
                         </div>
@@ -223,29 +224,29 @@ export default function ProfilePage() {
 
                       <div className="grid gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="displayName">Display Name</Label>
-                          <Input id="displayName" {...register('displayName')} className="h-11" />
+                          <Label htmlFor="displayName" className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Display Name</Label>
+                          <Input id="displayName" {...register('displayName')} className="h-11 rounded-xl" />
                           {errors.displayName && (
-                            <p className="text-xs text-destructive">{errors.displayName.message}</p>
+                            <p className="text-xs text-destructive font-bold">{errors.displayName.message}</p>
                           )}
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="category">Category</Label>
+                            <Label htmlFor="category" className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Category</Label>
                             <Controller
                               name="category"
                               control={control}
                               render={({ field }) => (
                                 <Select onValueChange={field.onChange} value={field.value}>
-                                  <SelectTrigger className="h-11">
+                                  <SelectTrigger className="h-11 rounded-xl">
                                     <SelectValue placeholder="Select" />
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="SSC">SSC</SelectItem>
                                     <SelectItem value="HSC">HSC</SelectItem>
-                                    <SelectItem value="Admission 1st">Admission 1st Time</SelectItem>
-                                    <SelectItem value="Admission 2nd">Admission 2nd Time</SelectItem>
+                                    <SelectItem value="Admission 1st">Admission 1st</SelectItem>
+                                    <SelectItem value="Admission 2nd">Admission 2nd</SelectItem>
                                     <SelectItem value="Job Prep">Job Prep</SelectItem>
                                   </SelectContent>
                                 </Select>
@@ -253,13 +254,13 @@ export default function ProfilePage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="batch">Batch / Year</Label>
+                            <Label htmlFor="batch" className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Batch</Label>
                             <Controller
                               name="batch"
                               control={control}
                               render={({ field }) => (
                                 <Select onValueChange={field.onChange} value={field.value}>
-                                  <SelectTrigger className="h-11">
+                                  <SelectTrigger className="h-11 rounded-xl">
                                     <SelectValue placeholder="Year" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -274,21 +275,21 @@ export default function ProfilePage() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="photoURL">Photo URL</Label>
+                          <Label htmlFor="photoURL" className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Photo URL</Label>
                           <Input
                             id="photoURL"
                             placeholder="https://example.com/avatar.png"
                             {...register('photoURL')}
-                            className="h-11"
+                            className="h-11 rounded-xl"
                           />
                         </div>
                       </div>
 
-                      <Button type="submit" disabled={isSubmitting} className="w-full h-12 font-bold rounded-xl shadow-lg">
+                      <Button type="submit" disabled={isSubmitting} className="w-full h-12 font-black rounded-xl shadow-lg shadow-primary/20">
                         {isSubmitting && (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         )}
-                        Save Changes
+                        Save Profile
                       </Button>
                     </form>
                   ) : (
@@ -297,19 +298,22 @@ export default function ProfilePage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-none shadow-lg bg-[#1E293B] text-white">
-                <CardHeader>
-                  <CardTitle className="text-lg">Study Statistics</CardTitle>
+              <Card className="border-none shadow-lg bg-[#1E293B] text-white rounded-[2rem] overflow-hidden">
+                <CardHeader className="p-6">
+                  <CardTitle className="text-lg font-black flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-primary" />
+                    Focus Metrics
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="p-6 pt-0 space-y-6">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white/5 p-4 rounded-2xl">
-                      <p className="text-xl font-bold">{todayStudyMinutes}m</p>
-                      <p className="text-[10px] text-white/50 uppercase font-bold tracking-widest">Today</p>
+                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                      <p className="text-2xl font-black tracking-tight">{todayStudyMinutes}m</p>
+                      <p className="text-[10px] text-white/50 uppercase font-black tracking-widest">Today's Effort</p>
                     </div>
-                    <div className="bg-white/5 p-4 rounded-2xl">
-                      <p className="text-xl font-bold">{(totalStudyMinutes / 60).toFixed(1)}h</p>
-                      <p className="text-[10px] text-white/50 uppercase font-bold tracking-widest">Total</p>
+                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                      <p className="text-2xl font-black tracking-tight">{(totalStudyMinutes / 60).toFixed(1)}h</p>
+                      <p className="text-[10px] text-white/50 uppercase font-black tracking-widest">Total Hustle</p>
                     </div>
                   </div>
                 </CardContent>
@@ -317,14 +321,19 @@ export default function ProfilePage() {
             </div>
 
             <div className="lg:col-span-2 space-y-8">
-              <Card className="border-none shadow-xl rounded-[2rem]">
-                <CardHeader className="p-8 pb-0">
-                  <CardTitle className="text-2xl font-black">My Study Plan</CardTitle>
-                  <CardDescription>
-                    Organize your academic goals by adding subjects and chapters.
-                  </CardDescription>
+              <Card className="border-none shadow-xl rounded-[2.5rem] bg-card overflow-hidden">
+                <CardHeader className="p-8 pb-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <CardTitle className="text-3xl font-black tracking-tighter">My Study Plan</CardTitle>
+                      <CardDescription className="font-medium">
+                        Map out your subjects and chapters to dominate your exams.
+                      </CardDescription>
+                    </div>
+                    <SubjectManagementTrigger />
+                  </div>
                 </CardHeader>
-                <CardContent className="p-8">
+                <CardContent className="p-4 md:p-8">
                   <SubjectManagement />
                 </CardContent>
               </Card>
@@ -336,19 +345,35 @@ export default function ProfilePage() {
   );
 }
 
+function SubjectManagementTrigger() {
+    const { user } = useUser();
+    const firestore = useFirestore();
+    return (
+        <CrudDialog
+            trigger={
+                <Button className="rounded-full shadow-lg h-12 px-6 font-black shrink-0">
+                    <Plus className="mr-2 h-5 w-5" /> Subject
+                </Button>
+            }
+            title="Add New Subject"
+            onSubmit={async (name) => addSubject(firestore, user!.uid, name)}
+        />
+    )
+}
+
 function ProfileSkeleton() {
     return (
         <div className="space-y-4">
             <div className="flex flex-col items-center space-y-4">
-                <Skeleton className="h-24 w-24 rounded-full" />
+                <Skeleton className="h-28 w-28 rounded-full" />
                 <div className="space-y-2">
                     <Skeleton className="h-4 w-[150px]" />
                     <Skeleton className="h-4 w-[200px]" />
                 </div>
             </div>
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-11 w-full rounded-xl" />
+            <Skeleton className="h-11 w-full rounded-xl" />
+            <Skeleton className="h-11 w-full rounded-xl" />
         </div>
     )
 }
@@ -369,38 +394,28 @@ function SubjectManagement() {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-12 w-full" />
+      <div className="space-y-6">
+        <Skeleton className="h-24 w-full rounded-3xl" />
+        <Skeleton className="h-24 w-full rounded-3xl" />
+        <Skeleton className="h-24 w-full rounded-3xl" />
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="mb-6 flex justify-end">
-        <CrudDialog
-          trigger={
-            <Button className="rounded-full shadow-lg h-11 px-6">
-              <Plus className="mr-2 h-4 w-4" /> Add Subject
-            </Button>
-          }
-          title="Add New Subject"
-          onSubmit={async (name) => addSubject(firestore, user!.uid, name)}
-        />
-      </div>
+    <div className="space-y-6">
       {subjects && subjects.length > 0 ? (
-        <Accordion type="multiple" className="w-full space-y-4">
+        <Accordion type="multiple" className="w-full space-y-6">
           {subjects.map((subject) => (
             <SubjectItem key={subject.id} subject={subject} />
           ))}
         </Accordion>
       ) : (
-        <div className="text-center py-20 border-2 border-dashed rounded-[2rem] bg-secondary/20">
-          <Book className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
-          <p className="text-muted-foreground font-medium">
-            No subjects added yet. Start by adding your first subject.
+        <div className="text-center py-24 border-2 border-dashed rounded-[3rem] bg-secondary/10">
+          <Book className="mx-auto h-16 w-16 text-muted-foreground/20 mb-6" />
+          <h3 className="text-xl font-bold mb-2">Your shelf is empty</h3>
+          <p className="text-muted-foreground font-medium max-w-xs mx-auto">
+            Add your first subject to start building your customized study plan.
           </p>
         </div>
       )}
@@ -436,28 +451,37 @@ function SubjectItem({ subject }: { subject: any }) {
   }, [chapters]);
 
   return (
-    <Card className="border-none bg-secondary/30 overflow-hidden rounded-2xl">
+    <Card className="border-none bg-secondary/20 overflow-hidden rounded-[2rem] shadow-sm hover:shadow-md transition-all duration-300">
       <AccordionItem value={subject.id} className="border-0">
-        <div className="flex items-center p-4 md:p-6">
+        <div className="flex items-center p-6 md:p-8">
           <AccordionTrigger className="hover:no-underline flex-1 py-0">
-            <div className="flex flex-col gap-3 w-full text-left">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                        <Book className="h-5 w-5 text-primary" />
-                    </div>
-                    <span className="font-bold text-xl tracking-tight">{subject.name}</span>
-                </div>
+            <div className="flex flex-col gap-4 w-full text-left">
                 <div className="flex items-center gap-4">
-                    <Progress value={progress} className="w-32 h-2" />
-                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{Math.round(progress)}% done</span>
+                    <div className="p-3 bg-primary/10 rounded-2xl">
+                        <Book className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="space-y-0.5">
+                        <span className="font-black text-2xl tracking-tight block leading-tight">{subject.name}</span>
+                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                            {chapters?.length || 0} Chapters
+                        </span>
+                    </div>
+                </div>
+                <div className="flex items-center gap-6">
+                    <div className="flex-1 max-w-[240px]">
+                        <Progress value={progress} className="h-2.5 bg-background" />
+                    </div>
+                    <Badge variant="secondary" className="font-black text-[10px] uppercase tracking-widest px-3 h-6">
+                        {Math.round(progress)}% Mastery
+                    </Badge>
                 </div>
             </div>
           </AccordionTrigger>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2 ml-4">
             <CrudDialog
               trigger={
-                <Button variant="ghost" size="icon" className="h-10 w-10">
-                  <Edit className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl bg-background/50 hover:bg-background shadow-sm">
+                  <Edit className="h-5 w-5 text-muted-foreground" />
                 </Button>
               }
               title="Edit Subject"
@@ -474,13 +498,13 @@ function SubjectItem({ subject }: { subject: any }) {
             />
           </div>
         </div>
-        <AccordionContent className="px-6 pb-6">
-          <div className="border-t border-secondary-foreground/10 pt-6">
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Chapters</h4>
+        <AccordionContent className="px-6 md:px-8 pb-8">
+          <div className="border-t border-muted/50 pt-8 space-y-6">
+            <div className="flex justify-between items-center">
+              <h4 className="font-black text-xs uppercase tracking-[0.2em] text-muted-foreground">Detailed Syllabus</h4>
               <CrudDialog
                 trigger={
-                  <Button variant="outline" size="sm" className="rounded-full">
+                  <Button variant="outline" size="sm" className="rounded-full font-bold h-9 px-4 border-primary/20 hover:border-primary/40">
                     <Plus className="mr-2 h-4 w-4" /> Add Chapter
                   </Button>
                 }
@@ -491,9 +515,9 @@ function SubjectItem({ subject }: { subject: any }) {
               />
             </div>
             {loading ? (
-              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-12 w-full rounded-2xl" />
             ) : chapters && chapters.length > 0 ? (
-                <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {chapters.map((chapter) => (
                     <ChapterItem
                         key={chapter.id}
@@ -503,9 +527,11 @@ function SubjectItem({ subject }: { subject: any }) {
                     ))}
               </ul>
             ) : (
-              <p className="text-center text-sm text-muted-foreground py-8 bg-background/50 rounded-xl italic">
-                No chapters added to this subject yet.
-              </p>
+              <div className="text-center py-12 bg-background/50 rounded-3xl border-2 border-dashed border-muted/50">
+                <p className="text-sm font-bold text-muted-foreground/60 italic">
+                  No chapters defined for this subject.
+                </p>
+              </div>
             )}
           </div>
         </AccordionContent>
@@ -526,7 +552,7 @@ function ChapterItem({ subjectId, chapter }: { subjectId: string; chapter: any }
         await updateChapterStatus(firestore, user.uid, subjectId, chapter.id, newStatus);
         toast({
           title: `Status: ${newStatus}`,
-          description: completed ? "Chapter completed! 🚀" : "Status updated.",
+          description: completed ? "Chapter conquered! 🏆" : "Chapter status updated.",
         });
       } catch (error) {
         toast({ variant: 'destructive', title: 'Error updating status' });
@@ -543,95 +569,120 @@ function ChapterItem({ subjectId, chapter }: { subjectId: string; chapter: any }
           chapter.id,
           'revision'
         );
-        toast({ title: 'Chapter marked for revision' });
+        toast({ title: 'Marked for Revision' });
       } catch (error) {
         toast({ variant: 'destructive', title: 'Error setting to revision' });
       }
     };
 
-    const getStatusBadgeVariant = (status: string) => {
+    const getStatusStyles = (status: string) => {
         switch (status) {
           case 'completed':
-            return 'default';
+            return 'bg-success/5 border-success/20';
           case 'revision':
-            return 'secondary';
+            return 'bg-orange-500/5 border-orange-500/20';
           case 'pending':
           default:
-            return 'outline';
+            return 'bg-card border-transparent';
         }
-      };
+    };
+
+    const getBadgeVariant = (status: string) => {
+        switch (status) {
+            case 'completed': return 'default';
+            case 'revision': return 'secondary';
+            default: return 'outline';
+        }
+    }
   
     return (
-      <li className="flex items-center justify-between p-3 rounded-xl hover:bg-white transition-all group bg-background/60 border border-transparent hover:border-primary/20 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Checkbox
-            id={`chapter-${chapter.id}`}
-            checked={chapter.status === 'completed'}
-            onCheckedChange={(checked) => handleStatusChange(Boolean(checked))}
-            className="rounded-full"
-          />
-          <label
-            htmlFor={`chapter-${chapter.id}`}
-            className="flex flex-col cursor-pointer"
-          >
-            <span className={cn(
-                "font-bold text-sm",
-                chapter.status === 'completed' ? 'line-through text-muted-foreground' : ''
-            )}>{chapter.name}</span>
-            {chapter.revision_count > 0 && (
-              <span className="text-[10px] text-primary font-black uppercase">
-                Revision #{chapter.revision_count}
-              </span>
-            )}
-          </label>
+      <li className={cn(
+          "flex flex-col gap-4 p-5 rounded-[1.5rem] border transition-all duration-300 group shadow-sm hover:shadow-md",
+          getStatusStyles(chapter.status)
+      )}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-4">
+            <Checkbox
+              id={`chapter-${chapter.id}`}
+              checked={chapter.status === 'completed'}
+              onCheckedChange={(checked) => handleStatusChange(Boolean(checked))}
+              className="h-6 w-6 rounded-full border-2"
+            />
+            <label
+              htmlFor={`chapter-${chapter.id}`}
+              className="flex flex-col cursor-pointer min-w-0"
+            >
+              <span className={cn(
+                  "font-black text-base tracking-tight truncate",
+                  chapter.status === 'completed' ? 'line-through text-muted-foreground/60' : 'text-foreground'
+              )}>{chapter.name}</span>
+              <div className="flex items-center gap-2 mt-1">
+                 <Badge variant={getBadgeVariant(chapter.status)} className="capitalize text-[9px] h-4 font-black px-1.5 py-0">
+                    {chapter.status}
+                 </Badge>
+                 {chapter.revision_count > 0 && (
+                    <span className="text-[9px] text-primary font-black uppercase tracking-wider">
+                        Rev #{chapter.revision_count}
+                    </span>
+                 )}
+              </div>
+            </label>
+          </div>
+          <div className="flex items-center gap-1.5">
+             <div className="hidden group-hover:flex items-center gap-1">
+                <CrudDialog
+                    trigger={
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-background">
+                        <Edit className="h-4 w-4" />
+                    </Button>
+                    }
+                    title="Edit Chapter"
+                    initialValue={chapter.name}
+                    onSubmit={async (name) =>
+                        updateChapter(firestore, user!.uid, subjectId, chapter.id, name)
+                    }
+                />
+                <DeleteDialog
+                    onDelete={async () =>
+                        deleteChapter(firestore, user!.uid, subjectId, chapter.id)
+                    }
+                    itemName={chapter.name}
+                />
+             </div>
+             {chapter.status === 'completed' && (
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                        <Button
+                            variant="secondary"
+                            size="icon"
+                            onClick={handleSetToRevision}
+                            className="h-8 w-8 rounded-lg text-primary shadow-sm"
+                        >
+                            <RefreshCw className="h-4 w-4" />
+                        </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                        <p className="font-bold">Mark for Revision</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+             )}
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <Badge variant={getStatusBadgeVariant(chapter.status)} className="capitalize text-[10px] h-5 px-1.5">
-            {chapter.status}
-          </Badge>
-  
-          {chapter.status === 'completed' && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleSetToRevision}
-                    className="h-8 w-8 text-primary"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Mark for Revision</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-  
-          <CrudDialog
-            trigger={
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 opacity-0 group-hover:opacity-100"
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-            }
-            title="Edit Chapter"
-            initialValue={chapter.name}
-            onSubmit={async (name) =>
-              updateChapter(firestore, user!.uid, subjectId, chapter.id, name)
-            }
-          />
-          <DeleteDialog
-            onDelete={async () =>
-              deleteChapter(firestore, user!.uid, subjectId, chapter.id)
-            }
-            itemName={chapter.name}
-          />
+        
+        <div className="flex items-center justify-between pt-2 border-t border-muted/50">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Clock className="h-3.5 w-3.5" />
+                <span className="text-[10px] font-black uppercase tracking-widest">
+                    {chapter.time_spent || 0}m Studied
+                </span>
+            </div>
+            {chapter.last_revision_date && (
+                <span className="text-[9px] text-muted-foreground/60 font-bold italic">
+                    Last Rev: {new Date(chapter.last_revision_date.seconds * 1000).toLocaleDateString()}
+                </span>
+            )}
         </div>
       </li>
     );
@@ -661,7 +712,7 @@ function CrudDialog({
       await onSubmit(name.trim());
       toast({
         title: "Success",
-        description: `${title.split(' ')[1]} has been saved.`,
+        description: `${title.split(' ')[1]} saved successfully.`,
       });
       setName('');
       setOpen(false);
@@ -681,30 +732,31 @@ function CrudDialog({
       <DialogTrigger asChild onClick={() => setName(initialValue)}>
         {trigger}
       </DialogTrigger>
-      <DialogContent className="rounded-[2rem]">
+      <DialogContent className="rounded-[2.5rem] p-8">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle className="text-2xl font-black">{title}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6 pt-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
+        <form onSubmit={handleSubmit} className="space-y-8 pt-4">
+          <div className="space-y-3">
+            <Label htmlFor="name" className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Name</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="h-11"
+              className="h-14 rounded-2xl text-lg font-bold"
+              placeholder="e.g. Physics, Calculus, etc."
               autoFocus
             />
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-3">
             <DialogClose asChild>
-              <Button type="button" variant="secondary">
+              <Button type="button" variant="ghost" className="font-bold h-12 rounded-xl">
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={loading} className="font-bold">
+            <Button type="submit" disabled={loading} className="font-black h-12 rounded-xl px-8 shadow-lg shadow-primary/20">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
+              Save Item
             </Button>
           </DialogFooter>
         </form>
@@ -728,7 +780,7 @@ function DeleteDialog({
     setLoading(true);
     try {
       await onDelete();
-      toast({ title: "Deleted", description: `${itemName} has been removed.` });
+      toast({ title: "Deleted", description: `${itemName} removed from plan.` });
       setOpen(false);
     } catch (error: any) {
       toast({
@@ -744,22 +796,22 @@ function DeleteDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-10 w-10 text-destructive/50 hover:text-destructive">
-          <Trash2 className="h-4 w-4" />
+        <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl text-destructive/40 hover:text-destructive hover:bg-destructive/5 transition-colors">
+          <Trash2 className="h-5 w-5" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="rounded-[2rem]">
+      <DialogContent className="rounded-[2.5rem] p-8">
         <DialogHeader>
-          <DialogTitle>Delete Confirmation</DialogTitle>
+          <DialogTitle className="text-2xl font-black text-destructive">Delete Entry</DialogTitle>
         </DialogHeader>
-        <div className="py-4">
-            <p className="text-muted-foreground">
-            Are you sure you want to delete <strong>{itemName}</strong>? This will permanently remove all associated data.
+        <div className="py-6">
+            <p className="text-muted-foreground font-medium text-lg leading-relaxed">
+            Are you sure you want to remove <strong className="text-foreground">{itemName}</strong>? This will permanently erase all progress data for this entry.
             </p>
         </div>
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-3">
           <DialogClose asChild>
-            <Button type="button" variant="secondary">
+            <Button type="button" variant="secondary" className="font-bold h-12 rounded-xl">
               Cancel
             </Button>
           </DialogClose>
@@ -767,10 +819,10 @@ function DeleteDialog({
             variant="destructive"
             onClick={handleDelete}
             disabled={loading}
-            className="font-bold"
+            className="font-black h-12 rounded-xl px-8 shadow-lg shadow-destructive/20"
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Yes, Delete
+            Confirm Delete
           </Button>
         </DialogFooter>
       </DialogContent>
