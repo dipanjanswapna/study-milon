@@ -94,7 +94,8 @@ export default function TodoPage() {
   // Form State
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<string | null>(null);
-  const [plannedDuration, setPlannedDuration] = useState<string>('25');
+  const [plannedHours, setPlannedHours] = useState<string>('0');
+  const [plannedMinutes, setPlannedMinutes] = useState<string>('25');
 
   // Subjects & Chapters
   const subjectsQuery = useMemo(() => {
@@ -117,6 +118,13 @@ export default function TodoPage() {
 
     if (!subject || !chapter) return;
 
+    const totalMinutes = (parseInt(plannedHours, 10) || 0) * 60 + (parseInt(plannedMinutes, 10) || 0);
+
+    if (totalMinutes <= 0) {
+      toast({ variant: 'destructive', title: 'Duration must be greater than 0' });
+      return;
+    }
+
     setLoading(true);
     try {
       await addStudyTask(firestore, user.uid, {
@@ -125,12 +133,13 @@ export default function TodoPage() {
         subjectName: subject.name,
         chapterName: chapter.name,
         date: dateStr,
-        duration: parseInt(plannedDuration, 10) || 25,
+        duration: totalMinutes,
       });
       setIsDialogOpen(false);
       setSelectedSubject(null);
       setSelectedChapter(null);
-      setPlannedDuration('25');
+      setPlannedHours('0');
+      setPlannedMinutes('25');
       toast({ title: 'Task added successfully!' });
     } catch (error) {
       toast({ variant: 'destructive', title: 'Error adding task' });
@@ -225,6 +234,13 @@ export default function TodoPage() {
     return <div>{rows}</div>;
   };
 
+  const formatDurationDisplay = (totalMinutes: number) => {
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  };
+
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-background text-foreground">
@@ -316,17 +332,35 @@ export default function TodoPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label>Planned Duration (Minutes)</Label>
-                        <div className="relative">
-                          <Input 
-                            type="number" 
-                            min="1" 
-                            max="300" 
-                            value={plannedDuration} 
-                            onChange={(e) => setPlannedDuration(e.target.value)}
-                            className="pr-10"
-                          />
-                          <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Label>Planned Duration</Label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <Label className="text-[10px] text-muted-foreground uppercase font-bold">Hours</Label>
+                            <div className="relative">
+                              <Input 
+                                type="number" 
+                                min="0" 
+                                max="23" 
+                                value={plannedHours} 
+                                onChange={(e) => setPlannedHours(e.target.value)}
+                                className="pr-10"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[10px] text-muted-foreground uppercase font-bold">Minutes</Label>
+                            <div className="relative">
+                              <Input 
+                                type="number" 
+                                min="0" 
+                                max="59" 
+                                value={plannedMinutes} 
+                                onChange={(e) => setPlannedMinutes(e.target.value)}
+                                className="pr-10"
+                              />
+                              <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                            </div>
+                          </div>
                         </div>
                         <p className="text-[10px] text-muted-foreground">This will automatically set your study timer.</p>
                       </div>
@@ -379,7 +413,7 @@ export default function TodoPage() {
                              <p className="text-[9px] font-black text-primary uppercase tracking-widest truncate">{task.subjectName}</p>
                              <div className="flex items-center gap-1 text-muted-foreground">
                                 <Clock className="h-2.5 w-2.5" />
-                                <span className="text-[9px] font-bold">{task.duration}m</span>
+                                <span className="text-[9px] font-bold">{formatDurationDisplay(task.duration)}</span>
                              </div>
                           </div>
                           <h4 className={cn(
