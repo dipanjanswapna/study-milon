@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { Pie, PieChart } from 'recharts';
+import { Pie, PieChart, Cell, ResponsiveContainer } from 'recharts';
 import {
   ChartContainer,
   ChartTooltip,
@@ -32,26 +32,40 @@ export function SubjectDistributionChart({
 
   if (!data || data.length === 0) {
     return (
-      <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-        <p>No study data to display yet.</p>
+      <div className="h-[300px] flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-xl m-4">
+        <p className="text-sm font-medium">Start studying to see distribution.</p>
       </div>
     );
   }
 
   return (
-    <div className="h-[250px]">
+    <div className="h-[300px] w-full">
       <ChartContainer
         config={chartConfig}
         className="w-full h-full"
       >
-        <PieChart>
-          <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
-          <Pie data={data} dataKey="value" nameKey="name" label />
-          <ChartLegend
-            content={<ChartLegendContent nameKey="name" />}
-            className="-mt-4"
-          />
-        </PieChart>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
+            <Pie 
+              data={data} 
+              dataKey="value" 
+              nameKey="name" 
+              innerRadius={60} 
+              outerRadius={80} 
+              paddingAngle={5}
+              stroke="none"
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={`hsl(var(--chart-${(index % 5) + 1}))`} />
+              ))}
+            </Pie>
+            <ChartLegend
+              content={<ChartLegendContent nameKey="name" />}
+              className="flex-wrap pt-4"
+            />
+          </PieChart>
+        </ResponsiveContainer>
       </ChartContainer>
     </div>
   );
