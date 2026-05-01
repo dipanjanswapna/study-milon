@@ -2,12 +2,12 @@
 
 import React, { useMemo } from 'react';
 import { useCollection, useUser, useFirestore } from '@/firebase';
-import { collection, query, orderBy, where } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import type { StudySession } from '@/firebase/firestore/studySessions';
 import { StudyActivityChart } from './StudyActivityChart';
 import { SubjectDistributionChart } from './SubjectDistributionChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, PieChart, BarChart } from 'lucide-react';
+import { Clock, PieChart, BarChart, Trophy } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { subDays, format, isAfter, startOfDay } from 'date-fns';
 
@@ -68,73 +68,67 @@ export function AnalyticsDashboard() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <Skeleton className="h-6 w-1/3" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-10 w-1/2" />
-          </CardContent>
-        </Card>
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <Skeleton className="h-6 w-1/4" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-[250px] w-full" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-1/2" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-[250px] w-full" />
-          </CardContent>
-        </Card>
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Skeleton className="h-40 col-span-full" />
+          <Skeleton className="h-80 md:col-span-2" />
+          <Skeleton className="h-80" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <h2 className="text-2xl font-bold">Your Analytics</h2>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-3 shadow-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock /> Total Study Time
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold tracking-tight">Your Progress</h2>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
+        {/* Total Stats Card */}
+        <Card className="md:col-span-6 shadow-sm border-primary/10 overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <Trophy size={80} className="text-primary" />
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground uppercase tracking-wider">
+              <Clock className="h-4 w-4" /> Total Study Time
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-5xl font-bold">
-              {totalMinutes.toLocaleString()}
-            </p>
-            <p className="text-muted-foreground">
-              minutes logged on your way to a million!
+            <div className="flex flex-baseline gap-2">
+              <span className="text-5xl font-extrabold text-primary">
+                {totalMinutes.toLocaleString()}
+              </span>
+              <span className="text-muted-foreground font-medium">minutes</span>
+            </div>
+            <p className="text-sm text-muted-foreground mt-2">
+              Keep pushing! You are {(totalMinutes / 1000000 * 100).toFixed(4)}% of the way to a million.
             </p>
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2 shadow-md">
+        {/* Weekly Activity Chart */}
+        <Card className="md:col-span-4 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart /> Weekly Activity (Last 7 Days)
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <BarChart className="h-5 w-5 text-primary" /> Weekly Activity
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-2 pb-2">
             <StudyActivityChart data={weeklyData} />
           </CardContent>
         </Card>
 
-        <Card className="shadow-md">
+        {/* Subject Breakdown Chart */}
+        <Card className="md:col-span-2 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PieChart /> Subject Distribution
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <PieChart className="h-5 w-5 text-primary" /> Subjects
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-2 pb-2">
             <SubjectDistributionChart data={subjectData} />
           </CardContent>
         </Card>
