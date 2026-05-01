@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -15,7 +14,7 @@ import { subDays, format, isAfter, startOfDay, differenceInDays } from 'date-fns
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 
-type FilterType = 'daily' | 'weekly' | 'monthly' | 'total';
+type FilterType = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export function AnalyticsDashboard() {
   const { user } = useUser();
@@ -61,16 +60,16 @@ export function AnalyticsDashboard() {
       const thirtyDaysAgo = startOfDay(subDays(now, 29));
       filteredSessions = sessions.filter(s => s.createdAt && isAfter(s.createdAt.toDate(), thirtyDaysAgo));
       chartDays = 30;
-    } else if (filter === 'total') {
-      filteredSessions = sessions;
-      const firstSession = sessions[sessions.length - 1];
-      chartDays = firstSession?.createdAt ? Math.max(7, differenceInDays(now, firstSession.createdAt.toDate()) + 1) : 7;
+    } else if (filter === 'yearly') {
+      const yearAgo = startOfDay(subDays(now, 364));
+      filteredSessions = sessions.filter(s => s.createdAt && isAfter(s.createdAt.toDate(), yearAgo));
+      chartDays = 14; // We'll show the last 14 days of activity in the chart for yearly view to keep it readable
     }
 
     const totalMinutes = sessions.reduce((acc, s) => acc + s.duration, 0);
     const filterTotalMinutes = filteredSessions.reduce((acc, s) => acc + s.duration, 0);
 
-    // Activity Chart Data
+    // Activity Chart Data - Logic depends on filter
     const dailyMinutes: Record<string, number> = {};
     for (const session of filteredSessions) {
       if (!session.createdAt) continue;
@@ -78,12 +77,11 @@ export function AnalyticsDashboard() {
       dailyMinutes[day] = (dailyMinutes[day] || 0) + session.duration;
     }
 
-    const displayDays = filter === 'total' ? 14 : chartDays;
-    const chartData = Array.from({ length: displayDays })
+    const chartData = Array.from({ length: chartDays })
       .map((_, i) => {
         const date = subDays(now, i);
         const dayKey = format(date, 'yyyy-MM-dd');
-        const displayLabel = filter === 'monthly' || filter === 'total' ? format(date, 'd MMM') : format(date, 'E');
+        const displayLabel = filter === 'monthly' || filter === 'yearly' ? format(date, 'd MMM') : format(date, 'E');
         return { date: displayLabel, minutes: dailyMinutes[dayKey] || 0 };
       })
       .reverse();
@@ -146,7 +144,7 @@ export function AnalyticsDashboard() {
             <TabsTrigger value="daily">Daily</TabsTrigger>
             <TabsTrigger value="weekly">Weekly</TabsTrigger>
             <TabsTrigger value="monthly">Monthly</TabsTrigger>
-            <TabsTrigger value="total">Total</TabsTrigger>
+            <TabsTrigger value="yearly">Yearly</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
