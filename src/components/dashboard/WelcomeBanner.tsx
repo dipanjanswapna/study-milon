@@ -64,9 +64,6 @@ export function WelcomeBanner() {
               Welcome back
               {user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}!
             </h2>
-            <p className="text-sm md:text-lg text-white/80 max-w-lg font-medium leading-relaxed">
-              Success is built one session at a time. Ready to dive back in and crush your goals?
-            </p>
           </div>
         </div>
       </div>
