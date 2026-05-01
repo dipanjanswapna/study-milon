@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -15,7 +16,7 @@ import {
   Tabs,
   TabsList,
   TabsTrigger,
-} from '@/components/ui/tabs';
+} from '@/tabs';
 import {
   Select,
   SelectContent,
@@ -31,7 +32,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 
 type TimeFilter = 'daily' | 'weekly' | 'monthly' | 'yearly';
-type CategoryFilter = 'All' | 'SSC' | 'HSC' | 'Admission' | 'Job Prep';
+type CategoryFilter = 'All' | 'SSC' | 'HSC' | 'Admission 1st' | 'Admission 2nd' | 'Job Prep';
+
+const YEARS = Array.from({ length: 18 }, (_, i) => (2023 + i).toString());
 
 export default function LeaderboardPage() {
   const { user } = useUser();
@@ -41,35 +44,28 @@ export default function LeaderboardPage() {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('All');
   const [batchFilter, setBatchFilter] = useState<string>('All');
 
-  // Fetch top 100 based on total study minutes to avoid index errors with multiple orderBys
-  // We'll handle the 'daily' sort and specific filters on the client side for maximum reliability
+  // Fetch top performers
   const leaderboardQuery = useMemo(() => {
+    const sortField = timeFilter === 'daily' ? 'daily_study_minutes' : 'total_study_minutes';
     return query(
       collection(firestore, 'users'),
-      orderBy('total_study_minutes', 'desc'),
+      orderBy(sortField, 'desc'),
       limit(100)
     );
-  }, [firestore]);
+  }, [firestore, timeFilter]);
 
   const { data: allRankings, loading } = useCollection(leaderboardQuery);
 
-  // Apply filters and specific time-sort client-side
+  // Apply filters client-side
   const rankings = useMemo(() => {
     if (!allRankings) return [];
     
-    let filtered = allRankings.filter(u => {
+    return allRankings.filter(u => {
       const matchCategory = categoryFilter === 'All' || u.category === categoryFilter;
       const matchBatch = batchFilter === 'All' || u.batch === batchFilter;
       return matchCategory && matchBatch;
-    });
-
-    // If daily is selected, sort the current set by daily minutes
-    if (timeFilter === 'daily') {
-      filtered = [...filtered].sort((a, b) => (b.daily_study_minutes || 0) - (a.daily_study_minutes || 0));
-    }
-
-    return filtered.slice(0, 50); // Show top 50 within the filtered set
-  }, [allRankings, categoryFilter, batchFilter, timeFilter]);
+    }).slice(0, 50);
+  }, [allRankings, categoryFilter, batchFilter]);
 
   const top3 = rankings?.slice(0, 3) || [];
 
@@ -101,21 +97,37 @@ export default function LeaderboardPage() {
                 <p className="text-muted-foreground text-sm font-medium">Ranked by actual study hours. No points, just focus.</p>
             </div>
             
-            <div className="flex flex-wrap items-center justify-center gap-3 w-full md:w-auto">
-                <div className="flex items-center gap-2 bg-secondary/50 p-1 rounded-xl border w-full sm:w-auto">
-                    <Filter className="h-4 w-4 ml-2 text-muted-foreground hidden sm:block" />
-                    <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as any)}>
-                        <SelectTrigger className="w-full sm:w-[130px] h-9 border-none bg-transparent focus:ring-0">
-                            <SelectValue placeholder="Category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="All">All Categories</SelectItem>
-                            <SelectItem value="SSC">SSC</SelectItem>
-                            <SelectItem value="HSC">HSC</SelectItem>
-                            <SelectItem value="Admission">Admission</SelectItem>
-                            <SelectItem value="Job Prep">Job Prep</SelectItem>
-                        </SelectContent>
-                    </Select>
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="flex items-center gap-2 bg-secondary/50 p-1 rounded-xl border w-full sm:w-auto">
+                        <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as any)}>
+                            <SelectTrigger className="w-full sm:w-[150px] h-9 border-none bg-transparent focus:ring-0">
+                                <SelectValue placeholder="Category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="All">All Categories</SelectItem>
+                                <SelectItem value="SSC">SSC</SelectItem>
+                                <SelectItem value="HSC">HSC</SelectItem>
+                                <SelectItem value="Admission 1st">Admission 1st</SelectItem>
+                                <SelectItem value="Admission 2nd">Admission 2nd</SelectItem>
+                                <SelectItem value="Job Prep">Job Prep</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="flex items-center gap-2 bg-secondary/50 p-1 rounded-xl border w-full sm:w-auto">
+                        <Select value={batchFilter} onValueChange={setBatchFilter}>
+                            <SelectTrigger className="w-full sm:w-[110px] h-9 border-none bg-transparent focus:ring-0">
+                                <SelectValue placeholder="Batch" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="All">All Batches</SelectItem>
+                                {YEARS.map(year => (
+                                  <SelectItem key={year} value={year}>{year}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
 
                 <Tabs value={timeFilter} onValueChange={(v) => setTimeFilter(v as any)} className="w-full sm:w-auto">
@@ -138,7 +150,7 @@ export default function LeaderboardPage() {
           ) : rankings && rankings.length > 0 ? (
             <div className="space-y-10">
               
-              {/* Top 3 Podium - Responsive Grid */}
+              {/* Top 3 Podium */}
               <div className="grid grid-cols-3 items-end gap-2 md:gap-8 px-0 md:px-10 pt-12 md:pt-16">
                 {/* 2nd Place */}
                 <div className="flex flex-col items-center gap-2 md:gap-4 pb-2 md:pb-4 order-1">
@@ -262,9 +274,6 @@ export default function LeaderboardPage() {
                                                 <Badge variant="secondary" className="text-[8px] md:text-[10px] font-bold tracking-tighter uppercase px-1.5 h-4 md:h-5">
                                                     {contender.category || 'SSC'} {contender.batch || ''}
                                                 </Badge>
-                                                <span className="text-[9px] md:text-[11px] text-muted-foreground font-medium hidden sm:inline">
-                                                    Consistency: High 🔥
-                                                </span>
                                             </div>
                                         </div>
                                     </div>

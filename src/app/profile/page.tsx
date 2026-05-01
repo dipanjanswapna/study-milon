@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -74,11 +75,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 const profileSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
   photoURL: z.string().url('Please enter a valid URL.').or(z.literal('')),
-  category: z.enum(['SSC', 'HSC', 'Admission', 'Job Prep']),
+  category: z.enum(['SSC', 'HSC', 'Admission 1st', 'Admission 2nd', 'Job Prep']),
   batch: z.string().min(1, 'Batch is required.'),
 });
 
@@ -96,6 +98,9 @@ type UserProfile = {
   batch?: string;
   points?: number;
 };
+
+// Generate years from 2023 to 2040 for the batch selection
+const YEARS = Array.from({ length: 18 }, (_, i) => (2023 + i).toString());
 
 export default function ProfilePage() {
   const { user, loading: userLoading } = useUser();
@@ -115,7 +120,7 @@ export default function ProfilePage() {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       category: 'HSC',
-      batch: '26',
+      batch: '2026',
     }
   });
 
@@ -130,7 +135,7 @@ export default function ProfilePage() {
             displayName: data.displayName || '',
             photoURL: data.photoURL || '',
             category: (data.category as any) || 'HSC',
-            batch: data.batch || '',
+            batch: data.batch || '2026',
           });
         }
         setLoading(false);
@@ -246,7 +251,8 @@ export default function ProfilePage() {
                                   <SelectContent>
                                     <SelectItem value="SSC">SSC</SelectItem>
                                     <SelectItem value="HSC">HSC</SelectItem>
-                                    <SelectItem value="Admission">Admission</SelectItem>
+                                    <SelectItem value="Admission 1st">Admission 1st Time</SelectItem>
+                                    <SelectItem value="Admission 2nd">Admission 2nd Time</SelectItem>
                                     <SelectItem value="Job Prep">Job Prep</SelectItem>
                                   </SelectContent>
                                 </Select>
@@ -255,7 +261,22 @@ export default function ProfilePage() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="batch">Batch / Year</Label>
-                            <Input id="batch" {...register('batch')} placeholder="e.g. 26" className="h-11" />
+                            <Controller
+                              name="batch"
+                              control={control}
+                              render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <SelectTrigger className="h-11">
+                                    <SelectValue placeholder="Year" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {YEARS.map(year => (
+                                      <SelectItem key={year} value={year}>{year}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            />
                           </div>
                         </div>
 

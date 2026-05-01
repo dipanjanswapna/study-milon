@@ -1,3 +1,4 @@
+
 import {
   doc,
   setDoc,
@@ -8,7 +9,7 @@ import {
 } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 
-export type AcademicCategory = 'SSC' | 'HSC' | 'Admission' | 'Job Prep';
+export type AcademicCategory = 'SSC' | 'HSC' | 'Admission 1st' | 'Admission 2nd' | 'Job Prep';
 
 export type UserProfile = {
   uid: string;

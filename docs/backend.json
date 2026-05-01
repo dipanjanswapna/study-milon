@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -51,7 +52,13 @@
         },
         "category": {
           "type": "string",
-          "enum": ["SSC", "HSC", "Admission", "Job Prep"]
+          "enum": [
+            "SSC",
+            "HSC",
+            "Admission 1st",
+            "Admission 2nd",
+            "Job Prep"
+          ]
         },
         "batch": {
           "type": "string"
@@ -130,16 +137,40 @@
       "description": "A specific study task assigned to a date.",
       "type": "object",
       "properties": {
-        "subjectId": { "type": "string" },
-        "chapterId": { "type": "string" },
-        "subjectName": { "type": "string" },
-        "chapterName": { "type": "string" },
-        "date": { "type": "string", "format": "date" },
-        "duration": { "type": "number", "description": "planned duration in minutes" },
-        "completed": { "type": "boolean" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "subjectId": {
+          "type": "string"
+        },
+        "chapterId": {
+          "type": "string"
+        },
+        "subjectName": {
+          "type": "string"
+        },
+        "chapterName": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string",
+          "format": "date"
+        },
+        "duration": {
+          "type": "number",
+          "description": "planned duration in minutes"
+        },
+        "completed": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
       },
-      "required": ["subjectId", "chapterId", "date", "completed"]
+      "required": [
+        "subjectId",
+        "chapterId",
+        "date",
+        "completed"
+      ]
     }
   },
   "auth": {
