@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { doc, collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
+import { doc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -25,13 +25,20 @@ export function GuildSpotlight() {
     if (profile?.groupId) {
       const fetchGuildActivity = async () => {
         try {
-          const groupRef = doc(firestore, 'groups', profile.groupId);
-          const groupSnap = await getDocs(query(collection(firestore, 'users'), where('groupId', '==', profile.groupId), orderBy('daily_study_minutes', 'desc'), limit(5)));
+          // Instead of ordering by daily_study_minutes in Firestore (which requires a composite index),
+          // we fetch all guild members (max 15) and sort them in memory on the client.
+          const groupSnap = await getDocs(query(
+            collection(firestore, 'users'), 
+            where('groupId', '==', profile.groupId)
+          ));
           
           const membersData = groupSnap.docs.map(d => ({
             ...d.data(),
             id: d.id
-          }));
+          }))
+          .sort((a: any, b: any) => (b.daily_study_minutes || 0) - (a.daily_study_minutes || 0))
+          .slice(0, 5);
+
           setMembers(membersData);
         } catch (e) {
           console.error("Error fetching guild activity", e);
