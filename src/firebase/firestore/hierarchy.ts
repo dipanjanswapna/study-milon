@@ -8,10 +8,10 @@ import {
   type Firestore,
   doc,
   writeBatch,
-  getDocs,
   getDoc,
   increment,
   Timestamp,
+  setDoc,
 } from 'firebase/firestore';
 
 // Subject CRUD
@@ -36,9 +36,6 @@ export async function deleteSubject(
   subjectId: string
 ) {
   const subjectRef = doc(db, 'users', userId, 'subjects', subjectId);
-  // Note: This will not delete subcollections in the client SDK.
-  // For a complete cleanup, you'd need a Cloud Function.
-  // Here we just delete the subject document itself.
   await deleteDoc(subjectRef);
 }
 
@@ -142,40 +139,56 @@ export async function logStudyTime(
 ) {
     const userRef = doc(db, 'users', userId);
     const chapterRef = doc(db, 'users', userId, 'subjects', subjectId, 'chapters', chapterId);
+    const subjectRef = doc(db, 'users', userId, 'subjects', subjectId);
     
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
+    const sessionDocId = `${dateStr}_${subjectId}`;
+    const sessionRef = doc(db, 'users', userId, 'studySessions', sessionDocId);
+
     const batch = writeBatch(db);
 
     try {
-        const userSnap = await getDoc(userRef);
+        const [userSnap, subjectSnap] = await Promise.all([
+          getDoc(userRef),
+          getDoc(subjectRef)
+        ]);
+
         if (!userSnap.exists()) {
             throw new Error("User profile not found.");
         }
         
         const userData = userSnap.data();
         const lastActive = userData.last_active_date as Timestamp | undefined;
-        const today = new Date();
         
         let dailyMinutesUpdate;
-        
         if (lastActive && lastActive.toDate().toDateString() === today.toDateString()) {
-            // last active was today, just increment
             dailyMinutesUpdate = increment(minutes);
         } else {
-            // last active was not today, reset to the logged minutes
             dailyMinutesUpdate = minutes;
         }
 
-        // Update user profile
+        // Update user aggregate stats
         batch.update(userRef, {
             total_study_minutes: increment(minutes),
             daily_study_minutes: dailyMinutesUpdate,
             last_active_date: serverTimestamp()
         });
 
-        // Update chapter time spent
+        // Update chapter aggregate time
         batch.update(chapterRef, {
             time_spent: increment(minutes)
         });
+
+        // Log session for analytics
+        const subjectName = subjectSnap.exists() ? subjectSnap.data().name : 'Unknown';
+        batch.set(sessionRef, {
+          duration: increment(minutes),
+          subject: subjectName,
+          subjectId: subjectId,
+          createdAt: serverTimestamp(),
+          date: dateStr
+        }, { merge: true });
 
         await batch.commit();
 
