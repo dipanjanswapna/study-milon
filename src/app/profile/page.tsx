@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -193,7 +192,7 @@ export default function ProfilePage() {
               <Card className="overflow-hidden border-none shadow-xl">
                 <CardHeader className="bg-primary text-primary-foreground pb-8">
                   <CardTitle>Student Profile</CardTitle>
-                </Header>
+                </CardHeader>
                 <CardContent className="-mt-6">
                   {loading || userLoading ? (
                     <ProfileSkeleton />
