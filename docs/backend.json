@@ -62,6 +62,14 @@
         },
         "batch": {
           "type": "string"
+        },
+        "institution": {
+          "type": "string",
+          "description": "Name of the school or college."
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The user's mobile number."
         }
       },
       "required": [
