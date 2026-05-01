@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function TodoPage() {
   const { user } = useUser();
@@ -304,69 +305,75 @@ export default function TodoPage() {
                       <Plus className="mr-2 h-4 w-4" /> Add Task
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Plan Your Study Session</DialogTitle>
+                  <DialogContent className="max-w-md w-[95vw] sm:w-full max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0 border-none shadow-2xl">
+                    <DialogHeader className="p-6 pb-2 shrink-0">
+                      <DialogTitle className="text-xl font-black font-headline">Plan Your Study Session</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-6 py-4">
-                      <div className="space-y-2">
-                        <Label>Subject</Label>
-                        <Select onValueChange={(val) => {setSelectedSubject(val); setSelectedChapter(null);}}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Choose a subject" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {subjects?.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Chapter</Label>
-                        <Select onValueChange={setSelectedChapter} disabled={!selectedSubject}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Choose a chapter" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {chapters?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Planned Duration</Label>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <Label className="text-[10px] text-muted-foreground uppercase font-bold">Hours</Label>
-                            <div className="relative">
-                              <Input 
-                                type="number" 
-                                min="0" 
-                                max="23" 
-                                value={plannedHours} 
-                                onChange={(e) => setPlannedHours(e.target.value)}
-                                className="pr-10"
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-[10px] text-muted-foreground uppercase font-bold">Minutes</Label>
-                            <div className="relative">
-                              <Input 
-                                type="number" 
-                                min="0" 
-                                max="59" 
-                                value={plannedMinutes} 
-                                onChange={(e) => setPlannedMinutes(e.target.value)}
-                                className="pr-10"
-                              />
-                              <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                            </div>
-                          </div>
+                    
+                    <ScrollArea className="flex-1 px-6 pb-6 overflow-y-auto">
+                      <div className="space-y-6 py-2">
+                        <div className="space-y-2">
+                          <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Subject</Label>
+                          <Select onValueChange={(val) => {setSelectedSubject(val); setSelectedChapter(null);}}>
+                            <SelectTrigger className="h-11">
+                              <SelectValue placeholder="Choose a subject" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {subjects?.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
                         </div>
-                        <p className="text-[10px] text-muted-foreground">This will automatically set your study timer.</p>
+                        <div className="space-y-2">
+                          <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Chapter</Label>
+                          <Select onValueChange={setSelectedChapter} disabled={!selectedSubject}>
+                            <SelectTrigger className="h-11">
+                              <SelectValue placeholder="Choose a chapter" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {chapters?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-3">
+                          <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Planned Duration</Label>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] text-muted-foreground uppercase font-bold px-1">Hours</Label>
+                              <div className="relative">
+                                <Input 
+                                  type="number" 
+                                  min="0" 
+                                  max="23" 
+                                  value={plannedHours} 
+                                  onChange={(e) => setPlannedHours(e.target.value)}
+                                  className="h-11"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] text-muted-foreground uppercase font-bold px-1">Minutes</Label>
+                              <div className="relative">
+                                <Input 
+                                  type="number" 
+                                  min="0" 
+                                  max="59" 
+                                  value={plannedMinutes} 
+                                  onChange={(e) => setPlannedMinutes(e.target.value)}
+                                  className="h-11 pr-10"
+                                />
+                                <Clock className="absolute right-3 top-3.5 h-4 w-4 text-muted-foreground" />
+                              </div>
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground bg-primary/5 p-2 rounded-lg border border-primary/10">
+                            ✨ This will automatically configure your study timer when you start the session.
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <DialogFooter>
-                      <Button onClick={handleAddTask} disabled={loading || !selectedChapter} className="w-full">
+                    </ScrollArea>
+                    
+                    <DialogFooter className="p-6 pt-2 shrink-0 border-t bg-secondary/10">
+                      <Button onClick={handleAddTask} disabled={loading || !selectedChapter} className="w-full h-12 text-base font-bold rounded-xl shadow-lg shadow-primary/20">
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Add to Schedule
                       </Button>
