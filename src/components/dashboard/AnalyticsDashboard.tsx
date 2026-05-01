@@ -7,10 +7,10 @@ import type { StudySession } from '@/firebase/firestore/studySessions';
 import { StudyActivityChart } from './StudyActivityChart';
 import { SubjectDistributionChart } from './SubjectDistributionChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, PieChart, BarChart, Trophy, Filter, Target } from 'lucide-react';
+import { Clock, PieChart, BarChart, Trophy, Filter } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { subDays, format, isAfter, startOfDay, differenceInDays } from 'date-fns';
-import { Tabs, TabsList, TabsTrigger } from '@/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 
 type FilterType = 'daily' | 'weekly' | 'monthly' | 'total';
