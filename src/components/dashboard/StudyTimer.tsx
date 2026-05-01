@@ -1,6 +1,8 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { logStudyTime } from '@/firebase/firestore/hierarchy';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +12,6 @@ import {
   CardHeader,
   CardTitle,
   CardFooter,
-  CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, RotateCcw, Coffee, BookOpenCheck, Settings2 } from 'lucide-react';
@@ -31,6 +32,7 @@ export function StudyTimer() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
 
   const [workDuration, setWorkDuration] = useState(25);
   const [minutes, setMinutes] = useState(workDuration);
@@ -52,6 +54,14 @@ export function StudyTimer() {
     return query(collection(firestore, 'users', user.uid, 'subjects', selectedSubject, 'chapters'), orderBy('createdAt', 'asc'));
   }, [user, firestore, selectedSubject]);
   const { data: chapters, loading: chaptersLoading } = useCollection(chaptersQuery);
+
+  // Deep linking from To-Do List
+  useEffect(() => {
+    const subId = searchParams.get('subjectId');
+    const chapId = searchParams.get('chapterId');
+    if (subId) setSelectedSubject(subId);
+    if (chapId) setSelectedChapter(chapId);
+  }, [searchParams]);
 
   const reset = useCallback(() => {
     setIsActive(false);
@@ -179,7 +189,7 @@ export function StudyTimer() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
             <div className="space-y-2">
                 <Label htmlFor="subject" className="text-slate-400 text-xs font-bold uppercase tracking-widest">Select Subject</Label>
-                <Select onValueChange={(value) => {setSelectedSubject(value); setSelectedChapter(null);}} disabled={isActive}>
+                <Select value={selectedSubject || ''} onValueChange={(value) => {setSelectedSubject(value); setSelectedChapter(null);}} disabled={isActive}>
                     <SelectTrigger className="bg-slate-800 border-slate-700 text-white h-11">
                         <SelectValue placeholder="Subject" />
                     </SelectTrigger>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -7,6 +8,7 @@ import {
   User,
   BookMarked,
   BrainCircuit,
+  CalendarCheck,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -36,6 +38,11 @@ export function AppSidebar() {
       label: 'Dashboard',
       href: '/dashboard',
       icon: LayoutDashboard,
+    },
+    {
+      label: 'Study Planner',
+      href: '/todo',
+      icon: CalendarCheck,
     },
     {
       label: 'Resource Library',

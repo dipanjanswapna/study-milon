@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -114,6 +115,21 @@
         "time_spent",
         "revision_count"
       ]
+    },
+    "StudyTask": {
+      "title": "Study Task",
+      "description": "A specific study task assigned to a date.",
+      "type": "object",
+      "properties": {
+        "subjectId": { "type": "string" },
+        "chapterId": { "type": "string" },
+        "subjectName": { "type": "string" },
+        "chapterName": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "completed": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["subjectId", "chapterId", "date", "completed"]
     }
   },
   "auth": {
@@ -140,6 +156,12 @@
         "$ref": "#/entities/Chapter"
       },
       "description": "Stores the chapters for a specific subject."
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": {
+        "$ref": "#/entities/StudyTask"
+      },
+      "description": "Stores daily study tasks for a user."
     }
   }
 }
