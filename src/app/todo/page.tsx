@@ -73,16 +73,27 @@ export default function TodoPage() {
   const { data: monthTasks } = useCollection<StudyTask>(monthTasksQuery);
 
   // Fetch tasks for the specifically selected date
+  // Fixed: Removed orderBy('createdAt', 'asc') to avoid composite index requirement.
+  // We will sort the results locally instead.
   const tasksQuery = useMemo(() => {
     if (!user) return null;
     return query(
       collection(firestore, 'users', user.uid, 'tasks'),
-      where('date', '==', dateStr),
-      orderBy('createdAt', 'asc')
+      where('date', '==', dateStr)
     );
   }, [user, firestore, dateStr]);
 
-  const { data: tasks, loading: tasksLoading } = useCollection<StudyTask>(tasksQuery);
+  const { data: rawTasks, loading: tasksLoading } = useCollection<StudyTask>(tasksQuery);
+
+  // Local sorting for tasks
+  const tasks = useMemo(() => {
+    if (!rawTasks) return null;
+    return [...rawTasks].sort((a, b) => {
+      const timeA = a.createdAt?.seconds || 0;
+      const timeB = b.createdAt?.seconds || 0;
+      return timeA - timeB;
+    });
+  }, [rawTasks]);
 
   // Form State
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
