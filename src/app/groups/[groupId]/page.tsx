@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -42,7 +43,8 @@ import {
   Trash2,
   UserPlus,
   Loader2,
-  LogOut
+  LogOut,
+  ArrowRight
 } from 'lucide-react';
 import { 
   approveRequest, 
@@ -80,6 +82,7 @@ import {
 } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 export default function GroupDashboardPage() {
   const { groupId } = useParams();
@@ -491,7 +494,7 @@ export default function GroupDashboardPage() {
                       return (
                         <div key={member.uid} className="p-4 md:p-6 hover:bg-secondary/10 transition-all group">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                            <div className="flex items-center gap-4 md:gap-5">
+                            <Link href={`/profile/${member.uid}`} className="flex items-center gap-4 md:gap-5 flex-1 min-w-0">
                               <span className="font-black text-xl md:text-2xl italic text-muted-foreground/20 w-8 group-hover:text-primary transition-colors">#{idx + 1}</span>
                               <div className="relative">
                                 <Avatar className="h-12 w-12 md:h-14 md:w-14 ring-2 ring-background shadow-lg">
@@ -508,7 +511,7 @@ export default function GroupDashboardPage() {
                                 )}
                               </div>
                               <div className="space-y-1 min-w-0">
-                                <p className="font-black text-base md:text-lg tracking-tight truncate">{member.displayName}</p>
+                                <p className="font-black text-base md:text-lg tracking-tight truncate group-hover:text-primary transition-colors">{member.displayName}</p>
                                 <div className="flex flex-wrap items-center gap-2">
                                    <Badge variant="secondary" className="text-[9px] h-4 uppercase font-black tracking-tighter bg-primary/5 text-primary border-none">
                                       {member.daily_study_minutes || 0}m studied
@@ -518,7 +521,8 @@ export default function GroupDashboardPage() {
                                    </Badge>
                                 </div>
                               </div>
-                            </div>
+                              <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all ml-auto" />
+                            </Link>
                             
                             <div className="flex-1 sm:max-w-[240px] space-y-3">
                                <div className="space-y-1.5">
@@ -580,12 +584,14 @@ export default function GroupDashboardPage() {
                         {announcements && announcements.length > 0 ? (
                           announcements.map((msg) => (
                             <div key={msg.id} className="flex gap-3 md:gap-4 group">
-                               <Avatar className="h-10 w-10 md:h-12 md:w-12 shrink-0 shadow-md">
-                                  <AvatarFallback className="bg-primary/10 text-primary font-black text-sm">{msg.authorName?.[0]}</AvatarFallback>
-                               </Avatar>
+                               <Link href={`/profile/${msg.authorId}`}>
+                                 <Avatar className="h-10 w-10 md:h-12 md:w-12 shrink-0 shadow-md transition-transform hover:scale-110">
+                                    <AvatarFallback className="bg-primary/10 text-primary font-black text-sm">{msg.authorName?.[0]}</AvatarFallback>
+                                 </Avatar>
+                               </Link>
                                <div className="space-y-2 flex-1 min-w-0">
                                   <div className="flex items-center justify-between">
-                                     <span className="font-black text-sm md:text-base truncate pr-2">{msg.authorName}</span>
+                                     <Link href={`/profile/${msg.authorId}`} className="font-black text-sm md:text-base truncate pr-2 hover:text-primary transition-colors">{msg.authorName}</Link>
                                      <div className="flex items-center gap-2 shrink-0">
                                         <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest">
                                           {msg.createdAt ? format(msg.createdAt.toDate(), 'MMM d, h:mm a') : 'Just now'}

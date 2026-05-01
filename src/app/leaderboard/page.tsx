@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -24,11 +25,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Trophy, Medal, Crown, Star, Filter, Clock, Users2 } from 'lucide-react';
+import { Trophy, Medal, Crown, Star, Filter, Clock, Users2, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 type TimeFilter = 'daily' | 'weekly' | 'monthly' | 'yearly';
 type CategoryFilter = 'All' | 'SSC' | 'HSC' | 'Admission 1st' | 'Admission 2nd' | 'Job Prep';
@@ -169,7 +171,7 @@ export default function LeaderboardPage() {
                 <div className="flex flex-col items-center gap-2 md:gap-4 pb-2 md:pb-4 order-1">
                     {top3[1] && (
                     <>
-                        <div className="relative group">
+                        <Link href={`/profile/${top3[1].uid}`} className="relative group block transition-transform hover:scale-105">
                             <div className="absolute -inset-1 bg-slate-300 rounded-full blur opacity-25" />
                             <Avatar className="h-16 w-16 sm:h-20 sm:w-20 md:h-28 md:w-28 border-4 border-slate-300 shadow-xl relative">
                                 <AvatarImage src={top3[1].photoURL} />
@@ -178,7 +180,7 @@ export default function LeaderboardPage() {
                             <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 bg-slate-200 rounded-full p-1.5 md:p-2 border-2 border-slate-400 shadow-lg">
                                 <Medal className="h-4 w-4 md:h-5 md:w-5 text-slate-500" />
                             </div>
-                        </div>
+                        </Link>
                         <div className="text-center px-1">
                             <p className="font-black text-[10px] md:text-base truncate max-w-[80px] md:max-w-[120px]">{top3[1].displayName}</p>
                             {top3[1].groupId && groupMap[top3[1].groupId] && (
@@ -198,7 +200,7 @@ export default function LeaderboardPage() {
                 <div className="flex flex-col items-center gap-3 md:gap-6 order-2">
                     {top3[0] && (
                     <>
-                        <div className="relative group scale-110 md:scale-125 -mt-10 md:-mt-16">
+                        <Link href={`/profile/${top3[0].uid}`} className="relative group scale-110 md:scale-125 -mt-10 md:-mt-16 block transition-transform hover:scale-[1.3]">
                             <div className="absolute -inset-2 bg-yellow-400 rounded-full blur opacity-40 animate-pulse" />
                             <Avatar className="h-20 w-20 sm:h-24 sm:w-24 md:h-36 md:w-36 border-4 border-yellow-400 shadow-2xl relative">
                                 <AvatarImage src={top3[0].photoURL} />
@@ -210,7 +212,7 @@ export default function LeaderboardPage() {
                             <div className="absolute -bottom-2 -right-2 bg-yellow-400 rounded-full p-2 md:p-3 border-2 border-yellow-600 shadow-lg">
                                 <Trophy className="h-5 w-5 md:h-7 md:w-7 text-white" />
                             </div>
-                        </div>
+                        </Link>
                         <div className="text-center px-1">
                             <p className="font-black text-xs md:text-xl truncate max-w-[100px] md:max-w-[150px]">{top3[0].displayName}</p>
                             {top3[0].groupId && groupMap[top3[0].groupId] && (
@@ -230,7 +232,7 @@ export default function LeaderboardPage() {
                 <div className="flex flex-col items-center gap-2 md:gap-4 pb-2 md:pb-4 order-3">
                     {top3[2] && (
                     <>
-                        <div className="relative group">
+                        <Link href={`/profile/${top3[2].uid}`} className="relative group block transition-transform hover:scale-105">
                             <div className="absolute -inset-1 bg-amber-600 rounded-full blur opacity-25" />
                             <Avatar className="h-16 w-16 sm:h-20 sm:w-20 md:h-28 md:w-28 border-4 border-amber-600 shadow-xl relative">
                                 <AvatarImage src={top3[2].photoURL} />
@@ -239,7 +241,7 @@ export default function LeaderboardPage() {
                             <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 bg-amber-500 rounded-full p-1.5 md:p-2 border-2 border-amber-700 shadow-lg">
                                 <Medal className="h-4 w-4 md:h-5 md:w-5 text-amber-900" />
                             </div>
-                        </div>
+                        </Link>
                         <div className="text-center px-1">
                             <p className="font-black text-[10px] md:text-base truncate max-w-[80px] md:max-w-[120px]">{top3[2].displayName}</p>
                             {top3[2].groupId && groupMap[top3[2].groupId] && (
@@ -271,10 +273,11 @@ export default function LeaderboardPage() {
                             const userGuildName = contender.groupId ? groupMap[contender.groupId] : null;
 
                             return (
-                                <div 
+                                <Link 
                                     key={contender.uid} 
+                                    href={`/profile/${contender.uid}`}
                                     className={cn(
-                                        "flex items-center justify-between p-3 md:p-5 hover:bg-secondary/20 transition-all",
+                                        "flex items-center justify-between p-3 md:p-5 hover:bg-secondary/20 transition-all group",
                                         contender.uid === user?.uid ? "bg-primary/5 ring-1 ring-inset ring-primary/20" : ""
                                     )}
                                 >
@@ -295,7 +298,7 @@ export default function LeaderboardPage() {
                                         </div>
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2">
-                                                <p className="font-bold text-sm md:text-lg truncate">{contender.displayName}</p>
+                                                <p className="font-bold text-sm md:text-lg truncate group-hover:text-primary transition-colors">{contender.displayName}</p>
                                                 {contender.uid === user?.uid && (
                                                     <Badge variant="outline" className="text-[8px] md:text-[9px] h-4 font-black bg-primary/10 text-primary border-primary/20 px-1.5">YOU</Badge>
                                                 )}
@@ -312,13 +315,16 @@ export default function LeaderboardPage() {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="text-right shrink-0">
-                                        <p className="font-black text-sm md:text-2xl tracking-tighter text-primary">
-                                            {formatTime(currentMinutes)}
-                                        </p>
-                                        <p className="text-[8px] md:text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Studied</p>
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-right shrink-0">
+                                            <p className="font-black text-sm md:text-2xl tracking-tighter text-primary">
+                                                {formatTime(currentMinutes)}
+                                            </p>
+                                            <p className="text-[8px] md:text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Studied</p>
+                                        </div>
+                                        <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
                                     </div>
-                                </div>
+                                </Link>
                             );
                         })}
                     </div>
