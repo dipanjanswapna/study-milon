@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -16,7 +15,7 @@ import {
   Tabs,
   TabsList,
   TabsTrigger,
-} from '@/tabs';
+} from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
