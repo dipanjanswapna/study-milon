@@ -67,6 +67,7 @@ import {
   School,
   Phone,
   User as UserIcon,
+  Target,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -86,6 +87,8 @@ const profileSchema = z.object({
   batch: z.string().min(1, 'Batch is required.'),
   institution: z.string().min(2, 'Institution name must be at least 2 characters.').or(z.literal('')),
   phoneNumber: z.string().min(10, 'Phone number must be at least 10 digits.').or(z.literal('')),
+  dailyGoalHours: z.string().refine((val) => !isNaN(parseInt(val)) && parseInt(val) >= 0, 'Invalid hours'),
+  dailyGoalMinutes: z.string().refine((val) => !isNaN(parseInt(val)) && parseInt(val) >= 0 && parseInt(val) < 60, 'Invalid minutes'),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -98,6 +101,7 @@ type UserProfile = {
   role?: 'student' | 'admin';
   total_study_minutes?: number;
   daily_study_minutes?: number;
+  daily_goal_minutes?: number;
   category?: string;
   batch?: string;
   institution?: string;
@@ -127,6 +131,8 @@ export default function ProfilePage() {
       batch: '2026',
       institution: '',
       phoneNumber: '',
+      dailyGoalHours: '6',
+      dailyGoalMinutes: '0',
     }
   });
 
@@ -137,6 +143,11 @@ export default function ProfilePage() {
         if (docSnap.exists()) {
           const data = docSnap.data() as UserProfile;
           setProfile(data);
+          
+          const totalGoal = data.daily_goal_minutes || 360;
+          const h = Math.floor(totalGoal / 60);
+          const m = totalGoal % 60;
+
           reset({
             displayName: data.displayName || '',
             photoURL: data.photoURL || '',
@@ -144,6 +155,8 @@ export default function ProfilePage() {
             batch: data.batch || '2026',
             institution: data.institution || '',
             phoneNumber: data.phoneNumber || '',
+            dailyGoalHours: h.toString(),
+            dailyGoalMinutes: m.toString(),
           });
         }
         setLoading(false);
@@ -157,6 +170,8 @@ export default function ProfilePage() {
   const onSubmit = async (data: ProfileFormValues) => {
     if (!user) return;
     try {
+      const daily_goal_minutes = (parseInt(data.dailyGoalHours) * 60) + parseInt(data.dailyGoalMinutes);
+
       await updateUserProfile(firestore, user.uid, {
         displayName: data.displayName,
         photoURL: data.photoURL,
@@ -164,6 +179,7 @@ export default function ProfilePage() {
         batch: data.batch,
         institution: data.institution,
         phoneNumber: data.phoneNumber,
+        daily_goal_minutes: daily_goal_minutes,
       });
 
       if (auth.currentUser) {
@@ -175,7 +191,7 @@ export default function ProfilePage() {
 
       toast({
         title: 'Profile Updated',
-        description: 'Your academic identity has been updated successfully.',
+        description: 'Your academic identity and goals have been updated successfully.',
       });
     } catch (error: any) {
       toast({
@@ -318,10 +334,33 @@ export default function ProfilePage() {
                       </div>
                     </div>
 
+                    {/* Daily Goal Section */}
+                    <div className="pt-6 border-t">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Target className="h-5 w-5 text-primary" />
+                        <h4 className="text-sm font-bold uppercase tracking-wider">Daily Study Goal</h4>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="dailyGoalHours">Hours</Label>
+                          <Input id="dailyGoalHours" type="number" {...register('dailyGoalHours')} min="0" />
+                          {errors.dailyGoalHours && <p className="text-xs text-destructive">{errors.dailyGoalHours.message}</p>}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="dailyGoalMinutes">Minutes</Label>
+                          <Input id="dailyGoalMinutes" type="number" {...register('dailyGoalMinutes')} min="0" max="59" />
+                          {errors.dailyGoalMinutes && <p className="text-xs text-destructive">{errors.dailyGoalMinutes.message}</p>}
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Setting a daily goal helps us track your progress on the dashboard.
+                      </p>
+                    </div>
+
                     <div className="flex justify-end pt-4">
                       <Button type="submit" disabled={isSubmitting}>
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Save Profile
+                        Save Profile & Goals
                       </Button>
                     </div>
                   </form>

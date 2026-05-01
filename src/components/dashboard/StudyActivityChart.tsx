@@ -1,3 +1,4 @@
+
 'use client';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, ReferenceLine } from 'recharts';
 import {
@@ -10,6 +11,7 @@ import {
 interface StudyActivityChartProps {
   data: { date: string; minutes: number }[];
   showTargetLine?: boolean;
+  targetValue?: number;
 }
 
 const chartConfig = {
@@ -19,10 +21,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export function StudyActivityChart({ data, showTargetLine }: StudyActivityChartProps) {
-  // 6 hours = 360 minutes as a daily target
-  const DAILY_TARGET = 360;
-
+export function StudyActivityChart({ data, showTargetLine, targetValue = 360 }: StudyActivityChartProps) {
   return (
     <div className="h-[300px] w-full">
       <ChartContainer config={chartConfig} className="w-full h-full">
@@ -52,10 +51,10 @@ export function StudyActivityChart({ data, showTargetLine }: StudyActivityChartP
             />
             {showTargetLine && (
               <ReferenceLine 
-                y={DAILY_TARGET} 
+                y={targetValue} 
                 stroke="hsl(var(--success))" 
                 strokeDasharray="5 5"
-                label={{ value: 'Target', position: 'right', fill: 'hsl(var(--success))', fontSize: 10, fontWeight: 700 }}
+                label={{ value: 'Goal', position: 'right', fill: 'hsl(var(--success))', fontSize: 10, fontWeight: 700 }}
               />
             )}
             <Bar 

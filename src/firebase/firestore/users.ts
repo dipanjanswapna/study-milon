@@ -20,6 +20,7 @@ export type UserProfile = {
   role: 'student' | 'admin';
   total_study_minutes?: number;
   daily_study_minutes?: number;
+  daily_goal_minutes?: number;
   last_active_date?: any;
   category?: AcademicCategory;
   batch?: string;
@@ -47,6 +48,7 @@ export async function createUserProfile(
         role: 'student',
         total_study_minutes: 0,
         daily_study_minutes: 0,
+        daily_goal_minutes: 360, // Default 6 hours
         last_active_date: serverTimestamp(),
         institution: '',
         phoneNumber: '',

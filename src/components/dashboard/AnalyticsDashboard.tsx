@@ -1,13 +1,15 @@
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useCollection, useUser, useFirestore } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { useCollection, useUser, useFirestore, useDoc } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import type { StudySession } from '@/firebase/firestore/studySessions';
+import type { UserProfile } from '@/firebase/firestore/users';
 import { StudyActivityChart } from './StudyActivityChart';
 import { SubjectDistributionChart } from './SubjectDistributionChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, PieChart, BarChart, Trophy, Filter } from 'lucide-react';
+import { Clock, PieChart, BarChart, Trophy, Filter, Target } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { subDays, format, isAfter, startOfDay, differenceInDays } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,6 +22,12 @@ export function AnalyticsDashboard() {
   const firestore = useFirestore();
   const [filter, setFilter] = useState<FilterType>('weekly');
 
+  // Fetch user profile for daily goal
+  const userRef = useMemo(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
+  const { data: profile } = useDoc<UserProfile>(userRef as any);
+
+  const dailyGoalMinutes = profile?.daily_goal_minutes || 360;
+
   const sessionsQuery = useMemo(() => {
     if (!user) return null;
     return query(
@@ -31,15 +39,19 @@ export function AnalyticsDashboard() {
   const { data: sessions, loading } = useCollection<StudySession>(sessionsQuery);
 
   const stats = useMemo(() => {
-    if (!sessions) return { totalMinutes: 0, chartData: [], subjectData: [], subjectList: [] };
+    if (!sessions) return { totalMinutes: 0, todayMinutes: 0, chartData: [], subjectData: [], subjectList: [] };
 
     const now = new Date();
+    const todayStart = startOfDay(now);
+    
+    const todaySessions = sessions.filter(s => s.createdAt && isAfter(s.createdAt.toDate(), todayStart));
+    const todayMinutes = todaySessions.reduce((acc, s) => acc + s.duration, 0);
+
     let filteredSessions = sessions;
     let chartDays = 7;
 
     if (filter === 'daily') {
-      const today = startOfDay(now);
-      filteredSessions = sessions.filter(s => s.createdAt && isAfter(s.createdAt.toDate(), today));
+      filteredSessions = todaySessions;
       chartDays = 1;
     } else if (filter === 'weekly') {
       const sevenDaysAgo = startOfDay(subDays(now, 6));
@@ -55,7 +67,8 @@ export function AnalyticsDashboard() {
       chartDays = firstSession?.createdAt ? Math.max(7, differenceInDays(now, firstSession.createdAt.toDate()) + 1) : 7;
     }
 
-    const totalMinutes = filteredSessions.reduce((acc, s) => acc + s.duration, 0);
+    const totalMinutes = sessions.reduce((acc, s) => acc + s.duration, 0);
+    const filterTotalMinutes = filteredSessions.reduce((acc, s) => acc + s.duration, 0);
 
     // Activity Chart Data
     const dailyMinutes: Record<string, number> = {};
@@ -65,7 +78,6 @@ export function AnalyticsDashboard() {
       dailyMinutes[day] = (dailyMinutes[day] || 0) + session.duration;
     }
 
-    // Limit chart data to last 14 days if total is selected to prevent overcrowding
     const displayDays = filter === 'total' ? 14 : chartDays;
     const chartData = Array.from({ length: displayDays })
       .map((_, i) => {
@@ -92,11 +104,11 @@ export function AnalyticsDashboard() {
       .map(([name, minutes]) => ({
         name,
         minutes,
-        percentage: totalMinutes > 0 ? (minutes / totalMinutes) * 100 : 0,
+        percentage: filterTotalMinutes > 0 ? (minutes / filterTotalMinutes) * 100 : 0,
       }))
       .sort((a, b) => b.minutes - a.minutes);
 
-    return { totalMinutes, chartData, subjectData, subjectList };
+    return { totalMinutes, todayMinutes, chartData, subjectData, subjectList };
   }, [sessions, filter]);
 
   const formatStudyTime = (minutes: number) => {
@@ -106,6 +118,7 @@ export function AnalyticsDashboard() {
     return `${h}h ${m}m`;
   };
 
+  const dailyGoalProgress = Math.min(100, (stats.todayMinutes / dailyGoalMinutes) * 100);
   const millionMinutesProgress = (stats.totalMinutes / 1000000) * 100;
 
   if (loading) {
@@ -139,11 +152,11 @@ export function AnalyticsDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-        {/* Progress Card */}
-        <Card className="md:col-span-6 shadow-md border-primary/10 overflow-hidden bg-card group">
+        {/* Daily Goal Card */}
+        <Card className="md:col-span-3 shadow-md border-primary/10 overflow-hidden bg-card group">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-widest">
-              <Trophy className="h-4 w-4 text-primary" /> Goal Progress
+              <Target className="h-4 w-4 text-primary" /> Today's Hustle Goal
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -151,12 +164,37 @@ export function AnalyticsDashboard() {
               <div className="flex items-baseline justify-between">
                 <div className="flex items-baseline gap-2">
                   <span className="text-4xl font-extrabold text-primary tracking-tighter">
-                    {stats.totalMinutes.toLocaleString()}
+                    {formatStudyTime(stats.todayMinutes)}
                   </span>
-                  <span className="text-sm font-medium text-muted-foreground">/ 1,000,000 mins</span>
+                  <span className="text-sm font-medium text-muted-foreground">/ {formatStudyTime(dailyGoalMinutes)}</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-lg font-bold text-primary">{millionMinutesProgress.toFixed(4)}%</span>
+                  <span className="text-lg font-bold text-primary">{dailyGoalProgress.toFixed(1)}%</span>
+                </div>
+              </div>
+              <Progress value={dailyGoalProgress} className="h-2.5 bg-secondary" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Total Progress Card */}
+        <Card className="md:col-span-3 shadow-md border-primary/10 overflow-hidden bg-card group">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-widest">
+              <Trophy className="h-4 w-4 text-primary" /> Million Minute Quest
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-baseline justify-between">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-extrabold text-primary tracking-tighter">
+                    {stats.totalMinutes.toLocaleString()}
+                  </span>
+                  <span className="text-xs font-medium text-muted-foreground">mins total</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-sm font-bold text-primary">{millionMinutesProgress.toFixed(4)}%</span>
                 </div>
               </div>
               <Progress value={millionMinutesProgress} className="h-2.5 bg-secondary" />
@@ -172,7 +210,7 @@ export function AnalyticsDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-2">
-            <StudyActivityChart data={stats.chartData} showTargetLine={filter === 'daily' || filter === 'weekly'} />
+            <StudyActivityChart data={stats.chartData} showTargetLine={filter === 'daily' || filter === 'weekly'} targetValue={dailyGoalMinutes} />
           </CardContent>
         </Card>
 
