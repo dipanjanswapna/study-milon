@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -9,6 +10,7 @@ import {
   BrainCircuit,
   CalendarCheck,
   Trophy,
+  Users2,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -50,6 +52,11 @@ export function AppSidebar() {
         icon: Trophy,
     },
     {
+      label: 'Study Guilds',
+      href: '/groups',
+      icon: Users2,
+    },
+    {
       label: 'Resource Library',
       href: '/resources',
       icon: BookMarked,
@@ -77,7 +84,7 @@ export function AppSidebar() {
         <SidebarMenu className="px-2 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || (item.href === '/groups' && pathname.startsWith('/groups'));
 
             return (
               <SidebarMenuItem key={item.href}>

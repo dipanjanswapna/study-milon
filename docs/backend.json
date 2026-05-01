@@ -6,212 +6,124 @@
       "description": "Represents a user's profile information.",
       "type": "object",
       "properties": {
-        "uid": {
-          "type": "string",
-          "description": "The unique ID of the user."
-        },
-        "email": {
-          "type": "string",
-          "format": "email",
-          "description": "The user's email address."
-        },
-        "displayName": {
-          "type": "string",
-          "description": "The user's display name."
-        },
-        "photoURL": {
-          "type": "string",
-          "format": "uri",
-          "description": "URL of the user's profile picture."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The timestamp when the user account was created."
-        },
-        "role": {
-          "type": "string",
-          "description": "The role of the user, e.g., 'student' or 'admin'.",
-          "enum": [
-            "student",
-            "admin"
-          ]
-        },
-        "total_study_minutes": {
-          "type": "number",
-          "description": "Total study minutes since the beginning."
-        },
-        "daily_study_minutes": {
-          "type": "number",
-          "description": "Total study minutes for the current day."
-        },
-        "daily_goal_minutes": {
-          "type": "number",
-          "description": "User's daily study goal in minutes."
-        },
-        "last_active_date": {
-          "type": "string",
-          "format": "date",
-          "description": "Last date the user was active to reset daily minutes."
-        },
-        "category": {
-          "type": "string",
-          "enum": [
-            "SSC",
-            "HSC",
-            "Admission 1st",
-            "Admission 2nd",
-            "Job Prep"
-          ]
-        },
-        "batch": {
-          "type": "string"
-        },
-        "institution": {
-          "type": "string",
-          "description": "Name of the school or college."
-        },
-        "phoneNumber": {
-          "type": "string",
-          "description": "The user's mobile number."
-        }
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string", "format": "uri" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "role": { "type": "string", "enum": ["student", "admin"] },
+        "total_study_minutes": { "type": "number" },
+        "daily_study_minutes": { "type": "number" },
+        "daily_goal_minutes": { "type": "number" },
+        "last_active_date": { "type": "string", "format": "date" },
+        "category": { "type": "string", "enum": ["SSC", "HSC", "Admission 1st", "Admission 2nd", "Job Prep"] },
+        "batch": { "type": "string" },
+        "institution": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "groupId": { "type": "string", "description": "The ID of the group the user belongs to." }
       },
-      "required": [
-        "uid",
-        "email",
-        "role"
-      ]
+      "required": ["uid", "email", "role"]
+    },
+    "StudyGroup": {
+      "title": "Study Group",
+      "description": "A group of students studying together.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "batch": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "moderators": { "type": "array", "items": { "type": "string" } },
+        "memberCount": { "type": "number" },
+        "memberLimit": { "type": "number", "default": 15 },
+        "discordLink": { "type": "string", "format": "uri" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "creatorId", "category"]
+    },
+    "GroupRequest": {
+      "title": "Group Join Request",
+      "description": "A request from a user to join a study group.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhoto": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "declined"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
     },
     "Subject": {
       "title": "Subject",
       "description": "Represents a user-defined study subject.",
       "type": "object",
       "properties": {
-        "name": {
-          "type": "string",
-          "description": "Name of the subject."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        }
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "name",
-        "createdAt"
-      ]
+      "required": ["name", "createdAt"]
     },
     "Chapter": {
       "title": "Chapter",
       "description": "Represents a chapter within a subject.",
       "type": "object",
       "properties": {
-        "name": {
-          "type": "string"
-        },
-        "status": {
-          "type": "string",
-          "enum": [
-            "pending",
-            "completed",
-            "revision"
-          ]
-        },
-        "time_spent": {
-          "type": "number",
-          "description": "in minutes"
-        },
-        "revision_count": {
-          "type": "number"
-        },
-        "last_revision_date": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        }
+        "name": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "completed", "revision"] },
+        "time_spent": { "type": "number" },
+        "revision_count": { "type": "number" },
+        "last_revision_date": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "name",
-        "createdAt",
-        "status",
-        "time_spent",
-        "revision_count"
-      ]
+      "required": ["name", "createdAt", "status", "time_spent", "revision_count"]
     },
     "StudyTask": {
       "title": "Study Task",
       "description": "A specific study task assigned to a date.",
       "type": "object",
       "properties": {
-        "subjectId": {
-          "type": "string"
-        },
-        "chapterId": {
-          "type": "string"
-        },
-        "subjectName": {
-          "type": "string"
-        },
-        "chapterName": {
-          "type": "string"
-        },
-        "date": {
-          "type": "string",
-          "format": "date"
-        },
-        "duration": {
-          "type": "number",
-          "description": "planned duration in minutes"
-        },
-        "completed": {
-          "type": "boolean"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        }
+        "subjectId": { "type": "string" },
+        "chapterId": { "type": "string" },
+        "subjectName": { "type": "string" },
+        "chapterName": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "duration": { "type": "number" },
+        "completed": { "type": "boolean" },
+        "source": { "type": "string", "enum": ["personal", "group"] },
+        "groupId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "subjectId",
-        "chapterId",
-        "date",
-        "completed"
-      ]
+      "required": ["subjectId", "chapterId", "date", "completed"]
     }
   },
   "auth": {
-    "providers": [
-      "google.com",
-      "password"
-    ]
+    "providers": ["google.com", "password"]
   },
   "firestore": {
     "/users/{userId}": {
-      "schema": {
-        "$ref": "#/entities/UserProfile"
-      },
+      "schema": { "$ref": "#/entities/UserProfile" },
       "description": "Stores user profile information."
     },
     "/users/{userId}/subjects/{subjectId}": {
-      "schema": {
-        "$ref": "#/entities/Subject"
-      },
+      "schema": { "$ref": "#/entities/Subject" },
       "description": "Stores the subjects for a specific user."
     },
     "/users/{userId}/subjects/{subjectId}/chapters/{chapterId}": {
-      "schema": {
-        "$ref": "#/entities/Chapter"
-      },
+      "schema": { "$ref": "#/entities/Chapter" },
       "description": "Stores the chapters for a specific subject."
     },
     "/users/{userId}/tasks/{taskId}": {
-      "schema": {
-        "$ref": "#/entities/StudyTask"
-      },
+      "schema": { "$ref": "#/entities/StudyTask" },
       "description": "Stores daily study tasks for a user."
+    },
+    "/groups/{groupId}": {
+      "schema": { "$ref": "#/entities/StudyGroup" },
+      "description": "Stores group information."
+    },
+    "/groups/{groupId}/requests/{requestId}": {
+      "schema": { "$ref": "#/entities/GroupRequest" },
+      "description": "Stores join requests for a group."
     }
   }
 }

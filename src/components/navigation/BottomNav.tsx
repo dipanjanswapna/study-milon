@@ -1,8 +1,9 @@
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, User, BookMarked, CalendarCheck, Trophy } from 'lucide-react';
+import { LayoutDashboard, User, BookMarked, CalendarCheck, Trophy, Users2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/firebase';
 
@@ -27,14 +28,14 @@ export function BottomNav() {
       icon: CalendarCheck,
     },
     {
-        label: 'Leaderboard',
-        href: '/leaderboard',
-        icon: Trophy,
+        label: 'Guilds',
+        href: '/groups',
+        icon: Users2,
     },
     {
-      label: 'Library',
-      href: '/resources',
-      icon: BookMarked,
+        label: 'Rank',
+        href: '/leaderboard',
+        icon: Trophy,
     },
     {
       label: 'Profile',
@@ -48,7 +49,7 @@ export function BottomNav() {
       <div className="flex items-center justify-around h-16">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || (item.href === '/groups' && pathname.startsWith('/groups'));
 
           return (
             <Link
