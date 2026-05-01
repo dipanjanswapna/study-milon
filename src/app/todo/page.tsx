@@ -33,6 +33,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -318,7 +319,7 @@ export default function TodoPage() {
     <ProtectedRoute>
       <div className="min-h-screen bg-background text-foreground">
         <Header />
-        <main className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
+        <main className="p-4 md:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
           <ProfileSetupGate>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               
