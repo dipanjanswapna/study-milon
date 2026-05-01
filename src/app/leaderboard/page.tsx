@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, query, orderBy, limit, where } from 'firebase/firestore';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { useFirestore, useCollection, useUser } from '@/firebase';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Header } from '@/components/dashboard/Header';
@@ -24,10 +24,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Trophy, Medal, Crown, Star, Loader2, Filter } from 'lucide-react';
+import { Trophy, Medal, Crown, Star, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 
 type TimeFilter = 'daily' | 'weekly' | 'monthly' | 'yearly';
 type CategoryFilter = 'All' | 'SSC' | 'HSC' | 'Admission' | 'Job Prep';
@@ -40,37 +41,29 @@ export default function LeaderboardPage() {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('All');
   const [batchFilter, setBatchFilter] = useState<string>('All');
 
+  // Fetch a larger set of top users globally to allow for client-side filtering without index errors
   const leaderboardQuery = useMemo(() => {
-    let q = query(
+    return query(
       collection(firestore, 'users'),
       orderBy('points', 'desc'),
-      limit(50)
+      limit(100)
     );
+  }, [firestore]);
 
-    if (categoryFilter !== 'All') {
-      q = query(q, where('category', '==', categoryFilter));
-    }
+  const { data: allRankings, loading } = useCollection(leaderboardQuery);
+
+  // Apply filters client-side to avoid missing index errors in Firestore
+  const rankings = useMemo(() => {
+    if (!allRankings) return [];
     
-    if (batchFilter !== 'All' && batchFilter.trim() !== '') {
-        q = query(q, where('batch', '==', batchFilter));
-    }
-
-    return q;
-  }, [firestore, categoryFilter, batchFilter]);
-
-  const { data: rankings, loading } = useCollection(leaderboardQuery);
+    return allRankings.filter(u => {
+      const matchCategory = categoryFilter === 'All' || u.category === categoryFilter;
+      const matchBatch = batchFilter === 'All' || u.batch === batchFilter;
+      return matchCategory && matchBatch;
+    }).slice(0, 50); // Show top 50 within the filtered set
+  }, [allRankings, categoryFilter, batchFilter]);
 
   const top3 = rankings?.slice(0, 3) || [];
-  const others = rankings?.slice(3) || [];
-
-  const getRankIcon = (index: number) => {
-    switch (index) {
-      case 0: return <Crown className="h-6 w-6 text-yellow-500 fill-yellow-500" />;
-      case 1: return <Medal className="h-6 w-6 text-slate-400 fill-slate-400" />;
-      case 2: return <Medal className="h-6 w-6 text-amber-600 fill-amber-600" />;
-      default: return null;
-    }
-  };
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return 'U';
@@ -146,7 +139,7 @@ export default function LeaderboardPage() {
                     </div>
                     <div className="text-center">
                         <p className="font-black text-sm md:text-base truncate max-w-[100px]">{top3[1].displayName}</p>
-                        <Badge variant="secondary" className="font-bold text-[10px] uppercase">{top3[1].points} pts</Badge>
+                        <Badge variant="secondary" className="font-bold text-[10px] uppercase">{(top3[1] as any).points} pts</Badge>
                     </div>
                   </div>
                 )}
@@ -169,7 +162,7 @@ export default function LeaderboardPage() {
                     </div>
                     <div className="text-center">
                         <p className="font-black text-lg md:text-xl truncate max-w-[120px]">{top3[0].displayName}</p>
-                        <Badge className="font-black text-xs uppercase bg-yellow-500 hover:bg-yellow-600 px-3">{top3[0].points} pts</Badge>
+                        <Badge className="font-black text-xs uppercase bg-yellow-500 hover:bg-yellow-600 px-3">{(top3[0] as any).points} pts</Badge>
                     </div>
                   </div>
                 )}
@@ -189,7 +182,7 @@ export default function LeaderboardPage() {
                     </div>
                     <div className="text-center">
                         <p className="font-black text-sm md:text-base truncate max-w-[100px]">{top3[2].displayName}</p>
-                        <Badge variant="secondary" className="font-bold text-[10px] uppercase">{top3[2].points} pts</Badge>
+                        <Badge variant="secondary" className="font-bold text-[10px] uppercase">{(top3[2] as any).points} pts</Badge>
                     </div>
                   </div>
                 )}
@@ -199,11 +192,11 @@ export default function LeaderboardPage() {
               <div className="bg-card rounded-[2rem] shadow-xl overflow-hidden border">
                 <div className="p-6 bg-secondary/30 border-b flex justify-between items-center">
                     <h3 className="font-black text-sm uppercase tracking-widest text-muted-foreground">The Contenders</h3>
-                    <div className="text-[10px] font-bold text-muted-foreground">Showing top 50 users</div>
+                    <div className="text-[10px] font-bold text-muted-foreground">Showing top filtered results</div>
                 </div>
                 <ScrollArea className="h-[500px]">
                     <div className="divide-y">
-                        {rankings.map((contender, idx) => (
+                        {rankings.map((contender: any, idx) => (
                             <div 
                                 key={contender.uid} 
                                 className={cn(
@@ -238,7 +231,7 @@ export default function LeaderboardPage() {
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="font-black text-lg tracking-tighter text-primary">{contender.points.toLocaleString()}</p>
+                                    <p className="font-black text-lg tracking-tighter text-primary">{contender.points?.toLocaleString() || 0}</p>
                                     <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Points</p>
                                 </div>
                             </div>
@@ -251,7 +244,7 @@ export default function LeaderboardPage() {
           ) : (
             <div className="text-center py-20 bg-secondary/20 rounded-[2rem] border-2 border-dashed">
                 <Trophy className="mx-auto h-16 w-16 text-muted-foreground/30 mb-4" />
-                <h3 className="text-xl font-bold">No rankings available yet</h3>
+                <h3 className="text-xl font-bold">No rankings found</h3>
                 <p className="text-muted-foreground max-w-md mx-auto">Start studying and completing chapters to earn points and appear on the leaderboard!</p>
             </div>
           )}
