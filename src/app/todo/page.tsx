@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { format, isSameDay, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth } from 'date-fns';
-import { collection, query, where, orderBy, getDocs, doc } from 'firebase/firestore';
+import { collection, query, where, orderBy, doc } from 'firebase/firestore';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { addStudyTask, updateTaskStatus, deleteTask, type StudyTask } from '@/firebase/firestore/todo';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -11,9 +11,6 @@ import { Header } from '@/components/dashboard/Header';
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -33,7 +30,6 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-  DialogDescription,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -45,14 +41,10 @@ import {
   ChevronLeft, 
   ChevronRight,
   Clock,
-  Sparkles,
-  BrainCircuit,
-  Lightbulb
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { suggestSchedule, type SuggestScheduleOutput } from '@/ai/flows/suggest-schedule-flow';
 
 export default function TodoPage() {
   const { user } = useUser();
@@ -62,16 +54,9 @@ export default function TodoPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isAiOpen, setIsAiOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState<SuggestScheduleOutput | null>(null);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
-
-  // User Profile for context
-  const userRef = useMemo(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
-  const { data: profile } = useDoc<any>(userRef as any);
 
   // Month tasks query
   const monthStart = startOfMonth(currentMonth);
@@ -158,65 +143,6 @@ export default function TodoPage() {
       toast({ title: 'Task added successfully!' });
     } catch (error) {
       toast({ variant: 'destructive', title: 'Error adding task' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAiPlan = async () => {
-    if (!user || !profile || !subjects) return;
-    setAiLoading(true);
-    try {
-      // Gather roadmap data for AI
-      const roadmapData = [];
-      for (const sub of subjects) {
-        const capsSnap = await getDocs(collection(firestore, 'users', user.uid, 'subjects', sub.id, 'chapters'));
-        roadmapData.push({
-          id: sub.id,
-          name: sub.name,
-          chapters: capsSnap.docs.map(d => ({
-            id: d.id,
-            name: d.data().name,
-            status: d.data().status,
-            timeSpent: d.data().time_spent || 0
-          }))
-        });
-      }
-
-      const result = await suggestSchedule({
-        category: profile.category || 'HSC',
-        batch: profile.batch || '2026',
-        dailyGoalMinutes: profile.daily_goal_minutes || 360,
-        subjects: roadmapData
-      });
-      setAiSuggestion(result);
-      setIsAiOpen(true);
-    } catch (e) {
-      toast({ variant: 'destructive', title: 'AI Planning Failed', description: 'Could not connect to study advisor.' });
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  const applyAiTasks = async () => {
-    if (!user || !aiSuggestion) return;
-    setLoading(true);
-    try {
-      for (const task of aiSuggestion.suggestedTasks) {
-        await addStudyTask(firestore, user.uid, {
-          subjectId: task.subjectId,
-          chapterId: task.chapterId,
-          subjectName: task.subjectName,
-          chapterName: task.chapterName,
-          date: dateStr,
-          duration: task.duration,
-        });
-      }
-      setIsAiOpen(false);
-      setAiSuggestion(null);
-      toast({ title: 'Plan Applied!', description: 'Your AI suggested tasks are now in your list.' });
-    } catch (e) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to apply all tasks.' });
     } finally {
       setLoading(false);
     }
@@ -374,15 +300,6 @@ export default function TodoPage() {
                   </div>
                   
                   <div className="flex gap-2 w-full sm:w-auto">
-                    <Button 
-                      variant="outline" 
-                      className="rounded-full shadow-sm border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 flex-1"
-                      onClick={handleAiPlan}
-                      disabled={aiLoading}
-                    >
-                      {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                      AI Plan
-                    </Button>
                     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                       <DialogTrigger asChild>
                         <Button className="rounded-full shadow-lg bg-primary hover:bg-primary/90 flex-1">
@@ -531,7 +448,7 @@ export default function TodoPage() {
                           <Plus className="text-muted-foreground h-5 w-5" />
                       </div>
                       <h3 className="text-base font-bold">Empty Schedule</h3>
-                      <p className="text-muted-foreground text-xs px-4">Select a subject or use AI to generate a plan.</p>
+                      <p className="text-muted-foreground text-xs px-4">Select a subject to manually add to your schedule.</p>
                     </div>
                   )}
                 </div>
@@ -540,71 +457,6 @@ export default function TodoPage() {
           </ProfileSetupGate>
         </main>
       </div>
-
-      {/* AI Suggestion Dialog */}
-      <Dialog open={isAiOpen} onOpenChange={setIsAiOpen}>
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-0 border-none shadow-2xl rounded-[2rem] overflow-hidden">
-           <DialogHeader className="bg-primary text-primary-foreground p-8">
-              <div className="flex items-center gap-3">
-                 <div className="bg-white/20 p-2 rounded-xl">
-                    <BrainCircuit className="h-6 w-6 text-white" />
-                 </div>
-                 <div>
-                    <DialogTitle className="text-2xl font-black">AI Smart Planner</DialogTitle>
-                    <DialogDescription className="text-primary-foreground/70">Academic Strategy for {profile?.category} {profile?.batch}</DialogDescription>
-                 </div>
-              </div>
-           </DialogHeader>
-
-           <ScrollArea className="flex-1 p-8">
-              <div className="space-y-8">
-                 {aiSuggestion && (
-                   <>
-                     <div className="bg-secondary/30 p-6 rounded-[2rem] border border-primary/10 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                           <Lightbulb className="h-20 w-20" />
-                        </div>
-                        <h4 className="text-xs font-black uppercase tracking-widest text-primary mb-3">Today's Strategy</h4>
-                        <p className="text-lg font-medium leading-relaxed italic">"{aiSuggestion.strategyNote}"</p>
-                     </div>
-
-                     <div className="space-y-4">
-                        <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground">Suggested Hustles</h4>
-                        <div className="grid gap-3">
-                           {aiSuggestion.suggestedTasks.map((t, i) => (
-                             <div key={i} className="p-5 rounded-2xl bg-card border hover:border-primary/30 transition-all">
-                                <div className="flex justify-between items-start gap-4">
-                                   <div className="space-y-1">
-                                      <div className="flex items-center gap-2">
-                                         <Badge variant="secondary" className="text-[10px] font-bold uppercase">{t.subjectName}</Badge>
-                                         <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
-                                            <Clock className="h-3 w-3" /> {formatDurationDisplay(t.duration)}
-                                         </span>
-                                      </div>
-                                      <h5 className="font-bold text-lg">{t.chapterName}</h5>
-                                      <p className="text-xs text-muted-foreground font-medium">{t.reason}</p>
-                                   </div>
-                                </div>
-                             </div>
-                           ))}
-                        </div>
-                     </div>
-                   </>
-                 )}
-              </div>
-           </ScrollArea>
-
-           <DialogFooter className="p-8 pt-4 bg-secondary/10 border-t">
-              <div className="flex gap-3 w-full">
-                 <Button variant="ghost" onClick={() => setIsAiOpen(false)} className="flex-1 h-12 font-bold rounded-xl">Cancel</Button>
-                 <Button onClick={applyAiTasks} disabled={loading} className="flex-[2] h-12 font-bold rounded-xl shadow-lg shadow-primary/20">
-                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                    Apply to Schedule
-                 </Button>
-              </div>
-           </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </ProtectedRoute>
   );
 }
