@@ -159,7 +159,10 @@ export default function GroupDashboardPage() {
       const fetchMembers = async () => {
         const membersData = [];
         let totalMinutes = 0;
-        for (const mid of group.members) {
+        // Use unique set of member UIDs to prevent duplicate key errors
+        const uniqueMemberUids = Array.from(new Set(group.members));
+        
+        for (const mid of uniqueMemberUids) {
           // Fetch user profile
           const mSnap = await getDocs(query(collection(firestore, 'users'), where('uid', '==', mid)));
           if (!mSnap.empty) {
@@ -469,7 +472,7 @@ export default function GroupDashboardPage() {
                             <Trash2 className="h-5 w-5" />
                          </Button>
                       </DialogTrigger>
-                      <DialogContent className="rounded-[2rem] border-none max-w-sm">
+                      <DialogContent className="rounded-[2rem] border-none max-sm">
                         <DialogHeader>
                            <DialogTitle className="flex items-center gap-2 text-destructive">
                               <AlertTriangle className="h-5 w-5" /> Disband Guild
@@ -493,7 +496,7 @@ export default function GroupDashboardPage() {
                           <LogOut className="h-5 w-5" />
                         </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent className="rounded-[2rem] border-none max-w-sm">
+                      <AlertDialogContent className="rounded-[2rem] border-none max-sm">
                         <AlertDialogHeader>
                           <AlertDialogTitle className="flex items-center gap-2 text-destructive">
                             <LogOut className="h-5 w-5" /> Leave Guild
@@ -543,7 +546,7 @@ export default function GroupDashboardPage() {
                     {memberProfiles.map((member, idx) => {
                       const studyProgress = Math.min(100, (member.daily_study_minutes || 0) / (member.daily_goal_minutes || 360) * 100);
                       return (
-                        <div key={member.uid} className="p-4 md:p-6 hover:bg-secondary/10 transition-all group">
+                        <div key={`${member.uid}-${idx}`} className="p-4 md:p-6 hover:bg-secondary/10 transition-all group">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                             <Link href={`/profile/${member.uid}`} className="flex items-center gap-4 md:gap-5 flex-1 min-w-0">
                               <span className="font-black text-xl md:text-2xl italic text-muted-foreground/20 w-8 group-hover:text-primary transition-colors">#{idx + 1}</span>
