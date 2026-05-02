@@ -43,12 +43,15 @@ export function StudyTimer() {
   
   const { data: rawTasks, loading: tasksLoading } = useCollection<StudyTask>(tasksQuery);
 
-  const activeTask = useMemo(() => {
-    if (!rawTasks) return null;
+  const incompleteTasks = useMemo(() => {
+    if (!rawTasks) return [];
     return [...rawTasks]
-      .sort((a, b) => (a.order || 0) - (b.order || 0))
-      .find(t => !t.completed);
+      .filter(t => !t.completed)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
   }, [rawTasks]);
+
+  const activeTask = incompleteTasks[0] || null;
+  const upcomingTasks = incompleteTasks.slice(1, 3);
 
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
@@ -387,6 +390,30 @@ export function StudyTimer() {
             >
               <CheckCircle2 className="mr-2 h-4 w-4" /> Secure Objective
             </Button>
+          )}
+
+          {/* Upcoming Tasks Section */}
+          {!isBreak && upcomingTasks.length > 0 && (
+            <div className="w-full mt-6 space-y-3 pt-6 border-t border-white/10">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-100/40 px-1">
+                <ListTodo className="h-3 w-3" />
+                Upcoming Sequence
+              </div>
+              <div className="space-y-2">
+                {upcomingTasks.map((task) => (
+                  <div key={task.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 group/task transition-all hover:bg-white/10">
+                    <div className="flex flex-col gap-0.5 overflow-hidden">
+                      <span className="text-[11px] font-black text-white/90 leading-none truncate">{task.chapterName}</span>
+                      <span className="text-[9px] font-bold text-blue-100/40 uppercase tracking-tighter truncate">{task.subjectName}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-blue-100/50 shrink-0 ml-2">
+                       <Clock className="h-2.5 w-2.5" />
+                       <span className="text-[10px] font-black">{task.duration}m</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </CardContent>
