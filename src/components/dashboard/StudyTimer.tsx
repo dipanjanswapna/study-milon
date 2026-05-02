@@ -14,7 +14,7 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RotateCcw, Coffee, BookOpenCheck, Settings2, ShieldCheck, Wifi, Zap } from 'lucide-react';
+import { Play, Pause, RotateCcw, Coffee, BookOpenCheck, Settings2, ShieldCheck, Wifi, Zap, Clock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -28,7 +28,6 @@ import { collection, query, orderBy, doc, serverTimestamp } from 'firebase/fires
 import { cn } from '@/lib/utils';
 
 const BREAK_MINUTES = 5;
-const SYNC_INTERVAL_MS = 60000; // 1 minute
 
 // 1 second of silent audio to keep the browser process alive on mobile
 const SILENT_AUDIO_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
@@ -49,6 +48,10 @@ export function StudyTimer() {
   const [isBreak, setIsBreak] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<string | null>(null);
+
+  // Separate inputs for H:M
+  const [inputHours, setInputHours] = useState('0');
+  const [inputMinutes, setInputMinutes] = useState('25');
 
   // Background Audio Ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -85,7 +88,7 @@ export function StudyTimer() {
     }
   }, []);
 
-  // 1. Session Recovery (The "Unstoppable" Logic)
+  // 1. Session Recovery
   useEffect(() => {
     if (profile?.currentSession && !initializedFromCloud.current) {
       const { startTime, duration, status, subjectId, chapterId, isBreak: cloudIsBreak } = profile.currentSession;
@@ -99,13 +102,14 @@ export function StudyTimer() {
         if (calculatedTimeLeft > 0) {
           setTimeLeft(calculatedTimeLeft);
           setWorkDuration(duration);
+          setInputHours(Math.floor(duration / 60).toString());
+          setInputMinutes((duration % 60).toString());
           setSelectedSubject(subjectId);
           setSelectedChapter(chapterId);
           setIsBreak(cloudIsBreak);
           setIsActive(true);
           lastLoggedMinuteRef.current = Math.floor(elapsedSeconds / 60);
           
-          // Resume audio hack
           audioRef.current?.play().catch(() => {});
           
           toast({ 
@@ -113,12 +117,14 @@ export function StudyTimer() {
             description: "Your session was restored from the cloud timestamp." 
           });
         } else {
-          // Session expired while user was away - auto reset
           handleReset();
         }
       } else {
-        setWorkDuration(duration || 25);
-        setTimeLeft((duration || 25) * 60);
+        const d = duration || 25;
+        setWorkDuration(d);
+        setTimeLeft(d * 60);
+        setInputHours(Math.floor(d / 60).toString());
+        setInputMinutes((d % 60).toString());
       }
       initializedFromCloud.current = true;
     }
@@ -136,6 +142,8 @@ export function StudyTimer() {
       const d = parseInt(durationParam, 10);
       if (!isNaN(d) && d > 0) {
         setWorkDuration(d);
+        setInputHours(Math.floor(d / 60).toString());
+        setInputMinutes((d % 60).toString());
         if (!isActive) setTimeLeft(d * 60);
       }
     }
@@ -147,7 +155,6 @@ export function StudyTimer() {
       setIsActive(true);
       lastLoggedMinuteRef.current = 0;
       
-      // Start background persistence
       audioRef.current?.play().catch(() => {});
       
       const newSession: CurrentSession = {
@@ -159,7 +166,6 @@ export function StudyTimer() {
         isBreak: false
       };
       
-      // Atomic write to Firestore
       await updateUserProfile(firestore, user.uid, { 
         currentSession: newSession as any, 
         isStudying: true,
@@ -214,7 +220,7 @@ export function StudyTimer() {
       lastLoggedMinuteRef.current = 0;
       
       await updateUserProfile(firestore, user.uid, {
-        isStudying: false, // Don't count break time as study on leaderboard
+        isStudying: false,
         currentSession: {
           startTime,
           duration: workDuration,
@@ -238,7 +244,7 @@ export function StudyTimer() {
     }
   }, [user, firestore, selectedSubject, selectedChapter, isBreak]);
 
-  // 3. THE UNSTOPPABLE ENGINE (Timestamp Validation)
+  // 3. THE UNSTOPPABLE ENGINE
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
@@ -252,7 +258,6 @@ export function StudyTimer() {
         
         setTimeLeft(newTimeLeft);
 
-        // Logging every minute passed based on actual timestamp difference
         if (!isBreak) {
           const currentElapsedMinutes = Math.floor(elapsedSeconds / 60);
           if (currentElapsedMinutes > lastLoggedMinuteRef.current) {
@@ -261,7 +266,6 @@ export function StudyTimer() {
           }
         }
 
-        // Live status heart-beat for Leaderboard
         if (elapsedSeconds % 30 === 0 && !isBreak) {
           updateUserProfile(firestore, user!.uid, { last_active_date: serverTimestamp() });
         }
@@ -282,6 +286,20 @@ export function StudyTimer() {
     };
   }, [isActive, isBreak, workDuration, profile?.currentSession, user, firestore, handleReset, startBreak, handleMinuteLog]);
 
+  const handleDurationChange = (h: string, m: string) => {
+    const hours = parseInt(h, 10) || 0;
+    const mins = parseInt(m, 10) || 0;
+    const total = (hours * 60) + mins;
+    
+    if (total >= 1) {
+      setWorkDuration(total);
+      if (!isActive) setTimeLeft(total * 60);
+    }
+    
+    setInputHours(h);
+    setInputMinutes(m);
+  };
+
   const minutesDisplay = Math.floor(timeLeft / 60);
   const secondsDisplay = timeLeft % 60;
   const totalSecondsForMode = (isBreak ? BREAK_MINUTES : workDuration) * 60;
@@ -291,7 +309,6 @@ export function StudyTimer() {
 
   return (
     <Card className="w-full shadow-2xl bg-slate-900 text-white border-none overflow-hidden relative">
-      {/* Background Pulse Effect when active */}
       {isActive && (
         <div className={cn(
           "absolute inset-0 opacity-10 animate-pulse pointer-events-none",
@@ -322,7 +339,6 @@ export function StudyTimer() {
       
       <CardContent className="flex flex-col items-center justify-center gap-8 py-10 relative z-10">
         <div className="relative h-60 w-60 md:h-72 md:w-72">
-          {/* Circular Progress SVG */}
           <svg className="h-full w-full" viewBox="0 0 100 100">
             <defs>
               <linearGradient id="timerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -402,31 +418,52 @@ export function StudyTimer() {
             </div>
         </div>
 
-        <div className="space-y-3 w-full pt-2">
+        <div className="space-y-4 w-full pt-2">
           <div className="flex items-center justify-between px-1">
             <Label className="text-slate-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
               <Settings2 className="h-4 w-4 text-primary" /> Session Duration
             </Label>
-            <span className="text-xs font-black font-mono text-primary bg-primary/10 px-2 py-0.5 rounded">{workDuration} Minutes</span>
+            <span className="text-xs font-black font-mono text-primary bg-primary/10 px-2 py-0.5 rounded">
+              {Math.floor(workDuration / 60)}h {workDuration % 60}m
+            </span>
           </div>
-          <Input 
-            type="range" 
-            min="5" 
-            max="120" 
-            step="5"
-            value={workDuration}
-            onChange={(e) => {
-              const val = parseInt(e.target.value, 10);
-              setWorkDuration(val);
-              if (!isActive) setTimeLeft(val * 60);
-            }}
-            disabled={isActive}
-            className="w-full accent-primary bg-slate-700 h-2 rounded-full"
-          />
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <div className="relative">
+                <Input 
+                  type="number" 
+                  min="0" 
+                  max="12" 
+                  value={inputHours} 
+                  onChange={(e) => handleDurationChange(e.target.value, inputMinutes)}
+                  disabled={isActive}
+                  className="bg-slate-800/80 border-slate-700 text-white h-11 rounded-xl pr-10"
+                />
+                <span className="absolute right-3 top-3 text-[10px] font-black text-slate-500 uppercase">Hours</span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <div className="relative">
+                <Input 
+                  type="number" 
+                  min="0" 
+                  max="59" 
+                  value={inputMinutes} 
+                  onChange={(e) => handleDurationChange(inputHours, e.target.value)}
+                  disabled={isActive}
+                  className="bg-slate-800/80 border-slate-700 text-white h-11 rounded-xl pr-10"
+                />
+                <span className="absolute right-3 top-3 text-[10px] font-black text-slate-500 uppercase">Mins</span>
+              </div>
+            </div>
+          </div>
+          <p className="text-[10px] text-slate-500 font-medium px-1 flex items-center gap-1">
+            <Clock className="h-3 w-3" /> Total study session: {workDuration} minutes
+          </p>
         </div>
       </CardFooter>
 
-      {/* Media session info for user */}
       <div className="p-3 bg-primary/5 border-t border-white/5 text-center">
          <p className="text-[8px] font-bold text-white/30 uppercase tracking-[0.3em]">
             Root-Level Architecture • Unix Timestamp Verified • Study Milon
