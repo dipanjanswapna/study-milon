@@ -2,8 +2,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
-import { useFirestore, useCollection, useUser } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { useFirestore, useCollection } from '@/firebase';
 import { AdminRoute } from '@/components/auth/AdminRoute';
 import { Header } from '@/components/dashboard/Header';
 import {
@@ -46,6 +46,17 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { deleteGroup, type StudyGroup } from '@/firebase/firestore/groups';
 import { deleteUserProfile, SUPER_ADMIN_UID } from '@/firebase/firestore/users';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function AdminDashboardPage() {
   const firestore = useFirestore();
@@ -72,8 +83,6 @@ export default function AdminDashboardPage() {
   }, [users, groups]);
 
   const handleDeleteGroup = async (groupId: string, members: string[]) => {
-    if (!confirm('Are you sure you want to disband this guild? All members will be removed.')) return;
-    
     setLoadingAction(groupId);
     try {
       await deleteGroup(firestore, groupId, members);
@@ -91,8 +100,6 @@ export default function AdminDashboardPage() {
       return;
     }
     
-    if (!confirm(`Are you sure you want to delete ${userName}? This will remove their Firestore profile and guild membership.`)) return;
-
     setLoadingAction(userId);
     try {
       await deleteUserProfile(firestore, userId);
@@ -224,15 +231,39 @@ export default function AdminDashboardPage() {
                             {user.createdAt ? new Date(user.createdAt.toDate()).toLocaleDateString() : 'Unknown'}
                           </TableCell>
                           <TableCell className="text-right">
-                             <Button 
-                               variant="ghost" 
-                               size="icon" 
-                               className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-full"
-                               onClick={() => handleDeleteUser(user.uid, user.displayName)}
-                               disabled={loadingAction === user.uid || user.uid === SUPER_ADMIN_UID}
-                             >
-                                {loadingAction === user.uid ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                             </Button>
+                             {user.uid !== SUPER_ADMIN_UID && (
+                               <AlertDialog>
+                                 <AlertDialogTrigger asChild>
+                                   <Button 
+                                     variant="ghost" 
+                                     size="icon" 
+                                     className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-full"
+                                     disabled={loadingAction === user.uid}
+                                   >
+                                      {loadingAction === user.uid ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                   </Button>
+                                 </AlertDialogTrigger>
+                                 <AlertDialogContent className="rounded-[2rem] border-none max-w-sm">
+                                   <AlertDialogHeader>
+                                     <AlertDialogTitle className="flex items-center gap-2 text-destructive font-black">
+                                       <AlertTriangle className="h-5 w-5" /> Delete Student
+                                     </AlertDialogTitle>
+                                     <AlertDialogDescription className="font-medium text-base">
+                                       Are you sure? This will permanently delete <strong>{user.displayName}</strong>'s profile and remove them from any study guilds.
+                                     </AlertDialogDescription>
+                                   </AlertDialogHeader>
+                                   <AlertDialogFooter className="flex-col gap-2">
+                                     <AlertDialogAction 
+                                       onClick={() => handleDeleteUser(user.uid, user.displayName)}
+                                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl font-black h-12"
+                                     >
+                                       Yes, Delete Student
+                                     </AlertDialogAction>
+                                     <AlertDialogCancel className="rounded-xl font-bold h-12">Cancel</AlertDialogCancel>
+                                   </AlertDialogFooter>
+                                 </AlertDialogContent>
+                               </AlertDialog>
+                             )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -266,15 +297,38 @@ export default function AdminDashboardPage() {
                          <Button variant="outline" size="sm" className="rounded-xl font-bold h-9" asChild>
                             <a href={group.discordLink} target="_blank"><ExternalLink className="h-3.5 w-3.5 mr-2" /> Discord</a>
                          </Button>
-                         <Button 
-                           variant="ghost" 
-                           size="icon" 
-                           className="h-9 w-9 text-destructive hover:bg-destructive/10 rounded-full"
-                           onClick={() => handleDeleteGroup(group.id, group.members)}
-                           disabled={loadingAction === group.id}
-                         >
-                            {loadingAction === group.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                         </Button>
+                         
+                         <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                               <Button 
+                                 variant="ghost" 
+                                 size="icon" 
+                                 className="h-9 w-9 text-destructive hover:bg-destructive/10 rounded-full"
+                                 disabled={loadingAction === group.id}
+                               >
+                                  {loadingAction === group.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                               </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="rounded-[2rem] border-none max-w-sm">
+                               <AlertDialogHeader>
+                                 <AlertDialogTitle className="flex items-center gap-2 text-destructive font-black">
+                                   <AlertTriangle className="h-5 w-5" /> Disband Guild
+                                 </AlertDialogTitle>
+                                 <AlertDialogDescription className="font-medium text-base">
+                                   Are you absolutely sure? This will remove all <strong>{group.memberCount}</strong> members from <strong>{group.name}</strong> and delete the guild forever.
+                                 </AlertDialogDescription>
+                               </AlertDialogHeader>
+                               <AlertDialogFooter className="flex-col gap-2">
+                                 <AlertDialogAction 
+                                   onClick={() => handleDeleteGroup(group.id, group.members)}
+                                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl font-black h-12"
+                                 >
+                                   Yes, Disband Guild
+                                 </AlertDialogAction>
+                                 <AlertDialogCancel className="rounded-xl font-bold h-12">Keep Guild</AlertDialogCancel>
+                               </AlertDialogFooter>
+                            </AlertDialogContent>
+                         </AlertDialog>
                       </div>
                     </CardContent>
                   </Card>
