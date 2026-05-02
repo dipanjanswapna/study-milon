@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -70,8 +69,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
   useSortable,
-} from '@radix-ui/react-sortable'; // Corrected alias/import issue often seen with Shadcn starters
-// Actually Shadcn typically uses standard sortable:
+} from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
 export default function TodoPage() {
@@ -205,7 +203,7 @@ export default function TodoPage() {
     setLoading(true);
     try {
       await restoreTasks(firestore, user.uid, expiredTasks.map(t => t.id));
-      toast({ title: "Roadmap Resynchronized", description: "Expired tasks moved to today's schedule." });
+      toast({ title: "Roadmap Resynchronized", description: "Roadmap moves to today's schedule." });
     } catch (e) {
       toast({ variant: 'destructive', title: "Failed to restore tasks" });
     } finally {
