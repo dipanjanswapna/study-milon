@@ -23,7 +23,7 @@ import { format } from 'date-fns';
 
 const BREAK_MINUTES = 5;
 const SILENT_AUDIO_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
-const ALARM_AUDIO_PATH = "/WhatsApp Audio 2026-05-02 at 4.38.00 PM";
+const ALARM_AUDIO_PATH = "/WhatsApp Audio 2026-05-02 at 4.38.00 PM.mp3";
 
 export function StudyTimer() {
   const { user } = useUser();
@@ -488,4 +488,3 @@ function polarToCartesian(centerX: number, centerY: number, radius: number, angl
     y: centerY + (radius * Math.sin(angleInRadians))
   };
 }
-

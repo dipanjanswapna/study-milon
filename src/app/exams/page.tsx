@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useFirestore, useCollection, useUser, useDoc } from '@/firebase';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -18,6 +19,16 @@ import { cn } from '@/lib/utils';
 export default function ExamsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
+  const hasPlayedMusic = useRef(false);
+
+  useEffect(() => {
+    if (!hasPlayedMusic.current) {
+      const audio = new Audio("/Eiii tomra kmn acho #exam #helicopter #milon #education #study #ssc26 #sscexam #ssc #tenthclass.mp3");
+      audio.play().catch(err => console.log("Autoplay blocked by browser. Interaction required.", err));
+      hasPlayedMusic.current = true;
+    }
+  }, []);
+
   const examsQuery = useMemo(() => query(collection(firestore, 'exams'), orderBy('examDate', 'asc')), [firestore]);
   const { data: exams, loading } = useCollection<any>(examsQuery);
 
