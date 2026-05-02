@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -124,6 +123,24 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    formState: { errors, isSubmitting },
+  } = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      category: 'HSC',
+      batch: '2026',
+      institution: '',
+      phoneNumber: '',
+      dailyGoalHours: '6',
+      dailyGoalMinutes: '0',
+    }
+  });
+
   useEffect(() => {
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
@@ -183,24 +200,6 @@ export default function ProfilePage() {
       setLoading(false);
     }
   }, [user, firestore, reset, userLoading]);
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    control,
-    formState: { errors, isSubmitting },
-  } = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      category: 'HSC',
-      batch: '2026',
-      institution: '',
-      phoneNumber: '',
-      dailyGoalHours: '6',
-      dailyGoalMinutes: '0',
-    }
-  });
 
   const onSubmit = async (data: ProfileFormValues) => {
     if (!user) return;
