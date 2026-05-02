@@ -25,23 +25,28 @@ export default function ExamsPage() {
     // The filename contains '#' which is a special character in URLs. 
     // We must ensure the browser requests it correctly by encoding the filename.
     const filename = "Eiii tomra kmn acho #exam #helicopter #milon #education #study #ssc26 #sscexam #ssc #tenthclass.mp3";
+    // Encode # as %23 for URL safety
     const audioPath = "/" + filename.split('#').join('%23');
 
     if (!audioRef.current) {
       audioRef.current = new Audio(audioPath);
+      audioRef.current.loop = false;
     }
 
-    if (isMusicOn) {
-      const playPromise = audioRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(err => {
-          console.log("Autoplay blocked or file not found:", err);
-          setIsMusicOn(false); 
-        });
+    const playAudio = async () => {
+      try {
+        if (isMusicOn) {
+          await audioRef.current?.play();
+        } else {
+          audioRef.current?.pause();
+        }
+      } catch (err) {
+        console.log("Autoplay was blocked by browser. User must interact first.", err);
+        // If blocked, we keep the state as is, but visually the user might need to click toggle
       }
-    } else {
-      audioRef.current.pause();
-    }
+    };
+
+    playAudio();
 
     // Cleanup: Stop music when leaving the page
     return () => {
