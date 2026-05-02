@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -23,12 +22,14 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuBadge,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { SUPER_ADMIN_UID } from '@/firebase/firestore/users';
+import { format } from 'date-fns';
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -39,6 +40,23 @@ export function AppSidebar() {
   // Fetch user profile for role check
   const userRef = useMemo(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
   const { data: profile } = useDoc<any>(userRef as any);
+
+  // Fetch incomplete tasks for the badge
+  const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+  const incompleteTasksQuery = useMemo(() => {
+    if (!user) return null;
+    return query(
+      collection(firestore, 'users', user.uid, 'tasks'),
+      where('completed', '==', false)
+    );
+  }, [user, firestore]);
+  const { data: incompleteTasks } = useCollection<any>(incompleteTasksQuery);
+
+  const pendingCount = useMemo(() => {
+    if (!incompleteTasks) return 0;
+    // Count tasks for today or overdue
+    return incompleteTasks.filter(t => t.date <= todayStr).length;
+  }, [incompleteTasks, todayStr]);
 
   const isAdmin = profile?.role === 'admin' || user?.uid === SUPER_ADMIN_UID;
   const isAdminPage = pathname.startsWith('/admin');
@@ -74,6 +92,7 @@ export function AppSidebar() {
       label: 'Study Planner',
       href: '/todo',
       icon: CalendarCheck,
+      badge: pendingCount > 0 ? pendingCount : null
     },
     {
         label: 'Exam Tracker',
@@ -146,6 +165,14 @@ export function AppSidebar() {
                     {state === 'expanded' && <span className="font-medium">{item.label}</span>}
                   </Link>
                 </SidebarMenuButton>
+                {item.badge && state === 'expanded' && (
+                  <SidebarMenuBadge className="bg-destructive text-destructive-foreground font-black text-[10px] rounded-full">
+                    {item.badge}
+                  </SidebarMenuBadge>
+                )}
+                {item.badge && state === 'collapsed' && (
+                  <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-card" />
+                )}
               </SidebarMenuItem>
             );
           })}
