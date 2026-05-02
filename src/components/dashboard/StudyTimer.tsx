@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { logStudyTime } from '@/firebase/firestore/hierarchy';
-import { updateUserProfile } from '@/firebase/firestore/users';
+import { updateUserProfile, type CurrentSession } from '@/firebase/firestore/users';
 import { useToast } from '@/hooks/use-toast';
 import {
   Card,
@@ -14,7 +15,7 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RotateCcw, Coffee, BookOpenCheck, Settings2, ShieldCheck, ShieldAlert, Wifi } from 'lucide-react';
+import { Play, Pause, RotateCcw, Coffee, BookOpenCheck, Settings2, ShieldCheck, Wifi } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -35,28 +36,22 @@ export function StudyTimer() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
 
-  // Fetch Focus Settings to show protection status
+  // Profile data for session recovery
   const userRef = useMemo(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: profile } = useDoc<any>(userRef as any);
-  const isFocusModeEnabled = useMemo(() => {
-    if (!profile?.focusSettings) return false;
-    const { blockFbReels, blockInstaReels, blockYoutubeShorts, restrictMessenger, restrictWhatsapp } = profile.focusSettings;
-    return blockFbReels || blockInstaReels || blockYoutubeShorts || restrictMessenger || restrictWhatsapp;
-  }, [profile?.focusSettings]);
 
   const [workDuration, setWorkDuration] = useState(25);
   const [timeLeft, setTimeLeft] = useState(workDuration * 60);
   const [isActive, setIsActive] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
-  
-  // High-accuracy background-safe refs
-  const startTimeRef = useRef<number | null>(null);
-  const baseSecondsRef = useRef<number>(workDuration * 60);
-  const lastLoggedMinuteRef = useRef<number>(0);
-
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<string | null>(null);
-  
+
+  // High-accuracy sync refs
+  const lastLoggedMinuteRef = useRef<number>(0);
+  const initializedFromCloud = useRef(false);
+
+  // Fetch subjects for dropdowns
   const subjectsQuery = useMemo(() => {
     if (!user) return null;
     return query(collection(firestore, 'users', user.uid, 'subjects'), orderBy('createdAt', 'asc'));
@@ -69,8 +64,38 @@ export function StudyTimer() {
   }, [user, firestore, selectedSubject]);
   const { data: chapters, loading: chaptersLoading } = useCollection(chaptersQuery);
 
-  const initializedFromParams = useRef(false);
-  
+  // 1. Session Recovery (Root-Level Persistence)
+  useEffect(() => {
+    if (profile?.currentSession && !initializedFromCloud.current) {
+      const { startTime, duration, status, subjectId, chapterId, isBreak: cloudIsBreak } = profile.currentSession;
+      
+      if (status === 'active' && startTime) {
+        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+        const totalSessionSeconds = (cloudIsBreak ? BREAK_MINUTES : duration) * 60;
+        const calculatedTimeLeft = Math.max(0, totalSessionSeconds - elapsedSeconds);
+
+        if (calculatedTimeLeft > 0) {
+          setTimeLeft(calculatedTimeLeft);
+          setWorkDuration(duration);
+          setSelectedSubject(subjectId);
+          setSelectedChapter(chapterId);
+          setIsBreak(cloudIsBreak);
+          setIsActive(true);
+          lastLoggedMinuteRef.current = Math.floor(elapsedSeconds / 60);
+          toast({ title: "Session Resumed", description: "Your study timer has been restored from the cloud." });
+        } else {
+          // Session expired while user was away
+          handleReset();
+        }
+      } else {
+        setWorkDuration(duration || 25);
+        setTimeLeft((duration || 25) * 60);
+      }
+      initializedFromCloud.current = true;
+    }
+  }, [profile?.currentSession, toast]);
+
+  // 2. Search Params Handling
   useEffect(() => {
     const subId = searchParams.get('subjectId');
     const chapId = searchParams.get('chapterId');
@@ -78,103 +103,122 @@ export function StudyTimer() {
 
     if (subId) setSelectedSubject(subId);
     if (chapId) setSelectedChapter(chapId);
-    
     if (durationParam) {
       const d = parseInt(durationParam, 10);
       if (!isNaN(d) && d > 0) {
         setWorkDuration(d);
-        if (!isActive) {
-          setTimeLeft(d * 60);
-          baseSecondsRef.current = d * 60;
-        }
-        
-        if (!initializedFromParams.current && subId && chapId) {
-            handleStart();
-            initializedFromParams.current = true;
-            toast({
-                title: "Session Started!",
-                description: `Focused study for ${d} minutes.`,
-            });
-        }
+        if (!isActive) setTimeLeft(d * 60);
       }
     }
-  }, [searchParams, toast]);
+  }, [searchParams, isActive]);
+
+  const updateCloudSession = useCallback(async (updates: Partial<CurrentSession>) => {
+    if (!user) return;
+    const session = {
+      startTime: isActive ? (profile?.currentSession?.startTime || Date.now()) : null,
+      duration: workDuration,
+      status: isActive ? 'active' : 'idle',
+      subjectId: selectedSubject,
+      chapterId: selectedChapter,
+      isBreak,
+      ...updates
+    };
+    await updateUserProfile(firestore, user.uid, { currentSession: session as any, isStudying: session.status === 'active' && !session.isBreak });
+  }, [user, firestore, isActive, workDuration, selectedSubject, selectedChapter, isBreak, profile?.currentSession]);
 
   const handleStart = async () => {
-    if (!isActive && user) {
-      startTimeRef.current = Date.now();
-      baseSecondsRef.current = timeLeft;
-      lastLoggedMinuteRef.current = 0;
+    if (!isActive && user && selectedSubject && selectedChapter) {
+      const startTime = Date.now();
       setIsActive(true);
-      if (!isBreak) {
-        updateUserProfile(firestore, user.uid, { 
-          isStudying: true,
-          last_active_date: serverTimestamp()
-        });
-      }
+      lastLoggedMinuteRef.current = 0;
+      
+      const newSession: CurrentSession = {
+        startTime,
+        duration: workDuration,
+        status: 'active',
+        subjectId: selectedSubject,
+        chapterId: selectedChapter,
+        isBreak: false
+      };
+      
+      await updateUserProfile(firestore, user.uid, { 
+        currentSession: newSession as any, 
+        isStudying: true,
+        last_active_date: serverTimestamp()
+      });
     }
   };
 
-  const handlePause = () => {
+  const handlePause = async () => {
     if (user) {
       setIsActive(false);
-      startTimeRef.current = null;
-      updateUserProfile(firestore, user.uid, { isStudying: false });
+      await updateCloudSession({ status: 'paused', startTime: null });
+      await updateUserProfile(firestore, user.uid, { isStudying: false });
     }
   };
 
-  const reset = useCallback(() => {
+  const handleReset = useCallback(async () => {
     if (user) {
       setIsActive(false);
       setIsBreak(false);
-      startTimeRef.current = null;
       const initialSeconds = workDuration * 60;
       setTimeLeft(initialSeconds);
-      baseSecondsRef.current = initialSeconds;
-      updateUserProfile(firestore, user.uid, { isStudying: false });
+      lastLoggedMinuteRef.current = 0;
+      await updateUserProfile(firestore, user.uid, { 
+        isStudying: false,
+        currentSession: {
+          startTime: null,
+          duration: workDuration,
+          status: 'idle',
+          subjectId: selectedSubject,
+          chapterId: selectedChapter,
+          isBreak: false
+        } as any
+      });
     }
-  }, [workDuration, user, firestore]);
+  }, [workDuration, user, firestore, selectedSubject, selectedChapter]);
 
-  const startBreak = useCallback(() => {
+  const startBreak = useCallback(async () => {
     if (user) {
       setIsBreak(true);
       const breakSeconds = BREAK_MINUTES * 60;
       setTimeLeft(breakSeconds);
-      baseSecondsRef.current = breakSeconds;
-      startTimeRef.current = Date.now();
-      lastLoggedMinuteRef.current = 0;
       setIsActive(true);
-      updateUserProfile(firestore, user.uid, { isStudying: false });
-      toast({
-          title: "Time for a break!",
-          description: `Take 5 minutes to recharge.`
-      })
+      lastLoggedMinuteRef.current = 0;
+      
+      await updateCloudSession({ 
+        isBreak: true, 
+        startTime: Date.now(), 
+        status: 'active' 
+      });
+      
+      toast({ title: "Time for a break!", description: `Take 5 minutes to recharge.` });
     }
-  }, [toast, user, firestore]);
+  }, [user, updateCloudSession, toast]);
 
   const handleMinuteLog = useCallback(async () => {
-    if (!user || !selectedSubject || !selectedChapter) return;
+    if (!user || !selectedSubject || !selectedChapter || isBreak) return;
     try {
         await logStudyTime(firestore, user.uid, selectedSubject, selectedChapter, 1);
-        // last_active_date is updated within logStudyTime
     } catch (error) {
         // Silent catch for offline sync
     }
-  }, [user, firestore, selectedSubject, selectedChapter]);
+  }, [user, firestore, selectedSubject, selectedChapter, isBreak]);
 
+  // 3. The Unstoppable Engine
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
-    if (isActive) {
+    if (isActive && profile?.currentSession?.startTime) {
       interval = setInterval(() => {
-        if (!startTimeRef.current) return;
-        
-        // Calculate EXACT elapsed time based on system clock
-        const elapsedSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        const newTimeLeft = Math.max(0, baseSecondsRef.current - elapsedSeconds);
+        const startTime = profile.currentSession!.startTime;
+        const totalSessionSeconds = (isBreak ? BREAK_MINUTES : workDuration) * 60;
+        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+        const newTimeLeft = Math.max(0, totalSessionSeconds - elapsedSeconds);
         
         setTimeLeft(newTimeLeft);
 
+        // Logging every minute passed
         if (!isBreak) {
           const currentElapsedMinutes = Math.floor(elapsedSeconds / 60);
           if (currentElapsedMinutes > lastLoggedMinuteRef.current) {
@@ -185,16 +229,9 @@ export function StudyTimer() {
 
         if (newTimeLeft === 0) {
           clearInterval(interval!);
-          setIsActive(false);
           if (isBreak) {
-            if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
-              new Notification("Break's over!", { body: "Time to get back to the hustle." });
-            }
-            reset();
+            handleReset();
           } else {
-            if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
-              new Notification("Study session complete!", { body: "Take a well-deserved break." });
-            }
             startBreak();
           }
         }
@@ -204,13 +241,7 @@ export function StudyTimer() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isActive, isBreak, reset, startBreak, handleMinuteLog]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-      Notification.requestPermission();
-    }
-  }, []);
+  }, [isActive, isBreak, workDuration, profile?.currentSession, handleReset, startBreak, handleMinuteLog]);
 
   const minutesDisplay = Math.floor(timeLeft / 60);
   const secondsDisplay = timeLeft % 60;
@@ -220,7 +251,7 @@ export function StudyTimer() {
   const canStart = !!selectedSubject && !!selectedChapter;
 
   return (
-    <Card className="w-full shadow-2xl bg-slate-900 text-white border-none overflow-hidden">
+    <Card className="w-full shadow-2xl bg-slate-900 text-white border-none overflow-hidden relative">
       <CardHeader className="bg-slate-800/50 pb-4 flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 text-xl font-headline">
           {isBreak ? <Coffee className="text-orange-400" /> : <BookOpenCheck className="text-primary" />}
@@ -231,12 +262,6 @@ export function StudyTimer() {
               <div className="flex items-center gap-1 bg-primary/20 px-2 py-1 rounded-full border border-primary/20 animate-pulse">
                 <Wifi className="h-3 w-3 text-primary" />
                 <span className="text-[9px] font-black uppercase text-primary tracking-tighter">Live Syncing</span>
-              </div>
-            )}
-            {isFocusModeEnabled && !isBreak && (
-              <div className="flex items-center gap-1.5 bg-success/10 px-2 py-1 rounded-full border border-success/20">
-                 <ShieldCheck className="h-3.5 w-3.5 text-success" />
-                 <span className="text-[10px] font-black uppercase text-success tracking-tighter">Protected</span>
               </div>
             )}
         </div>
@@ -263,7 +288,7 @@ export function StudyTimer() {
             </span>
             {isActive && !isBreak && (
               <span className="text-[10px] font-black uppercase text-primary mt-2 flex items-center gap-1 animate-pulse">
-                <Wifi className="h-3 w-3" /> LIVE FOCUS
+                <Wifi className="h-3 w-3" /> UNSTOPPABLE
               </span>
             )}
           </div>
@@ -274,14 +299,13 @@ export function StudyTimer() {
             onClick={isActive ? handlePause : handleStart} 
             size="lg" 
             className="w-40 h-12 text-lg font-bold shadow-lg shadow-primary/20" 
-            disabled={!canStart}
+            disabled={!canStart && !isActive}
           >
             {isActive ? <Pause className="mr-2" /> : <Play className="mr-2" />}
             {isActive ? 'Pause' : 'Start'}
           </Button>
-          <Button onClick={reset} variant="ghost" size="icon" className="h-12 w-12 rounded-full hover:bg-slate-800">
+          <Button onClick={handleReset} variant="ghost" size="icon" className="h-12 w-12 rounded-full hover:bg-slate-800">
             <RotateCcw className="h-6 w-6" />
-            <span className="sr-only">Reset</span>
           </Button>
         </div>
       </CardContent>
@@ -328,10 +352,7 @@ export function StudyTimer() {
               const val = parseInt(e.target.value, 10);
               if (val > 0) {
                 setWorkDuration(val);
-                if (!isActive) {
-                  setTimeLeft(val * 60);
-                  baseSecondsRef.current = val * 60;
-                }
+                if (!isActive) setTimeLeft(val * 60);
               }
             }}
             disabled={isActive} min="1"

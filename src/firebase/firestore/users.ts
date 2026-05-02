@@ -30,6 +30,15 @@ export type FocusSettings = {
   strictMode: boolean;
 };
 
+export type CurrentSession = {
+  startTime: number | null;
+  duration: number;
+  status: 'active' | 'paused' | 'idle';
+  subjectId: string | null;
+  chapterId: string | null;
+  isBreak: boolean;
+};
+
 export type UserProfile = {
   uid: string;
   email: string | null;
@@ -56,6 +65,7 @@ export type UserProfile = {
   focusPoints?: number;
   pinnedExamId?: string | null;
   isStudying?: boolean;
+  currentSession?: CurrentSession;
 };
 
 export async function createUserProfile(
@@ -96,6 +106,14 @@ export async function createUserProfile(
         focusPoints: 0,
         pinnedExamId: null,
         isStudying: false,
+        currentSession: {
+          startTime: null,
+          duration: 25,
+          status: 'idle',
+          subjectId: null,
+          chapterId: null,
+          isBreak: false
+        },
         focusSettings: {
           blockFbReels: false,
           blockInstaReels: false,

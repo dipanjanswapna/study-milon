@@ -28,6 +28,17 @@
         "phoneNumber": { "type": "string" },
         "groupId": { "type": "string", "description": "The ID of the group the user belongs to." },
         "pinnedExamId": { "type": "string", "nullable": true },
+        "currentSession": {
+          "type": "object",
+          "properties": {
+            "startTime": { "type": "number" },
+            "duration": { "type": "number" },
+            "status": { "type": "string", "enum": ["active", "paused", "idle"] },
+            "subjectId": { "type": "string" },
+            "chapterId": { "type": "string" },
+            "isBreak": { "type": "boolean" }
+          }
+        },
         "focusSettings": {
           "type": "object",
           "properties": {
