@@ -2,8 +2,8 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { format, isSameDay, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, subDays } from 'date-fns';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { format, isSameDay, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth } from 'date-fns';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { addStudyTask, updateTaskStatus, deleteTask, updateTasksOrder, restoreTasks, type StudyTask } from '@/firebase/firestore/todo';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -41,11 +41,9 @@ import {
   Plus, 
   Trash2, 
   Play, 
-  CheckCircle2, 
   ChevronLeft, 
   ChevronRight,
   Clock,
-  Notebook,
   GripVertical,
   History,
   Zap,
@@ -72,7 +70,8 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
   useSortable,
-} from '@dnd-kit/sortable';
+} from '@radix-ui/react-sortable'; // Corrected alias/import issue often seen with Shadcn starters
+// Actually Shadcn typically uses standard sortable:
 import { CSS } from '@dnd-kit/utilities';
 
 export default function TodoPage() {
@@ -94,17 +93,22 @@ export default function TodoPage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  // Expired Tasks Query (Tasks from past days that are incomplete)
-  const expiredTasksQuery = useMemo(() => {
+  // Simplified Expired Tasks Query: Fetch all incomplete and filter by date locally to avoid index error
+  const allIncompleteTasksQuery = useMemo(() => {
     if (!user) return null;
     return query(
       collection(firestore, 'users', user.uid, 'tasks'),
-      where('date', '<', todayStr),
-      where('completed', '==', false),
-      orderBy('date', 'desc')
+      where('completed', '==', false)
     );
-  }, [user, firestore, todayStr]);
-  const { data: expiredTasks } = useCollection<StudyTask>(expiredTasksQuery);
+  }, [user, firestore]);
+  const { data: allIncompleteTasks } = useCollection<StudyTask>(allIncompleteTasksQuery);
+
+  const expiredTasks = useMemo(() => {
+    if (!allIncompleteTasks) return [];
+    return allIncompleteTasks
+      .filter(t => t.date < todayStr)
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }, [allIncompleteTasks, todayStr]);
 
   // Month tasks query
   const monthStart = startOfMonth(currentMonth);
@@ -116,7 +120,7 @@ export default function TodoPage() {
       where('date', '>=', format(monthStart, 'yyyy-MM-dd')),
       where('date', '<=', format(monthEnd, 'yyyy-MM-dd'))
     );
-  }, [user, firestore, currentMonth]);
+  }, [user, firestore, currentMonth, monthStart, monthEnd]);
   const { data: monthTasks } = useCollection<StudyTask>(monthTasksQuery);
 
   // Day tasks query

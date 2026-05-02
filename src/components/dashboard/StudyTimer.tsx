@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, RotateCcw, Coffee, BookOpenCheck, Wifi, Zap, Clock, ArrowRight, ListTodo, CheckCircle2 } from 'lucide-react';
-import { collection, query, where, doc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -39,17 +39,19 @@ export function StudyTimer() {
     if (!user) return null;
     return query(
       collection(firestore, 'users', user.uid, 'tasks'),
-      where('date', '==', todayStr),
-      orderBy('order', 'asc')
+      where('date', '==', todayStr)
+      // Removed orderBy to avoid composite index requirement
     );
   }, [user, firestore, todayStr]);
-  const { data: tasks, loading: tasksLoading } = useCollection<StudyTask>(tasksQuery);
+  const { data: rawTasks, loading: tasksLoading } = useCollection<StudyTask>(tasksQuery);
 
-  // Determine the Active Task: The first one in the list that is NOT completed
+  // Determine the Active Task: Sort client-side to avoid index error
   const activeTask = useMemo(() => {
-    if (!tasks) return null;
-    return tasks.find(t => !t.completed);
-  }, [tasks]);
+    if (!rawTasks) return null;
+    return [...rawTasks]
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+      .find(t => !t.completed);
+  }, [rawTasks]);
 
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
