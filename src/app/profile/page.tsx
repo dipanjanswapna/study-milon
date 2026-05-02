@@ -71,7 +71,8 @@ import {
   Apple,
   Monitor,
   Smartphone,
-  Info
+  Info,
+  Sparkles
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -88,6 +89,7 @@ const profileSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
   photoURL: z.string().url('Please enter a valid URL.').or(z.literal('')),
   category: z.enum(['SSC', 'HSC', 'Admission 1st', 'Admission 2nd', 'Job Prep']),
+  religion: z.enum(['Muslim', 'Hindu']),
   batch: z.string().min(1, 'Batch is required.'),
   institution: z.string().min(2, 'Institution name must be at least 2 characters.').or(z.literal('')),
   phoneNumber: z.string().min(10, 'Phone number must be at least 10 digits.').or(z.literal('')),
@@ -103,6 +105,7 @@ type UserProfile = {
   photoURL: string;
   createdAt: any;
   role?: 'student' | 'admin';
+  religion?: 'Muslim' | 'Hindu';
   total_study_minutes?: number;
   daily_study_minutes?: number;
   daily_goal_minutes?: number;
@@ -133,6 +136,7 @@ export default function ProfilePage() {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       category: 'HSC',
+      religion: 'Muslim',
       batch: '2026',
       institution: '',
       phoneNumber: '',
@@ -186,6 +190,7 @@ export default function ProfilePage() {
             displayName: data.displayName || '',
             photoURL: data.photoURL || '',
             category: (data.category as any) || 'HSC',
+            religion: data.religion || 'Muslim',
             batch: data.batch || '2026',
             institution: data.institution || '',
             phoneNumber: data.phoneNumber || '',
@@ -209,6 +214,7 @@ export default function ProfilePage() {
       await updateUserProfile(firestore, user.uid, {
         displayName: data.displayName,
         photoURL: data.photoURL,
+        religion: data.religion,
         category: data.category as any,
         batch: data.batch,
         institution: data.institution,
@@ -344,6 +350,26 @@ export default function ProfilePage() {
                             )}
                           />
                         </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="religion">Religion (For Dashboard Widget)</Label>
+                        <Controller
+                          name="religion"
+                          control={control}
+                          render={({ field }) => (
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <SelectTrigger className="flex items-center gap-2">
+                                <Sparkles className="h-4 w-4 text-primary" />
+                                <SelectValue placeholder="Select Religion" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Muslim">Muslim</SelectItem>
+                                <SelectItem value="Hindu">Hindu</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
                       </div>
 
                       <div className="space-y-2">

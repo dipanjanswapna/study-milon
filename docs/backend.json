@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "UserProfile": {
@@ -12,6 +11,7 @@
         "photoURL": { "type": "string", "format": "uri" },
         "createdAt": { "type": "string", "format": "date-time" },
         "role": { "type": "string", "enum": ["student", "admin"] },
+        "religion": { "type": "string", "enum": ["Muslim", "Hindu"], "default": "Muslim" },
         "total_study_minutes": { "type": "number" },
         "daily_study_minutes": { "type": "number" },
         "daily_goal_minutes": { "type": "number" },

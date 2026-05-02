@@ -1,4 +1,3 @@
-
 import {
   doc,
   setDoc,
@@ -10,6 +9,7 @@ import {
 import type { User } from 'firebase/auth';
 
 export type AcademicCategory = 'SSC' | 'HSC' | 'Admission 1st' | 'Admission 2nd' | 'Job Prep';
+export type Religion = 'Muslim' | 'Hindu';
 
 export type UserProfile = {
   uid: string;
@@ -18,6 +18,7 @@ export type UserProfile = {
   photoURL: string | null;
   createdAt: any;
   role: 'student' | 'admin';
+  religion?: Religion;
   total_study_minutes?: number;
   daily_study_minutes?: number;
   daily_goal_minutes?: number;
@@ -46,6 +47,7 @@ export async function createUserProfile(
         photoURL,
         createdAt,
         role: 'student',
+        religion: 'Muslim',
         total_study_minutes: 0,
         daily_study_minutes: 0,
         daily_goal_minutes: 360, // Default 6 hours
