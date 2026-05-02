@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -8,7 +7,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Header } from '@/components/dashboard/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Timer, Calendar, Info, Clock, ArrowRight, Zap } from 'lucide-react';
+import { Timer, Calendar, Clock, Zap } from 'lucide-react';
 import { differenceInDays, differenceInHours, differenceInMinutes, differenceInSeconds, isAfter } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -72,11 +71,10 @@ function ExamCountdownCard({ exam }: { exam: any }) {
   useEffect(() => {
     if (!examDate) return;
 
-    const timer = setInterval(() => {
+    const updateTimer = () => {
       const now = new Date();
       if (isAfter(now, examDate)) {
         setTimeLeft({ d: 0, h: 0, m: 0, s: 0 });
-        clearInterval(timer);
         return;
       }
 
@@ -86,7 +84,10 @@ function ExamCountdownCard({ exam }: { exam: any }) {
       const s = differenceInSeconds(examDate, now) % 60;
 
       setTimeLeft({ d, h, m, s });
-    }, 1000);
+    };
+
+    updateTimer();
+    const timer = setInterval(updateTimer, 1000);
 
     return () => clearInterval(timer);
   }, [examDate]);
@@ -97,7 +98,7 @@ function ExamCountdownCard({ exam }: { exam: any }) {
     <Card className="rounded-[2.5rem] border-none shadow-xl overflow-hidden group hover:scale-[1.02] transition-all">
       <CardHeader className="bg-secondary/30 pb-4">
         <div className="flex justify-between items-start mb-2">
-           <Badge className="bg-primary text-white border-none font-black text-[10px] uppercase">
+           <Badge className="bg-primary text-white border-none font-black text-[10px] uppercase px-3">
               {exam.category}
            </Badge>
            <div className="flex items-center gap-1.5 text-[10px] font-black text-muted-foreground uppercase">
@@ -106,21 +107,21 @@ function ExamCountdownCard({ exam }: { exam: any }) {
            </div>
         </div>
         <CardTitle className="text-2xl font-black group-hover:text-primary transition-colors">{exam.title}</CardTitle>
-        <CardDescription className="line-clamp-2 min-h-[32px]">{exam.description}</CardDescription>
+        <CardDescription className="line-clamp-2 min-h-[32px] font-medium">{exam.description}</CardDescription>
       </CardHeader>
-      <CardContent className="p-6 md:p-8 pt-6">
+      <CardContent className="p-6 md:p-8 pt-6 bg-card">
         <div className="grid grid-cols-4 gap-2 md:gap-4">
           <CountdownUnit value={timeLeft.d} label="Days" />
           <CountdownUnit value={timeLeft.h} label="Hours" />
           <CountdownUnit value={timeLeft.m} label="Mins" />
-          <CountdownUnit value={timeLeft.s} label="Secs" isLast />
+          <CountdownUnit value={timeLeft.s} label="Secs" />
         </div>
       </CardContent>
     </Card>
   );
 }
 
-function CountdownUnit({ value, label, isLast }: { value: number; label: string; isLast?: boolean }) {
+function CountdownUnit({ value, label }: { value: number; label: string }) {
   return (
     <div className="flex flex-col items-center">
        <div className="w-full aspect-square bg-slate-900 rounded-2xl flex items-center justify-center shadow-inner relative overflow-hidden">

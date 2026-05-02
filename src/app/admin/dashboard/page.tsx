@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -113,6 +112,7 @@ export default function AdminDashboardPage() {
       setIsExamOpen(false);
       setExamTitle('');
       setExamDate('');
+      setExamDesc('');
       toast({ title: 'Exam Added', description: 'Students can now track this countdown.' });
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Error', description: e.message });
@@ -299,7 +299,7 @@ export default function AdminDashboardPage() {
                                    <AlertDialogHeader>
                                      <AlertDialogTitle className="flex items-center gap-2 text-destructive font-black">
                                        <AlertTriangle className="h-5 w-5" /> Delete Student
-                                     </AlertDialogTitle>
+                                     </AlertTitle>
                                      <AlertDialogDescription className="font-medium text-base">
                                        Are you sure? This will permanently delete <strong>{user.displayName}</strong>'s profile and remove them from any study guilds.
                                      </AlertDialogDescription>
