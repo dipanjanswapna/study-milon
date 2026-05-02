@@ -15,72 +15,68 @@ export function WelcomeBanner() {
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
   useEffect(() => {
-    // Set initial time on mount to avoid hydration mismatch
     setCurrentTime(new Date());
-    
-    // Update every minute
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 60000);
-
     return () => clearInterval(timer);
   }, []);
 
   return (
-    <Card className="relative w-full h-56 md:h-64 lg:h-72 overflow-hidden rounded-[2.5rem] shadow-2xl border-none">
+    <Card className="relative w-full h-48 md:h-64 lg:h-72 overflow-hidden rounded-[2rem] md:rounded-[2.5rem] shadow-2xl border-none group">
       {welcomeImage && (
         <Image
           src={welcomeImage.imageUrl}
           alt={welcomeImage.description}
           fill
-          className="object-cover transition-transform duration-1000 hover:scale-105"
+          className="object-cover transition-transform duration-[2000ms] group-hover:scale-110"
           data-ai-hint={welcomeImage.imageHint}
           priority
         />
       )}
       
       {/* Dynamic Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/50 to-transparent p-6 md:p-12 flex flex-col justify-center">
+      <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent p-5 md:p-12 flex flex-col justify-center">
         <div className="flex flex-col gap-2 md:gap-4 max-w-2xl">
           
-          {/* Responsive Date and Time Badges */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Status Badges */}
+          <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
              {currentTime ? (
                <>
-                 <div className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 text-[9px] md:text-[10px] font-black text-white uppercase tracking-widest">
-                    <CalendarIcon className="h-3 w-3 text-primary" />
-                    {format(currentTime, 'EEEE, MMM do')}
+                 <div className="inline-flex items-center gap-1 bg-white/10 backdrop-blur-lg px-2.5 py-1 rounded-full border border-white/20 text-[8px] md:text-[10px] font-black text-white uppercase tracking-widest transition-all hover:bg-white/20">
+                    <CalendarIcon className="h-2.5 w-2.5 md:h-3 md:w-3 text-primary" />
+                    {format(currentTime, 'MMM do')}
                  </div>
-                 <div className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 text-[9px] md:text-[10px] font-black text-white uppercase tracking-widest">
-                    <Clock className="h-3 w-3 text-primary" />
+                 <div className="inline-flex items-center gap-1 bg-white/10 backdrop-blur-lg px-2.5 py-1 rounded-full border border-white/20 text-[8px] md:text-[10px] font-black text-white uppercase tracking-widest transition-all hover:bg-white/20">
+                    <Clock className="h-2.5 w-2.5 md:h-3 md:w-3 text-primary" />
                     {format(currentTime, 'h:mm a')}
                  </div>
                </>
              ) : (
-               <div className="h-6 w-24 bg-white/10 animate-pulse rounded-full" />
+               <div className="h-5 w-20 bg-white/10 animate-pulse rounded-full" />
              )}
           </div>
 
-          <div className="space-y-4 md:space-y-6">
-            <h2 className="text-2xl md:text-4xl lg:text-6xl font-black text-white tracking-tighter font-headline leading-tight">
+          <div className="space-y-3 md:space-y-6">
+            <h2 className="text-xl md:text-4xl lg:text-6xl font-black text-white tracking-tighter font-headline leading-tight drop-shadow-md">
               Welcome back
               {user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}!
             </h2>
             
-            <div className="flex flex-wrap gap-3">
-              <Button asChild size="sm" className="rounded-full bg-white text-black hover:bg-white/90 font-black px-6 h-10 md:h-12 text-[10px] md:text-xs shadow-xl shadow-black/20 group">
+            <div className="flex flex-wrap gap-2 md:gap-3">
+              <Button asChild size="sm" className="rounded-full bg-white text-black hover:bg-primary hover:text-white font-black px-4 md:px-6 h-8 md:h-10 text-[9px] md:text-xs shadow-xl transition-all group/btn border-none">
                 <Link href="/resources">
-                  <BookMarked className="mr-2 h-4 w-4 text-primary" />
-                  Resource Library
-                  <ArrowRight className="ml-1.5 h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                  <BookMarked className="mr-1.5 h-3.5 w-3.5 md:h-4 md:w-4" />
+                  Resources
+                  <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover/btn:translate-x-1" />
                 </Link>
               </Button>
 
-              <Button asChild size="sm" variant="outline" className="rounded-full bg-black/20 backdrop-blur-md text-white border-white/20 hover:bg-white/10 font-black px-6 h-10 md:h-12 text-[10px] md:text-xs shadow-xl shadow-black/20 group">
+              <Button asChild size="sm" variant="outline" className="rounded-full bg-black/40 backdrop-blur-md text-white border-white/20 hover:bg-primary/20 hover:border-primary font-black px-4 md:px-6 h-8 md:h-10 text-[9px] md:text-xs shadow-xl transition-all group/btn">
                 <Link href="/exams">
-                  <Timer className="mr-2 h-4 w-4 text-primary" />
-                  Exam Countdown
-                  <ArrowRight className="ml-1.5 h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                  <Timer className="mr-1.5 h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
+                  Exams
+                  <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover/btn:translate-x-1" />
                 </Link>
               </Button>
             </div>

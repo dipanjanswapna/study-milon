@@ -1,9 +1,8 @@
-
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, User, BookMarked, CalendarCheck, Trophy, Users2, Timer } from 'lucide-react';
+import { LayoutDashboard, User, CalendarCheck, Trophy, Users2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/firebase';
 
@@ -23,11 +22,6 @@ export function BottomNav() {
       icon: LayoutDashboard,
     },
     {
-      label: 'Exams',
-      href: '/exams',
-      icon: Timer,
-    },
-    {
       label: 'Planner',
       href: '/todo',
       icon: CalendarCheck,
@@ -42,10 +36,15 @@ export function BottomNav() {
         href: '/leaderboard',
         icon: Trophy,
     },
+    {
+      label: 'Profile',
+      href: '/profile',
+      icon: User,
+    },
   ];
 
   return (
-    <nav className="w-full bg-card/80 backdrop-blur-lg border-t shadow-lg md:hidden">
+    <nav className="w-full bg-card/90 backdrop-blur-xl border-t shadow-2xl md:hidden safe-area-pb">
       <div className="flex items-center justify-around h-16">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -56,14 +55,14 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center w-full h-full gap-1 transition-all",
+                "flex flex-col items-center justify-center w-full h-full gap-0.5 transition-all duration-300",
                 isActive 
-                  ? "text-primary scale-105" 
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "text-primary scale-110" 
+                  : "text-muted-foreground hover:text-foreground opacity-70"
               )}
             >
               <Icon className={cn("h-5 w-5", isActive && "stroke-[2.5px]")} />
-              <span className="text-[10px] font-semibold">{item.label}</span>
+              <span className="text-[9px] font-black uppercase tracking-tighter">{item.label}</span>
             </Link>
           );
         })}
