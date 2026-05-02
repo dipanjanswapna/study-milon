@@ -23,6 +23,8 @@ export type FocusSettings = {
   blockYoutubeShorts: boolean;
   restrictMessenger: boolean;
   restrictWhatsapp: boolean;
+  blockSpotify?: boolean;
+  blockWattpad?: boolean;
   strictMode?: boolean;
 };
 
@@ -81,6 +83,8 @@ export async function createUserProfile(
           blockYoutubeShorts: false,
           restrictMessenger: false,
           restrictWhatsapp: false,
+          blockSpotify: false,
+          blockWattpad: false,
           strictMode: false,
         }
       });

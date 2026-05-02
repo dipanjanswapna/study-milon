@@ -26,7 +26,9 @@ import {
   Info,
   Smartphone,
   Lock,
-  Zap
+  Zap,
+  Music,
+  BookOpen
 } from 'lucide-react';
 import Link from 'next/link';
 import { 
@@ -48,6 +50,7 @@ declare global {
       checkPermissions: () => Promise<boolean>;
       requestPermissions: () => void;
       setStrictMode: (enabled: boolean) => void;
+      getPackageName?: (app: string) => string;
     };
   }
 }
@@ -63,6 +66,8 @@ export default function FocusSettingsPage() {
     blockYoutubeShorts: false,
     restrictMessenger: false,
     restrictWhatsapp: false,
+    blockSpotify: false,
+    blockWattpad: false,
     strictMode: false,
   });
   const [loading, setLoading] = useState(true);
@@ -185,7 +190,7 @@ export default function FocusSettingsPage() {
                             <ShieldAlert className="h-5 w-5 text-primary" />
                          </div>
                          <div>
-                            <CardTitle className="text-xl font-black">Social Media Blocker</CardTitle>
+                            <CardTitle className="text-xl font-black">App Focus Shield</CardTitle>
                             <CardDescription className="text-xs font-bold uppercase tracking-wider">Restrict high-dopamine apps</CardDescription>
                          </div>
                       </div>
@@ -212,6 +217,20 @@ export default function FocusSettingsPage() {
                             description="Keep your video learning focused on long-form content."
                             checked={settings.blockYoutubeShorts}
                             onChange={(val) => handleToggle('blockYoutubeShorts', val)}
+                         />
+                         <BlockItem 
+                            icon={<Music className="h-4 w-4" />} 
+                            label="Spotify" 
+                            description="Block Spotify (com.spotify.music) to maintain silence."
+                            checked={settings.blockSpotify || false}
+                            onChange={(val) => handleToggle('blockSpotify', val)}
+                         />
+                         <BlockItem 
+                            icon={<BookOpen className="h-4 w-4" />} 
+                            label="Wattpad" 
+                            description="Restrict Wattpad (com.wattpad.android) access."
+                            checked={settings.blockWattpad || false}
+                            onChange={(val) => handleToggle('blockWattpad', val)}
                          />
                          <BlockItem 
                             icon={<MessageSquare className="h-4 w-4" />} 
@@ -288,7 +307,7 @@ export default function FocusSettingsPage() {
                          <div className="space-y-4">
                             <h3 className="text-2xl font-black tracking-tighter">STOP SCROLLING</h3>
                             <p className="text-xs font-bold leading-relaxed text-white/60 uppercase tracking-widest">
-                               Ambition-কে সাফল্যের শিখরে নিয়ে যেতে পড়াশোনায় মন দিন!
+                               পড়াশোনার সময় বিনোদন বন্ধ! চলুন Study Milon-এ ফিরি।
                             </p>
                          </div>
                          
