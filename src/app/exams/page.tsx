@@ -7,7 +7,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Header } from '@/components/dashboard/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Timer, Calendar, Clock, Zap } from 'lucide-react';
+import { Timer, Calendar, Zap } from 'lucide-react';
 import { differenceInDays, differenceInHours, differenceInMinutes, differenceInSeconds, isAfter } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -54,7 +54,7 @@ export default function ExamsPage() {
              <div className="text-center md:text-left space-y-2">
                 <h4 className="text-xl font-black tracking-tight">The Final Stretch</h4>
                 <p className="text-sm font-medium text-muted-foreground leading-relaxed">
-                   যখন পরীক্ষার ঘড়ি টিকটিক করতে শুরু করে, তখন প্রতিটি মিনিট মূল্যবান। আপনার পড়াশোনার প্ল্যানটি এই তারিখগুলোর সাথে সামঞ্জস্যপূর্ণ করুন।
+                   যখন পরীক্ষার ঘড়ি টিকটিক করতে শুরু করে, তখন প্রতিটি minute মূল্যবান। আপনার পড়াশোনার প্ল্যানটি এই তারিখগুলোর সাথে সামঞ্জস্যপূর্ণ করুন।
                 </p>
              </div>
           </Card>
@@ -66,10 +66,15 @@ export default function ExamsPage() {
 
 function ExamCountdownCard({ exam }: { exam: any }) {
   const [timeLeft, setTimeLeft] = useState<{ d: number; h: number; m: number; s: number } | null>(null);
-  const examDate = exam.examDate?.toDate();
+  
+  // We compute the target date inside the effect or memoize it properly 
+  // to avoid creating a new Date object on every render of the card.
+  const examSeconds = exam.examDate?.seconds;
 
   useEffect(() => {
-    if (!examDate) return;
+    if (!examSeconds) return;
+
+    const examDate = new Date(examSeconds * 1000);
 
     const updateTimer = () => {
       const now = new Date();
@@ -83,16 +88,24 @@ function ExamCountdownCard({ exam }: { exam: any }) {
       const m = differenceInMinutes(examDate, now) % 60;
       const s = differenceInSeconds(examDate, now) % 60;
 
-      setTimeLeft({ d, h, m, s });
+      // Only update if at least one value changed (to avoid unnecessary re-renders)
+      setTimeLeft((prev) => {
+        if (prev && prev.d === d && prev.h === h && prev.m === m && prev.s === s) {
+          return prev;
+        }
+        return { d, h, m, s };
+      });
     };
 
     updateTimer();
     const timer = setInterval(updateTimer, 1000);
 
     return () => clearInterval(timer);
-  }, [examDate]);
+  }, [examSeconds]);
 
-  if (!examDate || !timeLeft) return null;
+  if (!examSeconds || !timeLeft) return null;
+
+  const displayDate = new Date(examSeconds * 1000);
 
   return (
     <Card className="rounded-[2.5rem] border-none shadow-xl overflow-hidden group hover:scale-[1.02] transition-all">
@@ -103,7 +116,7 @@ function ExamCountdownCard({ exam }: { exam: any }) {
            </Badge>
            <div className="flex items-center gap-1.5 text-[10px] font-black text-muted-foreground uppercase">
               <Calendar className="h-3 w-3" />
-              {examDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+              {displayDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
            </div>
         </div>
         <CardTitle className="text-2xl font-black group-hover:text-primary transition-colors">{exam.title}</CardTitle>
