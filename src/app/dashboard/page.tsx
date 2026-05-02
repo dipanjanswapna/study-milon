@@ -8,6 +8,7 @@ import { StudyTimer } from '@/components/dashboard/StudyTimer';
 import { AnalyticsDashboard } from '@/components/dashboard/AnalyticsDashboard';
 import { GuildSpotlight } from '@/components/dashboard/GuildSpotlight';
 import { PrayerWidget } from '@/components/dashboard/PrayerWidget';
+import { PinnedExamTicker } from '@/components/dashboard/PinnedExamTicker';
 
 export default function DashboardPage() {
   return (
@@ -22,6 +23,7 @@ export default function DashboardPage() {
               {/* Left Column: Timer, Prayers & Guild Activity (5/12) */}
               <div className="lg:col-span-5 space-y-6 order-1">
                 <div className="w-full">
+                  <PinnedExamTicker />
                   <StudyTimer />
                 </div>
                 <PrayerWidget />

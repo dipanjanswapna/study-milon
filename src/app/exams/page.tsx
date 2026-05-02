@@ -1,20 +1,28 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { collection, query, orderBy } from 'firebase/firestore';
-import { useFirestore, useCollection } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { useFirestore, useCollection, useUser, useDoc } from '@/firebase';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Header } from '@/components/dashboard/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Timer, Calendar, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Timer, Calendar, Zap, Pin, PinOff, Loader2 } from 'lucide-react';
 import { differenceInDays, differenceInHours, differenceInMinutes, differenceInSeconds, isAfter } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import { pinExamToDashboard } from '@/firebase/firestore/users';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 export default function ExamsPage() {
+  const { user } = useUser();
   const firestore = useFirestore();
   const examsQuery = useMemo(() => query(collection(firestore, 'exams'), orderBy('examDate', 'asc')), [firestore]);
   const { data: exams, loading } = useCollection<any>(examsQuery);
+
+  const userRef = useMemo(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
+  const { data: profile } = useDoc<any>(userRef as any);
 
   return (
     <ProtectedRoute>
@@ -36,7 +44,12 @@ export default function ExamsPage() {
               Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-64 rounded-[2.5rem]" />)
             ) : exams && exams.length > 0 ? (
               exams.map((exam) => (
-                <ExamCountdownCard key={exam.id} exam={exam} />
+                <ExamCountdownCard 
+                  key={exam.id} 
+                  exam={exam} 
+                  isPinned={profile?.pinnedExamId === exam.id}
+                  uid={user?.uid}
+                />
               ))
             ) : (
               <div className="col-span-full py-20 text-center space-y-4 bg-secondary/20 rounded-[2.5rem] border-2 border-dashed">
@@ -64,11 +77,12 @@ export default function ExamsPage() {
   );
 }
 
-function ExamCountdownCard({ exam }: { exam: any }) {
+function ExamCountdownCard({ exam, isPinned, uid }: { exam: any; isPinned: boolean; uid?: string }) {
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState<{ d: number; h: number; m: number; s: number } | null>(null);
   
-  // We compute the target date inside the effect or memoize it properly 
-  // to avoid creating a new Date object on every render of the card.
   const examSeconds = exam.examDate?.seconds;
 
   useEffect(() => {
@@ -88,7 +102,6 @@ function ExamCountdownCard({ exam }: { exam: any }) {
       const m = differenceInMinutes(examDate, now) % 60;
       const s = differenceInSeconds(examDate, now) % 60;
 
-      // Only update if at least one value changed (to avoid unnecessary re-renders)
       setTimeLeft((prev) => {
         if (prev && prev.d === d && prev.h === h && prev.m === m && prev.s === s) {
           return prev;
@@ -103,12 +116,39 @@ function ExamCountdownCard({ exam }: { exam: any }) {
     return () => clearInterval(timer);
   }, [examSeconds]);
 
+  const handleTogglePin = async () => {
+    if (!uid) return;
+    setLoading(true);
+    try {
+      await pinExamToDashboard(firestore, uid, isPinned ? null : exam.id);
+      toast({
+        title: isPinned ? "Exam Unpinned" : "Exam Pinned",
+        description: isPinned 
+          ? "The ticker has been removed from your dashboard." 
+          : `${exam.title} ticker is now active on your dashboard.`,
+      });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: "Error", description: e.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!examSeconds || !timeLeft) return null;
 
   const displayDate = new Date(examSeconds * 1000);
 
   return (
-    <Card className="rounded-[2.5rem] border-none shadow-xl overflow-hidden group hover:scale-[1.02] transition-all">
+    <Card className={cn(
+      "rounded-[2.5rem] border-none shadow-xl overflow-hidden group transition-all relative",
+      isPinned ? "ring-2 ring-primary ring-offset-4" : "hover:scale-[1.02]"
+    )}>
+      {isPinned && (
+        <div className="absolute top-4 right-4 z-10">
+          <Badge className="bg-primary text-white font-black text-[10px] animate-pulse">PINNED</Badge>
+        </div>
+      )}
+      
       <CardHeader className="bg-secondary/30 pb-4">
         <div className="flex justify-between items-start mb-2">
            <Badge className="bg-primary text-white border-none font-black text-[10px] uppercase px-3">
@@ -119,16 +159,31 @@ function ExamCountdownCard({ exam }: { exam: any }) {
               {displayDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
            </div>
         </div>
-        <CardTitle className="text-2xl font-black group-hover:text-primary transition-colors">{exam.title}</CardTitle>
+        <CardTitle className="text-2xl font-black group-hover:text-primary transition-colors pr-10">{exam.title}</CardTitle>
         <CardDescription className="line-clamp-2 min-h-[32px] font-medium">{exam.description}</CardDescription>
       </CardHeader>
-      <CardContent className="p-6 md:p-8 pt-6 bg-card">
+      <CardContent className="p-6 md:p-8 pt-6 bg-card space-y-6">
         <div className="grid grid-cols-4 gap-2 md:gap-4">
           <CountdownUnit value={timeLeft.d} label="Days" />
           <CountdownUnit value={timeLeft.h} label="Hours" />
           <CountdownUnit value={timeLeft.m} label="Mins" />
           <CountdownUnit value={timeLeft.s} label="Secs" />
         </div>
+
+        <Button 
+          variant={isPinned ? "outline" : "default"} 
+          className={cn("w-full rounded-xl font-bold h-11", isPinned && "text-destructive hover:bg-destructive/10")}
+          onClick={handleTogglePin}
+          disabled={loading}
+        >
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+            isPinned ? (
+              <><PinOff className="h-4 w-4 mr-2" /> Unpin from Dashboard</>
+            ) : (
+              <><Pin className="h-4 w-4 mr-2" /> Pin to Dashboard</>
+            )
+          )}
+        </Button>
       </CardContent>
     </Card>
   );

@@ -1,4 +1,3 @@
-
 import {
   doc,
   setDoc,
@@ -46,6 +45,7 @@ export type UserProfile = {
   groupId?: string;
   focusSettings?: FocusSettings;
   focusPoints?: number;
+  pinnedExamId?: string | null;
 };
 
 export async function createUserProfile(
@@ -74,6 +74,7 @@ export async function createUserProfile(
         institution: '',
         phoneNumber: '',
         focusPoints: 0,
+        pinnedExamId: null,
         focusSettings: {
           blockFbReels: false,
           blockInstaReels: false,
@@ -108,6 +109,11 @@ export async function updateUserProfile(
 ) {
   const userRef = doc(db, 'users', uid);
   await updateDoc(userRef, data);
+}
+
+export async function pinExamToDashboard(db: Firestore, uid: string, examId: string | null) {
+  const userRef = doc(db, 'users', uid);
+  await updateDoc(userRef, { pinnedExamId: examId });
 }
 
 /**
