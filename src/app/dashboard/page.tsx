@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Header } from '@/components/dashboard/Header';
@@ -8,6 +7,7 @@ import { ProfileSetupGate } from '@/components/dashboard/ProfileSetupGate';
 import { StudyTimer } from '@/components/dashboard/StudyTimer';
 import { AnalyticsDashboard } from '@/components/dashboard/AnalyticsDashboard';
 import { GuildSpotlight } from '@/components/dashboard/GuildSpotlight';
+import { PrayerWidget } from '@/components/dashboard/PrayerWidget';
 
 export default function DashboardPage() {
   return (
@@ -19,11 +19,12 @@ export default function DashboardPage() {
             <WelcomeBanner />
             
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-              {/* Left Column: Timer & Guild Activity (5/12) */}
+              {/* Left Column: Timer, Prayers & Guild Activity (5/12) */}
               <div className="lg:col-span-5 space-y-6 order-1">
                 <div className="w-full">
                   <StudyTimer />
                 </div>
+                <PrayerWidget />
                 <GuildSpotlight />
               </div>
 
