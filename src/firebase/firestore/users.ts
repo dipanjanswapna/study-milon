@@ -27,6 +27,7 @@ export type UserProfile = {
   batch?: string;
   institution?: string;
   phoneNumber?: string;
+  groupId?: string;
 };
 
 export async function createUserProfile(
@@ -47,7 +48,7 @@ export async function createUserProfile(
         photoURL,
         createdAt,
         role: 'student',
-        religion: 'Muslim',
+        religion: 'Muslim', // Explicit default on creation
         total_study_minutes: 0,
         daily_study_minutes: 0,
         daily_goal_minutes: 360, // Default 6 hours
