@@ -13,6 +13,7 @@ import {
   increment,
   Timestamp,
 } from 'firebase/firestore';
+import { format } from 'date-fns';
 
 // Subject CRUD
 export async function addSubject(db: Firestore, userId: string, name: string) {
@@ -141,8 +142,9 @@ export async function logStudyTime(
     const chapterRef = doc(db, 'users', userId, 'subjects', subjectId, 'chapters', chapterId);
     const subjectRef = doc(db, 'users', userId, 'subjects', subjectId);
     
+    // Always use local date for day-tracking to match client-side analytics
     const today = new Date();
-    const dateStr = today.toISOString().split('T')[0];
+    const dateStr = format(today, 'yyyy-MM-dd');
     const sessionDocId = `${dateStr}_${subjectId}`;
     const sessionRef = doc(db, 'users', userId, 'studySessions', sessionDocId);
 
@@ -159,10 +161,11 @@ export async function logStudyTime(
         }
         
         const userData = userSnap.data();
-        const lastActive = userData.last_active_date as Timestamp | undefined;
+        const lastStudyDay = userData.last_study_day;
         
         let dailyMinutesUpdate;
-        if (lastActive && lastActive.toDate().toDateString() === today.toDateString()) {
+        // If the date string has changed, it's a new day: reset the daily counter
+        if (lastStudyDay === dateStr) {
             dailyMinutesUpdate = increment(minutes);
         } else {
             dailyMinutesUpdate = minutes;
@@ -172,7 +175,8 @@ export async function logStudyTime(
         batch.update(userRef, {
             total_study_minutes: increment(minutes),
             daily_study_minutes: dailyMinutesUpdate,
-            last_active_date: serverTimestamp()
+            last_active_date: serverTimestamp(),
+            last_study_day: dateStr // Update study day anchor
         });
 
         // Update chapter aggregate time
@@ -186,7 +190,7 @@ export async function logStudyTime(
           duration: increment(minutes),
           subject: subjectName,
           subjectId: subjectId,
-          createdAt: serverTimestamp(),
+          createdAt: serverTimestamp(), // Keep timestamp for accurate chart filtering
           date: dateStr
         }, { merge: true });
 

@@ -41,6 +41,7 @@ export type UserProfile = {
   daily_study_minutes?: number;
   daily_goal_minutes?: number;
   last_active_date?: any;
+  last_study_day?: string; // Format: YYYY-MM-DD
   category?: AcademicCategory;
   batch?: string;
   institution?: string;
@@ -61,6 +62,7 @@ export async function createUserProfile(
   if (!userSnap.exists()) {
     const { uid, email, displayName, photoURL } = user;
     const createdAt = serverTimestamp();
+    const todayStr = new Date().toISOString().split('T')[0];
     try {
       await setDoc(userRef, {
         uid,
@@ -74,6 +76,7 @@ export async function createUserProfile(
         daily_study_minutes: 0,
         daily_goal_minutes: 360, // Default 6 hours
         last_active_date: serverTimestamp(),
+        last_study_day: todayStr,
         institution: '',
         phoneNumber: '',
         focusPoints: 0,
