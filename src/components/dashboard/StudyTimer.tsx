@@ -45,6 +45,7 @@ export function StudyTimer() {
 
   const incompleteTasks = useMemo(() => {
     if (!rawTasks) return [];
+    // Client-side sorting to avoid index requirement
     return [...rawTasks]
       .filter(t => !t.completed)
       .sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -61,10 +62,6 @@ export function StudyTimer() {
   const lastLoggedMinuteRef = useRef<number>(0);
   const initializedFromCloud = useRef(false);
 
-  // Constants for Circular Progress
-  const radius = 90;
-  const circumference = 2 * Math.PI * radius;
-
   useEffect(() => {
     if (activeTask && !isActive && !isBreak) {
       setTimeLeft(activeTask.duration * 60);
@@ -79,10 +76,6 @@ export function StudyTimer() {
   const progress = useMemo(() => {
     return ((totalSeconds - timeLeft) / totalSeconds) * 100;
   }, [timeLeft, totalSeconds]);
-
-  const strokeDashoffset = useMemo(() => {
-    return circumference - (progress / 100) * circumference;
-  }, [progress, circumference]);
 
   const handleReset = useCallback(async () => {
     if (user) {
@@ -300,7 +293,7 @@ export function StudyTimer() {
             <Target className="h-5 w-5 text-blue-200" />
             <CardTitle className="font-headline uppercase text-white">{isBreak ? 'Rest Cycle' : 'Elite Focus'}</CardTitle>
           </div>
-          <CardDescription className="text-blue-100/70">
+          <CardDescription className="text-blue-100/70 truncate max-w-[200px]">
             {isBreak ? 'Time to recharge.' : `Active: ${activeTask?.subjectName}`}
           </CardDescription>
         </div>
@@ -320,37 +313,88 @@ export function StudyTimer() {
            </div>
         )}
 
-        <div className="relative h-64 w-64 flex items-center justify-center">
-          {/* SVG Progress Ring */}
-          <svg className="absolute inset-0 -rotate-90 transform" width="256" height="256">
-            {/* Background Circle */}
-            <circle
-              className="text-white/10"
-              strokeWidth="8"
-              stroke="currentColor"
-              fill="transparent"
-              r={radius}
-              cx="128"
-              cy="128"
-            />
-            {/* Progress Circle (Red) */}
-            <circle
-              className="text-red-500 transition-all duration-1000 ease-linear"
-              strokeWidth="8"
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
-              stroke="currentColor"
-              fill="transparent"
-              r={radius}
-              cx="128"
-              cy="128"
-            />
-          </svg>
-          
-          <div className="flex flex-col items-center justify-center z-10">
+        {/* WATCH STYLE TIMER UI */}
+        <div className="relative h-[280px] w-[280px] flex items-center justify-center scale-90 md:scale-100">
+           {/* Dark Outer Face */}
+           <div className="absolute inset-0 rounded-full bg-[#444444] shadow-[0_0_40px_rgba(0,0,0,0.5)] border-4 border-[#333333]" />
+           
+           <svg className="absolute inset-0" viewBox="0 0 300 300">
+              {/* Ticks Logic */}
+              <g transform="translate(150, 150)">
+                 {Array.from({ length: 180 }).map((_, i) => (
+                    <line
+                       key={i}
+                       x1="0"
+                       y1="-135"
+                       x2="0"
+                       y2={i % 10 === 0 ? "-125" : "-130"}
+                       stroke={i % 10 === 0 ? "#ffffff" : "#666666"}
+                       strokeWidth={i % 10 === 0 ? "1.5" : "1"}
+                       transform={`rotate(${i * 2})`}
+                    />
+                 ))}
+                 
+                 {/* Numbers around the perimeter */}
+                 {Array.from({ length: 18 }).map((_, i) => {
+                    const angle = i * 20;
+                    const rad = ((angle - 90) * Math.PI) / 180;
+                    const x = 105 * Math.cos(rad);
+                    const y = 105 * Math.sin(rad);
+                    const isActiveArea = angle <= (progress * 3.6);
+                    return (
+                       <text
+                          key={i}
+                          x={x}
+                          y={y}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fontSize="12"
+                          fontWeight="900"
+                          fill={isActiveArea ? "#8866FF" : "#ffffff"}
+                          className="transition-colors duration-500"
+                       >
+                          {i * 10}
+                       </text>
+                    );
+                 })}
+              </g>
+
+              {/* Progress Wedge (Purple) */}
+              <g transform="translate(150, 150) rotate(-90)">
+                 {progress > 0 && (
+                   <path
+                      d={describeArc(0, 0, 130, 0, progress * 3.6)}
+                      fill="#8866FF"
+                      fillOpacity="0.4"
+                      className="transition-all duration-1000 ease-linear"
+                   />
+                 )}
+              </g>
+
+              {/* Handle (Purple Circle) */}
+              <g transform="translate(150, 150)">
+                 <circle
+                    cx={130 * Math.cos(((progress * 3.6 - 90) * Math.PI) / 180)}
+                    cy={130 * Math.sin(((progress * 3.6 - 90) * Math.PI) / 180)}
+                    r="8"
+                    fill="#8866FF"
+                    className="transition-all duration-1000 ease-linear shadow-lg"
+                 />
+                 <circle
+                    cx={130 * Math.cos(((progress * 3.6 - 90) * Math.PI) / 180)}
+                    cy={130 * Math.sin(((progress * 3.6 - 90) * Math.PI) / 180)}
+                    r="12"
+                    fill="#8866FF"
+                    fillOpacity="0.2"
+                    className="transition-all duration-1000 ease-linear animate-pulse"
+                 />
+              </g>
+           </svg>
+
+           {/* Central Digital Display */}
+           <div className="flex flex-col items-center justify-center z-10">
             <span className={cn(
-              "text-6xl font-black font-mono tracking-tighter tabular-nums text-white transition-all",
+              "text-5xl font-black font-mono tracking-tighter tabular-nums text-white transition-all",
               isActive && "scale-105"
             )}>
               {String(minutesDisplay).padStart(2, '0')}:{String(secondsDisplay).padStart(2, '0')}
@@ -419,4 +463,27 @@ export function StudyTimer() {
       </CardContent>
     </Card>
   );
+}
+
+// Helper for SVG Arc calculation
+function describeArc(x: number, y: number, radius: number, startAngle: number, endAngle: number) {
+  const start = polarToCartesian(x, y, radius, endAngle);
+  const end = polarToCartesian(x, y, radius, startAngle);
+  const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+  const d = [
+    "M", x, y,
+    "L", start.x, start.y,
+    "A", radius, radius, 0, largeArcFlag, 0, end.x, end.y,
+    "L", x, y,
+    "Z"
+  ].join(" ");
+  return d;
+}
+
+function polarToCartesian(centerX: number, centerY: number, radius: number, angleInDegrees: number) {
+  const angleInRadians = (angleInDegrees * Math.PI) / 180.0;
+  return {
+    x: centerX + (radius * Math.cos(angleInRadians)),
+    y: centerY + (radius * Math.sin(angleInRadians))
+  };
 }
