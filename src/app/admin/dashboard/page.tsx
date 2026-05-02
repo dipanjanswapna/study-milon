@@ -41,13 +41,14 @@ import {
   Loader2,
   AlertTriangle,
   Timer,
-  Plus
+  Plus,
+  Edit2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { deleteGroup, type StudyGroup } from '@/firebase/firestore/groups';
 import { deleteUserProfile, SUPER_ADMIN_UID } from '@/firebase/firestore/users';
-import { addExam, deleteExam } from '@/firebase/firestore/exams';
+import { addExam, deleteExam, updateExam } from '@/firebase/firestore/exams';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,11 +64,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { format } from 'date-fns';
 
 export default function AdminDashboardPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [searchTerm, setSearch] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
   // Fetch Users
@@ -94,26 +96,51 @@ export default function AdminDashboardPage() {
 
   // Exam Form State
   const [isExamOpen, setIsExamOpen] = useState(false);
+  const [editingExamId, setEditingExamId] = useState<string | null>(null);
   const [examTitle, setExamTitle] = useState('');
   const [examDate, setExamDate] = useState('');
   const [examCategory, setExamCategory] = useState('HSC');
   const [examDesc, setExamDesc] = useState('');
 
-  const handleAddExam = async () => {
+  const openAddExam = () => {
+    setEditingExamId(null);
+    setExamTitle('');
+    setExamDate('');
+    setExamCategory('HSC');
+    setExamDesc('');
+    setIsExamOpen(true);
+  };
+
+  const openEditExam = (exam: any) => {
+    setEditingExamId(exam.id);
+    setExamTitle(exam.title);
+    // Convert Firestore Timestamp to datetime-local string format: YYYY-MM-DDTHH:MM
+    const date = exam.examDate?.toDate() || new Date();
+    setExamDate(format(date, "yyyy-MM-dd'T'HH:mm"));
+    setExamCategory(exam.category);
+    setExamDesc(exam.description || '');
+    setIsExamOpen(true);
+  };
+
+  const handleSaveExam = async () => {
     if (!examTitle || !examDate) return;
     setLoadingAction('exam');
     try {
-      await addExam(firestore, {
+      const data = {
         title: examTitle,
         examDate: Timestamp.fromDate(new Date(examDate)),
         category: examCategory,
         description: examDesc
-      });
+      };
+
+      if (editingExamId) {
+        await updateExam(firestore, editingExamId, data);
+        toast({ title: 'Exam Updated', description: 'Schedule adjustments have been synced.' });
+      } else {
+        await addExam(firestore, data);
+        toast({ title: 'Exam Added', description: 'Students can now track this countdown.' });
+      }
       setIsExamOpen(false);
-      setExamTitle('');
-      setExamDate('');
-      setExamDesc('');
-      toast({ title: 'Exam Added', description: 'Students can now track this countdown.' });
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Error', description: e.message });
     } finally {
@@ -145,7 +172,7 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleDeleteUser = async (userId: string, userName: string) => {
+  const handleDeleteUser = async (userId: string) => {
     if (userId === SUPER_ADMIN_UID) {
       toast({ variant: 'destructive', title: 'Action Denied', description: 'The Super Admin cannot be deleted.' });
       return;
@@ -187,7 +214,7 @@ export default function AdminDashboardPage() {
                  placeholder="Search students..." 
                  className="pl-9 h-10 rounded-xl"
                  value={searchTerm}
-                 onChange={(e) => setSearch(e.target.value)}
+                 onChange={(e) => setSearchTerm(e.target.value)}
                />
             </div>
           </div>
@@ -306,7 +333,7 @@ export default function AdminDashboardPage() {
                                    </AlertDialogHeader>
                                    <AlertDialogFooter className="flex-col gap-2">
                                      <AlertDialogAction 
-                                       onClick={() => handleDeleteUser(user.uid, user.displayName)}
+                                       onClick={() => handleDeleteUser(user.uid)}
                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl font-black h-12"
                                      >
                                        Yes, Delete Student
@@ -393,11 +420,11 @@ export default function AdminDashboardPage() {
                  <h2 className="text-xl font-black flex items-center gap-2"><Timer className="h-5 w-5 text-primary" /> Global Exam Schedules</h2>
                  <Dialog open={isExamOpen} onOpenChange={setIsExamOpen}>
                    <DialogTrigger asChild>
-                     <Button className="rounded-xl font-bold"><Plus className="h-4 w-4 mr-2" /> Add Exam</Button>
+                     <Button className="rounded-xl font-bold" onClick={openAddExam}><Plus className="h-4 w-4 mr-2" /> Add Exam</Button>
                    </DialogTrigger>
                    <DialogContent className="max-w-md rounded-[2rem]">
                      <DialogHeader>
-                       <DialogTitle className="text-2xl font-black">Post Exam Schedule</DialogTitle>
+                       <DialogTitle className="text-2xl font-black">{editingExamId ? 'Update' : 'Post'} Exam Schedule</DialogTitle>
                      </DialogHeader>
                      <div className="space-y-4 py-4">
                        <div className="space-y-1.5">
@@ -428,8 +455,8 @@ export default function AdminDashboardPage() {
                        </div>
                      </div>
                      <DialogFooter>
-                       <Button className="w-full h-12 font-black rounded-xl" onClick={handleAddExam} disabled={loadingAction === 'exam' || !examTitle || !examDate}>
-                         {loadingAction === 'exam' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Launch Countdown'}
+                       <Button className="w-full h-12 font-black rounded-xl" onClick={handleSaveExam} disabled={loadingAction === 'exam' || !examTitle || !examDate}>
+                         {loadingAction === 'exam' ? <Loader2 className="h-4 w-4 animate-spin" /> : editingExamId ? 'Update Countdown' : 'Launch Countdown'}
                        </Button>
                      </DialogFooter>
                    </DialogContent>
@@ -458,15 +485,25 @@ export default function AdminDashboardPage() {
                           </TableCell>
                           <TableCell><Badge variant="secondary" className="text-[9px] font-black uppercase">{exam.category}</Badge></TableCell>
                           <TableCell className="text-right">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-destructive rounded-full"
-                              onClick={() => handleDeleteExam(exam.id)}
-                              disabled={loadingAction === exam.id}
-                            >
-                              {loadingAction === exam.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                            </Button>
+                            <div className="flex justify-end gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-primary rounded-full"
+                                onClick={() => openEditExam(exam)}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-destructive rounded-full"
+                                onClick={() => handleDeleteExam(exam.id)}
+                                disabled={loadingAction === exam.id}
+                              >
+                                {loadingAction === exam.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
