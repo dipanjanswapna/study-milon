@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -13,6 +14,7 @@ import {
   Users2,
   ShieldCheck,
   ArrowLeftRight,
+  Timer,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -74,14 +76,19 @@ export function AppSidebar() {
       icon: CalendarCheck,
     },
     {
-      label: 'Leaderboard',
-      href: '/leaderboard',
-      icon: Trophy,
+        label: 'Exam Tracker',
+        href: '/exams',
+        icon: Timer,
     },
     {
-      label: 'Study Guilds',
-      href: '/groups',
-      icon: Users2,
+        label: 'Leaderboard',
+        href: '/leaderboard',
+        icon: Trophy,
+    },
+    {
+        label: 'Study Guilds',
+        href: '/groups',
+        icon: Users2,
     },
     {
       label: 'Resource Library',

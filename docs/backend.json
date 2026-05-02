@@ -53,72 +53,18 @@
       },
       "required": ["name", "creatorId", "category"]
     },
-    "GroupRequest": {
-      "title": "Group Join Request",
-      "description": "A request from a user to join a study group.",
+    "Exam": {
+      "title": "Exam Schedule",
+      "description": "An upcoming exam date and countdown.",
       "type": "object",
       "properties": {
-        "userId": { "type": "string" },
-        "userName": { "type": "string" },
-        "userPhoto": { "type": "string" },
-        "status": { "type": "string", "enum": ["pending", "approved", "declined"] },
-        "createdAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "GroupAnnouncement": {
-      "title": "Group Announcement",
-      "description": "A notice or announcement posted within a study group.",
-      "type": "object",
-      "properties": {
-        "authorId": { "type": "string" },
-        "authorName": { "type": "string" },
-        "content": { "type": "string" },
+        "title": { "type": "string" },
+        "examDate": { "type": "string", "format": "date-time" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["authorId", "content", "createdAt"]
-    },
-    "Subject": {
-      "title": "Subject",
-      "description": "Represents a user-defined study subject.",
-      "type": "object",
-      "properties": {
-        "name": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["name", "createdAt"]
-    },
-    "Chapter": {
-      "title": "Chapter",
-      "description": "Represents a chapter within a subject.",
-      "type": "object",
-      "properties": {
-        "name": { "type": "string" },
-        "status": { "type": "string", "enum": ["pending", "completed", "revision"] },
-        "time_spent": { "type": "number" },
-        "revision_count": { "type": "number" },
-        "last_revision_date": { "type": "string", "format": "date-time" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["name", "createdAt", "status", "time_spent", "revision_count"]
-    },
-    "StudyTask": {
-      "title": "Study Task",
-      "description": "A specific study task assigned to a date.",
-      "type": "object",
-      "properties": {
-        "subjectId": { "type": "string" },
-        "chapterId": { "type": "string" },
-        "subjectName": { "type": "string" },
-        "chapterName": { "type": "string" },
-        "note": { "type": "string", "description": "Instructions or context for the task." },
-        "date": { "type": "string", "format": "date" },
-        "duration": { "type": "number" },
-        "completed": { "type": "boolean" },
-        "source": { "type": "string", "enum": ["personal", "group"] },
-        "groupId": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["subjectId", "chapterId", "date", "completed"]
+      "required": ["title", "examDate", "category"]
     }
   },
   "auth": {
@@ -129,29 +75,9 @@
       "schema": { "$ref": "#/entities/UserProfile" },
       "description": "Stores user profile information."
     },
-    "/users/{userId}/subjects/{subjectId}": {
-      "schema": { "$ref": "#/entities/Subject" },
-      "description": "Stores the subjects for a specific user."
-    },
-    "/users/{userId}/subjects/{subjectId}/chapters/{chapterId}": {
-      "schema": { "$ref": "#/entities/Chapter" },
-      "description": "Stores the chapters for a specific subject."
-    },
-    "/users/{userId}/tasks/{taskId}": {
-      "schema": { "$ref": "#/entities/StudyTask" },
-      "description": "Stores daily study tasks for a user."
-    },
-    "/groups/{groupId}": {
-      "schema": { "$ref": "#/entities/StudyGroup" },
-      "description": "Stores group information."
-    },
-    "/groups/{groupId}/requests/{requestId}": {
-      "schema": { "$ref": "#/entities/GroupRequest" },
-      "description": "Stores join requests for a group."
-    },
-    "/groups/{groupId}/announcements/{announcementId}": {
-      "schema": { "$ref": "#/entities/GroupAnnouncement" },
-      "description": "Stores announcements for a study group."
+    "/exams/{examId}": {
+      "schema": { "$ref": "#/entities/Exam" },
+      "description": "Stores global exam schedules."
     }
   }
 }

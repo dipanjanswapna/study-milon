@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, User, BookMarked, CalendarCheck, Trophy, Users2 } from 'lucide-react';
+import { LayoutDashboard, User, BookMarked, CalendarCheck, Trophy, Users2, Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/firebase';
 
@@ -23,6 +23,11 @@ export function BottomNav() {
       icon: LayoutDashboard,
     },
     {
+      label: 'Exams',
+      href: '/exams',
+      icon: Timer,
+    },
+    {
       label: 'Planner',
       href: '/todo',
       icon: CalendarCheck,
@@ -36,11 +41,6 @@ export function BottomNav() {
         label: 'Rank',
         href: '/leaderboard',
         icon: Trophy,
-    },
-    {
-      label: 'Profile',
-      href: '/profile',
-      icon: User,
     },
   ];
 

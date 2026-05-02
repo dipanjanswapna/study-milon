@@ -2,9 +2,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
 import { useFirestore, useCollection } from '@/firebase';
-import { AdminRoute } from '@/components/auth/AdminRoute';
+import { AdminRoute } from '@/components/auth/ProtectedRoute';
 import { Header } from '@/components/dashboard/Header';
 import {
   Card,
@@ -40,12 +40,15 @@ import {
   Search,
   ExternalLink,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  Timer,
+  Plus
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { deleteGroup, type StudyGroup } from '@/firebase/firestore/groups';
 import { deleteUserProfile, SUPER_ADMIN_UID } from '@/firebase/firestore/users';
+import { addExam, deleteExam } from '@/firebase/firestore/exams';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +60,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function AdminDashboardPage() {
   const firestore = useFirestore();
@@ -72,6 +79,10 @@ export default function AdminDashboardPage() {
   const groupsQuery = useMemo(() => query(collection(firestore, 'groups'), orderBy('createdAt', 'desc')), [firestore]);
   const { data: groups, loading: groupsLoading } = useCollection<StudyGroup>(groupsQuery);
 
+  // Fetch Exams
+  const examsQuery = useMemo(() => query(collection(firestore, 'exams'), orderBy('examDate', 'asc')), [firestore]);
+  const { data: exams, loading: examsLoading } = useCollection<any>(examsQuery);
+
   const stats = useMemo(() => {
     if (!users || !groups) return { totalUsers: 0, totalMinutes: 0, totalGroups: 0 };
     const totalMinutes = users.reduce((acc: number, u: any) => acc + (u.total_study_minutes || 0), 0);
@@ -81,6 +92,46 @@ export default function AdminDashboardPage() {
       totalGroups: groups.length,
     };
   }, [users, groups]);
+
+  // Exam Form State
+  const [isExamOpen, setIsExamOpen] = useState(false);
+  const [examTitle, setExamTitle] = useState('');
+  const [examDate, setExamDate] = useState('');
+  const [examCategory, setExamCategory] = useState('HSC');
+  const [examDesc, setExamDesc] = useState('');
+
+  const handleAddExam = async () => {
+    if (!examTitle || !examDate) return;
+    setLoadingAction('exam');
+    try {
+      await addExam(firestore, {
+        title: examTitle,
+        examDate: Timestamp.fromDate(new Date(examDate)),
+        category: examCategory,
+        description: examDesc
+      });
+      setIsExamOpen(false);
+      setExamTitle('');
+      setExamDate('');
+      toast({ title: 'Exam Added', description: 'Students can now track this countdown.' });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Error', description: e.message });
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleDeleteExam = async (examId: string) => {
+    setLoadingAction(examId);
+    try {
+      await deleteExam(firestore, examId);
+      toast({ title: 'Exam Removed' });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Error', description: e.message });
+    } finally {
+      setLoadingAction(null);
+    }
+  };
 
   const handleDeleteGroup = async (groupId: string, members: string[]) => {
     setLoadingAction(groupId);
@@ -177,9 +228,10 @@ export default function AdminDashboardPage() {
           </div>
 
           <Tabs defaultValue="users" className="space-y-6">
-            <TabsList className="bg-secondary/50 p-1 rounded-xl h-12 w-full max-w-md">
+            <TabsList className="bg-secondary/50 p-1 rounded-xl h-12 w-full max-w-lg">
               <TabsTrigger value="users" className="rounded-lg font-bold flex-1">Students</TabsTrigger>
               <TabsTrigger value="guilds" className="rounded-lg font-bold flex-1">Guilds</TabsTrigger>
+              <TabsTrigger value="exams" className="rounded-lg font-bold flex-1">Exams</TabsTrigger>
               <TabsTrigger value="reports" className="rounded-lg font-bold flex-1">Analytics</TabsTrigger>
             </TabsList>
 
@@ -334,6 +386,94 @@ export default function AdminDashboardPage() {
                   </Card>
                 ))}
               </div>
+            </TabsContent>
+
+            <TabsContent value="exams" className="space-y-6">
+              <div className="flex justify-between items-center">
+                 <h2 className="text-xl font-black flex items-center gap-2"><Timer className="h-5 w-5 text-primary" /> Global Exam Schedules</h2>
+                 <Dialog open={isExamOpen} onOpenChange={setIsExamOpen}>
+                   <DialogTrigger asChild>
+                     <Button className="rounded-xl font-bold"><Plus className="h-4 w-4 mr-2" /> Add Exam</Button>
+                   </DialogTrigger>
+                   <DialogContent className="max-w-md rounded-[2rem]">
+                     <DialogHeader>
+                       <DialogTitle className="text-2xl font-black">Post Exam Schedule</DialogTitle>
+                     </DialogHeader>
+                     <div className="space-y-4 py-4">
+                       <div className="space-y-1.5">
+                         <Label className="text-[10px] font-black uppercase">Exam Title</Label>
+                         <Input placeholder="e.g. HSC 2026 Board Final" value={examTitle} onChange={e => setExamTitle(e.target.value)} />
+                       </div>
+                       <div className="space-y-1.5">
+                         <Label className="text-[10px] font-black uppercase">Exam Date & Time</Label>
+                         <Input type="datetime-local" value={examDate} onChange={e => setExamDate(e.target.value)} />
+                       </div>
+                       <div className="space-y-1.5">
+                         <Label className="text-[10px] font-black uppercase">Category</Label>
+                         <Select value={examCategory} onValueChange={setExamCategory}>
+                           <SelectTrigger>
+                             <SelectValue />
+                           </SelectTrigger>
+                           <SelectContent>
+                             <SelectItem value="SSC">SSC</SelectItem>
+                             <SelectItem value="HSC">HSC</SelectItem>
+                             <SelectItem value="Admission">Admission</SelectItem>
+                             <SelectItem value="Job Prep">Job Prep</SelectItem>
+                           </SelectContent>
+                         </Select>
+                       </div>
+                       <div className="space-y-1.5">
+                         <Label className="text-[10px] font-black uppercase">Description</Label>
+                         <Textarea placeholder="Short details about the exam..." value={examDesc} onChange={e => setExamDesc(e.target.value)} />
+                       </div>
+                     </div>
+                     <DialogFooter>
+                       <Button className="w-full h-12 font-black rounded-xl" onClick={handleAddExam} disabled={loadingAction === 'exam' || !examTitle || !examDate}>
+                         {loadingAction === 'exam' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Launch Countdown'}
+                       </Button>
+                     </DialogFooter>
+                   </DialogContent>
+                 </Dialog>
+              </div>
+
+              <Card className="rounded-[2rem] border-none shadow-xl overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-secondary/30">
+                      <TableRow>
+                        <TableHead className="font-black text-[10px] uppercase">Exam</TableHead>
+                        <TableHead className="font-black text-[10px] uppercase">Date</TableHead>
+                        <TableHead className="font-black text-[10px] uppercase">Category</TableHead>
+                        <TableHead className="font-black text-[10px] uppercase text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {examsLoading ? (
+                        <TableRow><TableCell colSpan={4} className="text-center py-10"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+                      ) : exams?.map((exam: any) => (
+                        <TableRow key={exam.id}>
+                          <TableCell className="font-bold">{exam.title}</TableCell>
+                          <TableCell className="text-sm">
+                            {exam.examDate ? new Date(exam.examDate.toDate()).toLocaleString() : 'N/A'}
+                          </TableCell>
+                          <TableCell><Badge variant="secondary" className="text-[9px] font-black uppercase">{exam.category}</Badge></TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-destructive rounded-full"
+                              onClick={() => handleDeleteExam(exam.id)}
+                              disabled={loadingAction === exam.id}
+                            >
+                              {loadingAction === exam.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
             </TabsContent>
 
             <TabsContent value="reports">

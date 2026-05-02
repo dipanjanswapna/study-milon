@@ -1,3 +1,4 @@
+
 'use client';
 import {
   DropdownMenu,
@@ -13,6 +14,7 @@ import {
   User as UserIcon,
   LayoutDashboard,
   BookMarked,
+  Timer,
 } from 'lucide-react';
 import { useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -85,6 +87,12 @@ export function Header() {
                 <Link href="/dashboard">
                   <LayoutDashboard className="mr-2 h-4 w-4" />
                   Dashboard
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/exams">
+                  <Timer className="mr-2 h-4 w-4" />
+                  Exam Countdown
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
