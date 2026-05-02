@@ -42,23 +42,32 @@ export type GroupAnnouncement = {
 
 /**
  * Cleans up pending requests older than 2 days.
+ * Uses client-side filtering to avoid composite index requirements.
  */
 export async function cleanupExpiredRequests(db: Firestore, groupId: string) {
   try {
     const twoDaysAgo = subDays(new Date(), 2);
     const requestsRef = collection(db, 'groups', groupId, 'requests');
-    const q = query(
-      requestsRef, 
-      where('status', '==', 'pending'),
-      where('createdAt', '<', twoDaysAgo)
-    );
     
+    // Fetch only pending requests (single field query doesn't need complex index)
+    const q = query(requestsRef, where('status', '==', 'pending'));
     const snap = await getDocs(q);
-    if (!snap.empty) {
+    
+    if (snap.empty) return 0;
+
+    const expiredDocs = snap.docs.filter((d) => {
+      const data = d.data();
+      if (!data.createdAt) return false;
+      // Handle Firestore Timestamp to Date conversion
+      const date = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
+      return date < twoDaysAgo;
+    });
+
+    if (expiredDocs.length > 0) {
       const batch = writeBatch(db);
-      snap.forEach((d) => batch.delete(d.ref));
+      expiredDocs.forEach((d) => batch.delete(d.ref));
       await batch.commit();
-      return snap.size;
+      return expiredDocs.length;
     }
     return 0;
   } catch (e) {
@@ -103,11 +112,13 @@ export async function updateGroup(
 
 export async function sendJoinRequest(db: Firestore, groupId: string, user: { uid: string; displayName: string; photoURL: string }) {
   // Check if request already exists to prevent duplicates
+  // Using simple query + code filtering to avoid index errors
   const requestsRef = collection(db, 'groups', groupId, 'requests');
-  const q = query(requestsRef, where('userId', '==', user.uid), where('status', '==', 'pending'));
+  const q = query(requestsRef, where('userId', '==', user.uid));
   const snap = await getDocs(q);
   
-  if (!snap.empty) {
+  const hasPending = snap.docs.some(d => d.data().status === 'pending');
+  if (hasPending) {
     throw new Error("You already have a pending request for this guild.");
   }
 
@@ -122,12 +133,13 @@ export async function sendJoinRequest(db: Firestore, groupId: string, user: { ui
 
 export async function cancelJoinRequest(db: Firestore, groupId: string, userId: string) {
   const requestsRef = collection(db, 'groups', groupId, 'requests');
-  const q = query(requestsRef, where('userId', '==', userId), where('status', '==', 'pending'));
+  const q = query(requestsRef, where('userId', '==', userId));
   const snap = await getDocs(q);
   
-  if (!snap.empty) {
+  const pendingDocs = snap.docs.filter(d => d.data().status === 'pending');
+  if (pendingDocs.length > 0) {
     const batch = writeBatch(db);
-    snap.forEach((doc) => {
+    pendingDocs.forEach((doc) => {
       batch.delete(doc.ref);
     });
     await batch.commit();

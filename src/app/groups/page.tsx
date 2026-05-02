@@ -96,12 +96,14 @@ export default function GroupsPage() {
           // Trigger cleanup for this group to handle auto-withdrawals
           await cleanupExpiredRequests(firestore, gDoc.id);
 
+          // Query by userId only and filter status in code to avoid index error
           const reqSnap = await getDocs(query(
             collection(firestore, 'groups', gDoc.id, 'requests'),
-            where('userId', '==', user.uid),
-            where('status', '==', 'pending')
+            where('userId', '==', user.uid)
           ));
-          if (!reqSnap.empty) {
+          
+          const isPending = reqSnap.docs.some(d => d.data().status === 'pending');
+          if (isPending) {
             pendingIds.add(gDoc.id);
           }
         }
