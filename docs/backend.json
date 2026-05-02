@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -20,7 +21,17 @@
         "batch": { "type": "string" },
         "institution": { "type": "string" },
         "phoneNumber": { "type": "string" },
-        "groupId": { "type": "string", "description": "The ID of the group the user belongs to." }
+        "groupId": { "type": "string", "description": "The ID of the group the user belongs to." },
+        "focusSettings": {
+          "type": "object",
+          "properties": {
+            "blockFbReels": { "type": "boolean", "default": false },
+            "blockInstaReels": { "type": "boolean", "default": false },
+            "blockYoutubeShorts": { "type": "boolean", "default": false },
+            "restrictMessenger": { "type": "boolean", "default": false },
+            "restrictWhatsapp": { "type": "boolean", "default": false }
+          }
+        }
       },
       "required": ["uid", "email", "role"]
     },

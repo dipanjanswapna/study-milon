@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -72,7 +73,8 @@ import {
   Monitor,
   Smartphone,
   Info,
-  Sparkles
+  Sparkles,
+  Settings
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -84,6 +86,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 const profileSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
@@ -263,14 +266,21 @@ export default function ProfilePage() {
             
             {/* Personal Information Card */}
             <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <UserIcon className="h-5 w-5 text-primary" />
-                  <CardTitle>Academic Profile</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <UserIcon className="h-5 w-5 text-primary" />
+                    <CardTitle>Academic Profile</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Manage your student identity and academic details.
+                  </CardDescription>
                 </div>
-                <CardDescription>
-                  Manage your student identity and academic details.
-                </CardDescription>
+                <Button variant="ghost" size="icon" asChild className="rounded-full">
+                  <Link href="/profile/settings">
+                    <Settings className="h-5 w-5" />
+                  </Link>
+                </Button>
               </CardHeader>
               <CardContent>
                 {loading || userLoading ? (

@@ -1,3 +1,4 @@
+
 import {
   doc,
   setDoc,
@@ -10,6 +11,14 @@ import type { User } from 'firebase/auth';
 
 export type AcademicCategory = 'SSC' | 'HSC' | 'Admission 1st' | 'Admission 2nd' | 'Job Prep';
 export type Religion = 'Muslim' | 'Hindu';
+
+export type FocusSettings = {
+  blockFbReels: boolean;
+  blockInstaReels: boolean;
+  blockYoutubeShorts: boolean;
+  restrictMessenger: boolean;
+  restrictWhatsapp: boolean;
+};
 
 export type UserProfile = {
   uid: string;
@@ -28,6 +37,7 @@ export type UserProfile = {
   institution?: string;
   phoneNumber?: string;
   groupId?: string;
+  focusSettings?: FocusSettings;
 };
 
 export async function createUserProfile(
@@ -55,6 +65,13 @@ export async function createUserProfile(
         last_active_date: serverTimestamp(),
         institution: '',
         phoneNumber: '',
+        focusSettings: {
+          blockFbReels: false,
+          blockInstaReels: false,
+          blockYoutubeShorts: false,
+          restrictMessenger: false,
+          restrictWhatsapp: false,
+        }
       });
     } catch (error) {
       console.error('Error creating user profile:', error);
