@@ -7,7 +7,7 @@ import type { UserProfile } from '@/firebase/firestore/users';
 import { StudyActivityChart } from './StudyActivityChart';
 import { SubjectDistributionChart } from './SubjectDistributionChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, PieChart, BarChart, Trophy, Zap, TrendingUp } from 'lucide-react';
+import { Clock, PieChart, BarChart, Trophy, Zap, TrendingUp, Calendar } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { subDays, format, isAfter, startOfMonth, eachDayOfInterval } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,7 +18,7 @@ type FilterType = 'daily' | 'weekly' | 'monthly' | 'yearly';
 export function AnalyticsDashboard() {
   const { user } = useUser();
   const firestore = useFirestore();
-  const [filter, setFilter] = useState<FilterType>('weekly');
+  const [filter, setFilter] = useState<FilterType>('daily');
 
   const userRef = useMemo(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: profile, loading: profileLoading } = useDoc<UserProfile>(userRef as any);
@@ -54,6 +54,7 @@ export function AnalyticsDashboard() {
         }
       }
 
+      // Generate all 24 hours for the horizontal scroll chart
       chartData = Array.from({ length: 24 }).map((_, i) => {
         const h = i.toString();
         const displayLabel = i === 0 ? '12 AM' : i < 12 ? `${i} AM` : i === 12 ? '12 PM' : `${i - 12} PM`;
@@ -76,7 +77,6 @@ export function AnalyticsDashboard() {
       filteredSessions = sessions.filter(s => s.date && isAfter(new Date(s.date), subDays(now, 7)));
     }
     else if (filter === 'monthly') {
-      const monthStart = startOfMonth(now);
       const dailyAgg: Record<string, number> = {};
       sessions.forEach(s => {
         if (s.date && s.date.startsWith(format(now, 'yyyy-MM'))) {
@@ -157,7 +157,7 @@ export function AnalyticsDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <TrendingUp className="h-6 w-6 text-primary" />
-          <h2 className="text-2xl font-black tracking-tight text-foreground font-headline">Hustle Insights</h2>
+          <h2 className="text-2xl font-black tracking-tight text-foreground font-headline uppercase">Hustle Insights</h2>
         </div>
         <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)} className="w-full sm:w-auto">
           <TabsList className="grid w-full grid-cols-4 bg-secondary/50 p-1 rounded-xl">
@@ -170,6 +170,7 @@ export function AnalyticsDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
+        {/* Real-time Status Cards */}
         <Card className="md:col-span-3 rounded-[2rem] border-none shadow-xl bg-primary text-primary-foreground overflow-hidden group relative">
           <div className="absolute top-0 right-0 p-8 opacity-10">
             <Zap className="h-24 w-24" />
@@ -184,7 +185,7 @@ export function AnalyticsDashboard() {
               <h3 className="text-5xl font-black tracking-tighter">
                 {formatStudyTime(stats.currentPeriodMins)}
               </h3>
-              <span className="text-sm font-bold text-primary-foreground/60">{filter} total</span>
+              <span className="text-sm font-bold text-primary-foreground/60 lowercase">{filter} total</span>
             </div>
             <div className="pt-2">
               <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-1.5">
@@ -207,11 +208,11 @@ export function AnalyticsDashboard() {
               <h3 className="text-4xl font-black tracking-tighter text-foreground">
                 {(profile?.total_study_minutes || 0).toLocaleString()}
               </h3>
-              <span className="text-xs font-bold text-muted-foreground">Minutes</span>
+              <span className="text-[10px] font-black text-muted-foreground uppercase">Minutes</span>
             </div>
             <div className="pt-2">
               <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-1.5 text-primary">
-                 <span>Progress</span>
+                 <span>Global Rank Progress</span>
                  <span>{((profile?.total_study_minutes || 0) / 1000000 * 100).toFixed(4)}%</span>
               </div>
               <Progress value={((profile?.total_study_minutes || 0) / 1000000 * 100)} className="h-2 bg-secondary" />
@@ -219,21 +220,30 @@ export function AnalyticsDashboard() {
           </CardContent>
         </Card>
 
+        {/* Scrollable Bar Chart */}
         <Card className="md:col-span-4 rounded-[2rem] border-none shadow-xl bg-card overflow-hidden">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg font-black flex items-center gap-2">
-              <Clock className="h-5 w-5 text-primary" /> Consistency Tracker
+              <BarChart className="h-5 w-5 text-primary" /> Consistency Tracker
             </CardTitle>
+            <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-secondary/50 px-2 py-1 rounded-full border">
+               Scrollable Data
+            </div>
           </CardHeader>
           <CardContent className="px-2">
-            <StudyActivityChart data={stats.chartData} showTargetLine={filter === 'weekly'} targetValue={profile?.daily_goal_minutes || 360} />
+            <StudyActivityChart 
+              data={stats.chartData} 
+              showTargetLine={filter === 'weekly'} 
+              targetValue={profile?.daily_goal_minutes || 360} 
+            />
           </CardContent>
         </Card>
 
+        {/* Focus Distribution Pie/Doughnut */}
         <Card className="md:col-span-2 rounded-[2rem] border-none shadow-xl bg-card overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg font-black flex items-center gap-2">
-              <PieChart className="h-5 w-5 text-primary" /> Focus Distribution
+              <PieChart className="h-5 w-5 text-primary" /> Focus Areas
             </CardTitle>
           </CardHeader>
           <CardContent className="px-2">
