@@ -1,4 +1,3 @@
-
 'use client';
 import {
   DropdownMenu,
@@ -69,7 +68,7 @@ export function Header() {
             <DropdownMenuTrigger asChild>
               <Avatar className="h-8 w-8 cursor-pointer ring-2 ring-primary/10 hover:ring-primary/30 transition-all">
                 <AvatarImage
-                  src={user.photoURL || ''}
+                  src={user.photoURL || undefined}
                   alt={user.displayName || 'User avatar'}
                 />
                 <AvatarFallback className="text-xs">{getInitials(user.displayName)}</AvatarFallback>

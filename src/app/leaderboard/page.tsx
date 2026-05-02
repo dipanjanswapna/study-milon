@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -175,7 +174,7 @@ export default function LeaderboardPage() {
                         <Link href={`/profile/${top3[1].uid}`} className="relative group block transition-transform hover:scale-105">
                             <div className="absolute -inset-1 bg-slate-300 rounded-full blur opacity-25" />
                             <Avatar className="h-16 w-16 sm:h-20 sm:w-20 md:h-28 md:w-28 border-4 border-slate-300 shadow-xl relative">
-                                <AvatarImage src={top3[1].photoURL} />
+                                <AvatarImage src={top3[1].photoURL || undefined} />
                                 <AvatarFallback>{getInitials(top3[1].displayName)}</AvatarFallback>
                             </Avatar>
                             <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 bg-slate-200 rounded-full p-1.5 md:p-2 border-2 border-slate-400 shadow-lg">
@@ -204,7 +203,7 @@ export default function LeaderboardPage() {
                         <Link href={`/profile/${top3[0].uid}`} className="relative group scale-110 md:scale-125 -mt-10 md:-mt-16 block transition-transform hover:scale-[1.3]">
                             <div className="absolute -inset-2 bg-yellow-400 rounded-full blur opacity-40 animate-pulse" />
                             <Avatar className="h-20 w-20 sm:h-24 sm:w-24 md:h-36 md:w-36 border-4 border-yellow-400 shadow-2xl relative">
-                                <AvatarImage src={top3[0].photoURL} />
+                                <AvatarImage src={top3[0].photoURL || undefined} />
                                 <AvatarFallback>{getInitials(top3[0].displayName)}</AvatarFallback>
                             </Avatar>
                             <div className="absolute -top-6 md:-top-10 left-1/2 -translate-x-1/2">
@@ -236,7 +235,7 @@ export default function LeaderboardPage() {
                         <Link href={`/profile/${top3[2].uid}`} className="relative group block transition-transform hover:scale-105">
                             <div className="absolute -inset-1 bg-amber-600 rounded-full blur opacity-25" />
                             <Avatar className="h-16 w-16 sm:h-20 sm:w-20 md:h-28 md:w-28 border-4 border-amber-600 shadow-xl relative">
-                                <AvatarImage src={top3[2].photoURL} />
+                                <AvatarImage src={top3[2].photoURL || undefined} />
                                 <AvatarFallback>{getInitials(top3[2].displayName)}</AvatarFallback>
                             </Avatar>
                             <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 bg-amber-500 rounded-full p-1.5 md:p-2 border-2 border-amber-700 shadow-lg">
@@ -288,7 +287,7 @@ export default function LeaderboardPage() {
                                         </div>
                                         <div className="relative">
                                             <Avatar className="h-10 w-10 md:h-14 md:w-14 border-2 border-background shadow-sm">
-                                                <AvatarImage src={contender.photoURL} />
+                                                <AvatarImage src={contender.photoURL || undefined} />
                                                 <AvatarFallback>{getInitials(contender.displayName)}</AvatarFallback>
                                             </Avatar>
                                             {idx < 10 && (

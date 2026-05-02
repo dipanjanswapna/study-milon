@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -289,7 +288,7 @@ export default function AdminDashboardPage() {
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <Avatar className="h-10 w-10 border-2 border-background">
-                                <AvatarImage src={user.photoURL} />
+                                <AvatarImage src={user.photoURL || undefined} />
                                 <AvatarFallback>{user.displayName?.[0]}</AvatarFallback>
                               </Avatar>
                               <div>

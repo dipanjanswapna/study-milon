@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -143,7 +142,7 @@ export default function PublicProfilePage() {
             <CardContent className="p-8 md:p-12 relative">
               <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
                 <Avatar className="h-24 w-24 md:h-32 md:w-32 ring-4 ring-primary/20 shadow-2xl">
-                  <AvatarImage src={profile.photoURL} />
+                  <AvatarImage src={profile.photoURL || undefined} />
                   <AvatarFallback className="text-3xl font-black bg-white/10">{profile.displayName?.[0]}</AvatarFallback>
                 </Avatar>
                 

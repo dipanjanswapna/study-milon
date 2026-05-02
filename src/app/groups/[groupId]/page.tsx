@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -389,7 +388,7 @@ export default function GroupDashboardPage() {
                                   <div key={req.id} className="flex items-center justify-between p-5 bg-secondary/30 rounded-3xl border">
                                     <div className="flex items-center gap-3">
                                       <Avatar className="h-10 w-10">
-                                        <AvatarImage src={req.userPhoto} />
+                                        <AvatarImage src={req.userPhoto || undefined} />
                                         <AvatarFallback>{req.userName?.[0]}</AvatarFallback>
                                       </Avatar>
                                       <span className="font-bold">{req.userName}</span>
@@ -545,14 +544,15 @@ export default function GroupDashboardPage() {
                   <div className="divide-y">
                     {memberProfiles.map((member, idx) => {
                       const studyProgress = Math.min(100, (member.daily_study_minutes || 0) / (member.daily_goal_minutes || 360) * 100);
+                      const memberKey = member.uid ? `${member.uid}-${idx}` : `member-${idx}`;
                       return (
-                        <div key={`${member.uid}-${idx}`} className="p-4 md:p-6 hover:bg-secondary/10 transition-all group">
+                        <div key={memberKey} className="p-4 md:p-6 hover:bg-secondary/10 transition-all group">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                             <Link href={`/profile/${member.uid}`} className="flex items-center gap-4 md:gap-5 flex-1 min-w-0">
                               <span className="font-black text-xl md:text-2xl italic text-muted-foreground/20 w-8 group-hover:text-primary transition-colors">#{idx + 1}</span>
                               <div className="relative">
                                 <Avatar className="h-12 w-12 md:h-14 md:w-14 ring-2 ring-background shadow-lg">
-                                  <AvatarImage src={member.photoURL} />
+                                  <AvatarImage src={member.photoURL || undefined} />
                                   <AvatarFallback className="font-black text-lg">{member.displayName?.[0]}</AvatarFallback>
                                 </Avatar>
                                 {idx < 3 && (

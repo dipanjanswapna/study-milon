@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -289,7 +288,7 @@ export default function ProfilePage() {
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     <div className="flex items-center gap-6 pb-6 border-b">
                       <Avatar className="h-20 w-20 border">
-                        <AvatarImage src={profile.photoURL || ''} alt={profile.displayName || ''} />
+                        <AvatarImage src={profile.photoURL || undefined} alt={profile.displayName || ''} />
                         <AvatarFallback className="text-xl font-bold bg-secondary text-primary">
                           {getInitials(profile.displayName)}
                         </AvatarFallback>
