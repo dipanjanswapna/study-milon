@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -77,7 +78,7 @@ export function StudyTimer() {
     return ((totalSeconds - timeLeft) / totalSeconds) * 100;
   }, [timeLeft, totalSeconds]);
 
-  // Daily Goal Progress Logic
+  // Dynamic Daily Goal Progress Logic
   const dailyStudyProgress = useMemo(() => {
     if (!profile) return 0;
     const current = profile.daily_study_minutes || 0;
@@ -313,22 +314,29 @@ export function StudyTimer() {
         )}
       </CardHeader>
 
-      {/* Daily Study Goal Progress Line */}
+      {/* Live Daily Study Goal Progress Line */}
       <div className="px-6 md:px-8 pt-4 relative z-10">
         <div className="flex justify-between items-center mb-1.5 text-[9px] font-black uppercase tracking-widest text-blue-100/60">
            <span>Daily Study Goal Status</span>
-           <span>{Math.round(dailyStudyProgress)}% Secured</span>
+           <span className="flex items-center gap-1">
+              <span className={cn(isActive && !isBreak && "animate-pulse text-blue-300")}>
+                {Math.round(dailyStudyProgress)}%
+              </span>
+              <span>Secured</span>
+           </span>
         </div>
         <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden shadow-inner">
            <div 
-             className="h-full bg-blue-300 transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(147,197,253,0.5)]" 
+             className={cn(
+               "h-full bg-blue-300 transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(147,197,253,0.5)]",
+               isActive && !isBreak && "animate-pulse"
+             )} 
              style={{ width: `${dailyStudyProgress}%` }}
            />
         </div>
       </div>
       
       <CardContent className="flex flex-col items-center justify-center gap-8 py-10 relative z-10">
-        {/* WATCH STYLE TIMER UI */}
         <div className="relative h-[280px] w-[280px] flex items-center justify-center scale-90 md:scale-100">
            <div className="absolute inset-0 rounded-full bg-[#444444] shadow-[0_0_40px_rgba(0,0,0,0.5)] border-4 border-[#333333]" />
            
