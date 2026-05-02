@@ -48,7 +48,8 @@ import {
   History,
   Zap,
   CalendarCheck,
-  BookOpen
+  BookOpen,
+  Users2
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -136,6 +137,9 @@ export default function TodoPage() {
       setLocalTasks(sorted);
     }
   }, [rawTasks]);
+
+  const personalTasks = useMemo(() => localTasks.filter(t => t.source !== 'group'), [localTasks]);
+  const guildTasks = useMemo(() => localTasks.filter(t => t.source === 'group'), [localTasks]);
 
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<string | null>(null);
@@ -413,20 +417,25 @@ export default function TodoPage() {
                 </div>
 
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <SortableContext items={localTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-8">
+                    {/* Personal Tasks Section */}
                     <div className="space-y-4">
                       {tasksLoading ? (
-                        Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-24 bg-muted animate-pulse rounded-3xl" />)
-                      ) : localTasks.length > 0 ? (
-                        localTasks.map((task) => (
-                          <SortableTaskItem 
-                            key={task.id} 
-                            task={task} 
-                            onToggle={(id, val) => updateTaskStatus(firestore, user!.uid, id, val)}
-                            onDelete={(id) => deleteTask(firestore, user!.uid, id)}
-                          />
-                        ))
-                      ) : (
+                        Array.from({ length: 2 }).map((_, i) => <div key={i} className="h-24 bg-muted animate-pulse rounded-3xl" />)
+                      ) : personalTasks.length > 0 ? (
+                        <SortableContext items={personalTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                          <div className="space-y-4">
+                            {personalTasks.map((task) => (
+                              <SortableTaskItem 
+                                key={task.id} 
+                                task={task} 
+                                onToggle={(id, val) => updateTaskStatus(firestore, user!.uid, id, val)}
+                                onDelete={(id) => deleteTask(firestore, user!.uid, id)}
+                              />
+                            ))}
+                          </div>
+                        </SortableContext>
+                      ) : !guildTasks.length && (
                         <div className="text-center py-20 bg-secondary/20 rounded-[2.5rem] border-2 border-dashed">
                           <Plus className="mx-auto h-12 w-12 text-muted-foreground/20 mb-4" />
                           <h3 className="text-xl font-black">Empty Roadmap</h3>
@@ -434,7 +443,31 @@ export default function TodoPage() {
                         </div>
                       )}
                     </div>
-                  </SortableContext>
+
+                    {/* Guild Tasks Section */}
+                    {guildTasks.length > 0 && (
+                      <div className="space-y-4 pt-4">
+                        <div className="flex items-center gap-2 px-1">
+                           <div className="p-1.5 bg-primary/10 rounded-lg">
+                              <Users2 className="h-4 w-4 text-primary" />
+                           </div>
+                           <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground">Guild Objectives</h3>
+                        </div>
+                        <SortableContext items={guildTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                          <div className="space-y-4">
+                            {guildTasks.map((task) => (
+                              <SortableTaskItem 
+                                key={task.id} 
+                                task={task} 
+                                onToggle={(id, val) => updateTaskStatus(firestore, user!.uid, id, val)}
+                                onDelete={(id) => deleteTask(firestore, user!.uid, id)}
+                              />
+                            ))}
+                          </div>
+                        </SortableContext>
+                      </div>
+                    )}
+                  </div>
                 </DndContext>
               </div>
             </div>
