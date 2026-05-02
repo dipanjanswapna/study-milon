@@ -10,16 +10,15 @@ interface StudyActivityChartProps {
   data: any[];
   showTargetLine?: boolean;
   targetValue?: number;
-  isHourly?: boolean;
+  scrollable?: boolean;
   subjects?: string[];
 }
 
-export function StudyActivityChart({ data, showTargetLine, targetValue = 360, isHourly, subjects = [] }: StudyActivityChartProps) {
+export function StudyActivityChart({ data, showTargetLine, targetValue = 360, scrollable, subjects = [] }: StudyActivityChartProps) {
   const chartConfig: ChartConfig = {
     minutes: { label: 'Minutes', color: 'hsl(var(--primary))' }
   };
 
-  // Map theme chart colors to subjects for stacking
   subjects.forEach((sub, i) => {
     chartConfig[sub] = {
       label: sub,
@@ -34,7 +33,7 @@ export function StudyActivityChart({ data, showTargetLine, targetValue = 360, is
         <div className="bg-background/95 backdrop-blur-xl border-2 border-primary/10 rounded-2xl p-4 shadow-2xl">
           <div className="flex flex-col mb-3">
              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Session Log</p>
-             <p className="text-sm font-black text-primary">{isHourly ? `${label} Slot` : label}</p>
+             <p className="text-sm font-black text-primary">{label}</p>
           </div>
           <div className="space-y-2">
             {payload.map((entry: any, index: number) => (
@@ -80,19 +79,19 @@ export function StudyActivityChart({ data, showTargetLine, targetValue = 360, is
             fontSize={10}
             fontWeight={800}
             tickFormatter={(value) => `${value}m`}
-            domain={[0, isHourly ? 60 : 'auto']}
+            domain={[0, 'auto']}
             width={40}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--muted)/0.15)' }} />
           
           {showTargetLine && (
             <ReferenceLine 
-              y={isHourly ? targetValue / 24 : targetValue} 
+              y={targetValue} 
               stroke="hsl(var(--success))" 
               strokeDasharray="6 6"
               strokeWidth={2}
               label={{ 
-                value: isHourly ? 'Hourly Avg' : 'Daily Target', 
+                value: 'Target', 
                 position: 'right', 
                 fill: 'hsl(var(--success))', 
                 fontSize: 10, 
@@ -109,7 +108,7 @@ export function StudyActivityChart({ data, showTargetLine, targetValue = 360, is
                 stackId="a"
                 fill={`hsl(var(--chart-${(i % 5) + 1}))`}
                 radius={i === subjects.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-                barSize={isHourly ? 32 : undefined}
+                barSize={scrollable ? 32 : undefined}
                 animationDuration={500}
               />
             ))
@@ -118,7 +117,7 @@ export function StudyActivityChart({ data, showTargetLine, targetValue = 360, is
               dataKey="minutes" 
               fill="var(--color-minutes)" 
               radius={[6, 6, 0, 0]} 
-              barSize={isHourly ? 32 : undefined}
+              barSize={scrollable ? 32 : undefined}
               animationDuration={500}
             />
           )}
@@ -127,11 +126,13 @@ export function StudyActivityChart({ data, showTargetLine, targetValue = 360, is
     </ChartContainer>
   );
 
-  if (isHourly) {
+  if (scrollable) {
+    // Dynamic width based on data points to ensure bars don't get too thin
+    const minWidth = Math.max(800, data.length * 60);
     return (
       <div className="w-full">
         <ScrollArea className="w-full whitespace-nowrap rounded-3xl pb-6">
-          <div style={{ minWidth: 1440 }} className="h-[380px] pt-4">
+          <div style={{ minWidth: `${minWidth}px` }} className="h-[380px] pt-4">
             {chartContent}
           </div>
           <ScrollBar orientation="horizontal" className="h-2.5 bg-secondary/50 rounded-full" />

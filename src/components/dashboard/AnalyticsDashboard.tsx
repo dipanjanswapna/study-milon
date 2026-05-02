@@ -9,7 +9,7 @@ import { SubjectDistributionChart } from './SubjectDistributionChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, PieChart, BarChart, Trophy, Zap, TrendingUp, Activity } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { subDays, format, isAfter, startOfMonth, eachDayOfInterval, isSameMonth, startOfDay } from 'date-fns';
+import { subDays, format, isAfter, startOfMonth, eachDayOfInterval, isSameMonth, startOfDay, eachMonthOfInterval } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 
@@ -46,7 +46,6 @@ export function AnalyticsDashboard() {
       const todaySessions = sessions.filter(s => s.date === todayStr);
       filteredSessions = todaySessions;
 
-      // Initialize 24 slots for each hour of the day (12 AM to 11 PM)
       const hourlyData: Record<number, any> = {};
       for (let i = 0; i < 24; i++) {
         const dateObj = new Date();
@@ -57,7 +56,6 @@ export function AnalyticsDashboard() {
         };
       }
 
-      // Aggregate all subjects into their respective hourly buckets
       for (const session of todaySessions) {
         const subName = session.subject || 'Other';
         activeSubjectsSet.add(subName);
@@ -117,6 +115,11 @@ export function AnalyticsDashboard() {
       filteredSessions = sessions.filter(s => s.date && isSameMonth(new Date(s.date), now));
     }
     else if (filter === 'yearly') {
+      // Start from the month the user joined
+      const createdAt = profile?.createdAt?.toDate() || now;
+      const startOfJoinMonth = startOfMonth(createdAt);
+      const monthsInterval = eachMonthOfInterval({ start: startOfJoinMonth, end: now });
+
       const monthsAgg: Record<string, number> = {};
       sessions.forEach(s => {
         if (s.date) {
@@ -125,10 +128,9 @@ export function AnalyticsDashboard() {
         }
       });
 
-      chartData = Array.from({ length: 12 }).map((_, i) => {
-        const d = subDays(now, (11 - i) * 30);
-        const m = format(d, 'MMM yy');
-        return { date: m, minutes: monthsAgg[m] || 0 };
+      chartData = monthsInterval.map(month => {
+        const mKey = format(month, 'MMM yy');
+        return { date: mKey, minutes: monthsAgg[mKey] || 0 };
       });
       filteredSessions = sessions;
     }
@@ -142,7 +144,6 @@ export function AnalyticsDashboard() {
     }
     const subjectData = Object.entries(subjectMinutes).map(([name, value]) => ({ name, value }));
 
-    // Hustle Score Calculation
     const uniqueDays = new Set(filteredSessions.map(s => s.date)).size;
     const consistencyFactor = (uniqueDays / Math.max(1, chartData.length));
     const goalMins = profile?.daily_goal_minutes || 360;
@@ -250,7 +251,7 @@ export function AnalyticsDashboard() {
                   <BarChart className="h-6 w-6 text-primary" /> Consistency Tracker
                 </CardTitle>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">
-                  {filter === 'daily' ? 'Live Hourly Session Mapping' : `Activity Overview for ${filter}`}
+                  {filter === 'daily' ? 'Live Hourly Session Mapping' : filter === 'yearly' ? 'Full Hustle History' : `Activity Overview for ${filter}`}
                 </p>
               </div>
               {filter === 'daily' && (
@@ -265,7 +266,7 @@ export function AnalyticsDashboard() {
                 data={stats.chartData} 
                 showTargetLine={filter === 'daily' || filter === 'weekly'} 
                 targetValue={profile?.daily_goal_minutes || 360}
-                isHourly={filter === 'daily'}
+                scrollable={filter === 'daily' || filter === 'yearly'}
                 subjects={stats.activeSubjects}
               />
             </CardContent>
@@ -281,7 +282,7 @@ export function AnalyticsDashboard() {
             <CardContent className="p-6 pt-0">
               <SubjectDistributionChart data={stats.subjectData} />
             </CardContent>
-          </Card>
+          </div>
         </div>
       </div>
     </div>
