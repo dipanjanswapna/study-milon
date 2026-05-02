@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect, useRef } from 'react';
@@ -9,7 +8,7 @@ import { Header } from '@/components/dashboard/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Timer, Calendar, Zap, Pin, PinOff, Loader2 } from 'lucide-react';
+import { Timer, Calendar, Zap, Pin, PinOff, Loader2, Volume2, VolumeX } from 'lucide-react';
 import { differenceInDays, differenceInHours, differenceInMinutes, differenceInSeconds, isAfter } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { pinExamToDashboard } from '@/firebase/firestore/users';
@@ -19,15 +18,36 @@ import { cn } from '@/lib/utils';
 export default function ExamsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
-  const hasPlayedMusic = useRef(false);
+  const [isMusicOn, setIsMusicOn] = useState(true);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    if (!hasPlayedMusic.current) {
-      const audio = new Audio("/Eiii tomra kmn acho #exam #helicopter #milon #education #study #ssc26 #sscexam #ssc #tenthclass.mp3");
-      audio.play().catch(err => console.log("Autoplay blocked by browser. Interaction required.", err));
-      hasPlayedMusic.current = true;
+    // Initialize audio
+    if (!audioRef.current) {
+      audioRef.current = new Audio("/Eiii tomra kmn acho #exam #helicopter #milon #education #study #ssc26 #sscexam #ssc #tenthclass.mp3");
     }
-  }, []);
+
+    if (isMusicOn) {
+      audioRef.current.play().catch(err => {
+        console.log("Autoplay blocked by browser. Interaction required.", err);
+        setIsMusicOn(false); // Update UI if blocked
+      });
+    } else {
+      audioRef.current.pause();
+    }
+
+    // Cleanup: Stop music when leaving the page
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    };
+  }, [isMusicOn]);
+
+  const toggleMusic = () => {
+    setIsMusicOn(!isMusicOn);
+  };
 
   const examsQuery = useMemo(() => query(collection(firestore, 'exams'), orderBy('examDate', 'asc')), [firestore]);
   const { data: exams, loading } = useCollection<any>(examsQuery);
@@ -42,10 +62,23 @@ export default function ExamsPage() {
         <main className="p-4 md:p-8 max-w-5xl mx-auto space-y-8 pb-24">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-1 text-center md:text-left">
-              <h1 className="text-3xl md:text-5xl font-black tracking-tighter flex items-center justify-center md:justify-start gap-3">
-                <Timer className="h-10 w-10 text-primary" />
-                Exam Countdown
-              </h1>
+              <div className="flex items-center justify-center md:justify-start gap-4">
+                <h1 className="text-3xl md:text-5xl font-black tracking-tighter flex items-center gap-3">
+                  <Timer className="h-10 w-10 text-primary" />
+                  Exam Countdown
+                </h1>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={cn(
+                    "rounded-full h-12 w-12 transition-all",
+                    isMusicOn ? "bg-primary/10 text-primary hover:bg-primary/20" : "bg-secondary text-muted-foreground"
+                  )}
+                  onClick={toggleMusic}
+                >
+                  {isMusicOn ? <Volume2 className="h-6 w-6" /> : <VolumeX className="h-6 w-6" />}
+                </Button>
+              </div>
               <p className="text-muted-foreground text-sm font-medium">Synchronize your hustle with the academic clock.</p>
             </div>
           </div>
