@@ -64,20 +64,25 @@ export function StudyTimer() {
   const lastLoggedMinuteRef = useRef<number>(0);
   const initializedFromCloud = useRef(false);
 
+  // Sync timeLeft with activeTask ONLY if idle or if this is the first task
   useEffect(() => {
-    if (activeTask && !isActive && !isBreak) {
+    if (activeTask && !isActive && !isBreak && profile?.currentSession?.status === 'idle') {
       setTimeLeft(activeTask.duration * 60);
     }
-  }, [activeTask, isActive, isBreak]);
+  }, [activeTask, isActive, isBreak, profile?.currentSession?.status]);
 
   const totalSeconds = useMemo(() => {
     if (isBreak) return BREAK_MINUTES * 60;
+    // If paused, the 'duration' in currentSession stores the remaining seconds
+    if (profile?.currentSession?.status === 'paused') return profile.currentSession.duration;
     return (activeTask?.duration || 25) * 60;
-  }, [isBreak, activeTask]);
+  }, [isBreak, activeTask, profile?.currentSession]);
 
   const progress = useMemo(() => {
-    return ((totalSeconds - timeLeft) / totalSeconds) * 100;
-  }, [timeLeft, totalSeconds]);
+    // For visual progress, we need the ORIGINAL total duration
+    const originalTotal = isBreak ? BREAK_MINUTES * 60 : (activeTask?.duration || 25) * 60;
+    return ((originalTotal - timeLeft) / originalTotal) * 100;
+  }, [timeLeft, isBreak, activeTask]);
 
   const dailyStudyProgress = useMemo(() => {
     if (!profile) return 0;
@@ -100,7 +105,7 @@ export function StudyTimer() {
         isStudying: false,
         currentSession: {
           startTime: null,
-          duration: duration,
+          duration: duration * 60, // Store as seconds for precision
           status: 'idle',
           subjectId: activeTask?.subjectId || null,
           chapterId: activeTask?.chapterId || null,
@@ -124,18 +129,21 @@ export function StudyTimer() {
       lastLoggedMinuteRef.current = 0;
       audioRef.current?.play().catch(() => {});
       
+      // When resuming, 'timeLeft' is already correct (it was loaded from cloud or kept in state)
+      const currentRemaining = timeLeft;
+      
       const newSession: CurrentSession = {
         startTime,
-        duration: activeTask.duration,
+        duration: currentRemaining, // Use current timeLeft as the base duration for this segment
         status: 'active',
         subjectId: activeTask.subjectId,
         chapterId: activeTask.chapterId,
-        isBreak: false
+        isBreak: isBreak
       };
       
       updateUserProfile(firestore, user.uid, { 
         currentSession: newSession as any, 
-        isStudying: true,
+        isStudying: !isBreak,
         last_active_date: serverTimestamp()
       });
     }
@@ -145,10 +153,12 @@ export function StudyTimer() {
     if (user) {
       setIsActive(false);
       audioRef.current?.pause();
+      // Save current timeLeft to Firestore as the new duration to resume from
       updateUserProfile(firestore, user.uid, { 
         isStudying: false,
         "currentSession.status": "paused",
-        "currentSession.startTime": null
+        "currentSession.startTime": null,
+        "currentSession.duration": timeLeft // Store exact seconds remaining
       });
     }
   };
@@ -178,7 +188,7 @@ export function StudyTimer() {
         isStudying: false,
         currentSession: {
           startTime,
-          duration: activeTask.duration,
+          duration: breakSeconds,
           status: 'active',
           subjectId: activeTask.subjectId,
           chapterId: activeTask.chapterId,
@@ -201,14 +211,15 @@ export function StudyTimer() {
     alarmRef.current = new Audio(ALARM_AUDIO_PATH);
   }, []);
 
+  // Hydrate timer state from cloud session on load
   useEffect(() => {
     if (profile?.currentSession && !initializedFromCloud.current) {
       const { startTime, duration, status, isBreak: cloudIsBreak } = profile.currentSession;
+      
       if (status === 'active' && startTime) {
         const now = Date.now();
         const elapsedSeconds = Math.floor((now - startTime) / 1000);
-        const totalSessionSeconds = (cloudIsBreak ? BREAK_MINUTES : (activeTask?.duration || duration)) * 60;
-        const calculatedTimeLeft = Math.max(0, totalSessionSeconds - elapsedSeconds);
+        const calculatedTimeLeft = Math.max(0, duration - elapsedSeconds);
 
         if (calculatedTimeLeft > 0) {
           setTimeLeft(calculatedTimeLeft);
@@ -219,21 +230,25 @@ export function StudyTimer() {
         } else {
           handleReset();
         }
+      } else if (status === 'paused') {
+        // Load the paused time
+        setTimeLeft(duration);
+        setIsBreak(cloudIsBreak);
+        setIsActive(false);
       }
       initializedFromCloud.current = true;
     }
-  }, [profile?.currentSession, activeTask, handleReset]);
+  }, [profile?.currentSession, handleReset]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
       interval = setInterval(() => {
         const startTime = profile.currentSession!.startTime;
-        const duration = isBreak ? BREAK_MINUTES : (activeTask?.duration || 25);
-        const totalSessionSeconds = duration * 60;
+        const duration = profile.currentSession!.duration; // This is the budget when session started/resumed
         const now = Date.now();
         const elapsedSeconds = Math.floor((now - startTime) / 1000);
-        const newTimeLeft = Math.max(0, totalSessionSeconds - elapsedSeconds);
+        const newTimeLeft = Math.max(0, duration - elapsedSeconds);
         
         setTimeLeft(newTimeLeft);
 
