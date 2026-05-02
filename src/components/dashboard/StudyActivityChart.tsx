@@ -15,10 +15,6 @@ interface StudyActivityChartProps {
 }
 
 export function StudyActivityChart({ data, showTargetLine, targetValue = 360, isHourly, subjects = [] }: StudyActivityChartProps) {
-  const barCount = data.length;
-  // Responsive width calculation: ensuring bars have enough breathing room for labels
-  const minWidth = isHourly ? 1440 : barCount > 7 ? barCount * 80 : 0;
-
   const chartConfig: ChartConfig = {
     minutes: { label: 'Minutes', color: 'hsl(var(--primary))' }
   };
@@ -63,78 +59,90 @@ export function StudyActivityChart({ data, showTargetLine, targetValue = 360, is
     return null;
   };
 
+  const chartContent = (
+    <ChartContainer config={chartConfig} className="w-full h-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+          <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="hsl(var(--muted)/0.4)" />
+          <XAxis
+            dataKey="date"
+            tickLine={false}
+            tickMargin={15}
+            axisLine={false}
+            stroke="hsl(var(--muted-foreground))"
+            fontSize={10}
+            fontWeight={800}
+          />
+          <YAxis
+            tickLine={false}
+            axisLine={false}
+            stroke="hsl(var(--muted-foreground))"
+            fontSize={10}
+            fontWeight={800}
+            tickFormatter={(value) => `${value}m`}
+            domain={[0, isHourly ? 60 : 'auto']}
+            width={40}
+          />
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--muted)/0.15)' }} />
+          
+          {showTargetLine && (
+            <ReferenceLine 
+              y={isHourly ? targetValue / 24 : targetValue} 
+              stroke="hsl(var(--success))" 
+              strokeDasharray="6 6"
+              strokeWidth={2}
+              label={{ 
+                value: isHourly ? 'Hourly Avg' : 'Daily Target', 
+                position: 'right', 
+                fill: 'hsl(var(--success))', 
+                fontSize: 10, 
+                fontWeight: 900 
+              }}
+            />
+          )}
+          
+          {subjects.length > 0 ? (
+            subjects.map((sub, i) => (
+              <Bar 
+                key={sub}
+                dataKey={sub} 
+                stackId="a"
+                fill={`hsl(var(--chart-${(i % 5) + 1}))`}
+                radius={i === subjects.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                barSize={isHourly ? 32 : undefined}
+                animationDuration={500}
+              />
+            ))
+          ) : (
+            <Bar 
+              dataKey="minutes" 
+              fill="var(--color-minutes)" 
+              radius={[6, 6, 0, 0]} 
+              barSize={isHourly ? 32 : undefined}
+              animationDuration={500}
+            />
+          )}
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartContainer>
+  );
+
+  if (isHourly) {
+    return (
+      <div className="w-full">
+        <ScrollArea className="w-full whitespace-nowrap rounded-3xl pb-6">
+          <div style={{ minWidth: 1440 }} className="h-[380px] pt-4">
+            {chartContent}
+          </div>
+          <ScrollBar orientation="horizontal" className="h-2.5 bg-secondary/50 rounded-full" />
+        </ScrollArea>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full">
-      <ScrollArea className="w-full whitespace-nowrap rounded-3xl pb-6">
-        <div style={{ minWidth: minWidth || '100%' }} className="h-[380px] pt-4">
-          <ChartContainer config={chartConfig} className="w-full h-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
-                <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="hsl(var(--muted)/0.4)" />
-                <XAxis
-                  dataKey="date"
-                  tickLine={false}
-                  tickMargin={15}
-                  axisLine={false}
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={10}
-                  fontWeight={800}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={10}
-                  fontWeight={800}
-                  tickFormatter={(value) => `${value}m`}
-                  domain={[0, isHourly ? 60 : 'auto']}
-                  width={40}
-                />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--muted)/0.15)' }} />
-                
-                {showTargetLine && (
-                  <ReferenceLine 
-                    y={isHourly ? targetValue / 24 : targetValue} 
-                    stroke="hsl(var(--success))" 
-                    strokeDasharray="6 6"
-                    strokeWidth={2}
-                    label={{ 
-                      value: isHourly ? 'Hourly Avg' : 'Daily Target', 
-                      position: 'right', 
-                      fill: 'hsl(var(--success))', 
-                      fontSize: 10, 
-                      fontWeight: 900 
-                    }}
-                  />
-                )}
-                
-                {subjects.length > 0 ? (
-                  subjects.map((sub, i) => (
-                    <Bar 
-                      key={sub}
-                      dataKey={sub} 
-                      stackId="a"
-                      fill={`hsl(var(--chart-${(i % 5) + 1}))`}
-                      radius={i === subjects.length - 1 ? [6, 6, 0, 0] : [0, 0, 0, 0]}
-                      barSize={isHourly ? 32 : 40}
-                      animationDuration={500}
-                    />
-                  ))
-                ) : (
-                  <Bar 
-                    dataKey="minutes" 
-                    fill="var(--color-minutes)" 
-                    radius={[8, 8, 0, 0]} 
-                    barSize={40}
-                    animationDuration={500}
-                  />
-                )}
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        </div>
-        <ScrollBar orientation="horizontal" className="h-2.5 bg-secondary/50 rounded-full" />
-      </ScrollArea>
+    <div className="w-full h-[380px] pt-4">
+      {chartContent}
     </div>
   );
 }

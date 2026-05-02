@@ -142,7 +142,7 @@ export function AnalyticsDashboard() {
     }
     const subjectData = Object.entries(subjectMinutes).map(([name, value]) => ({ name, value }));
 
-    // Hustle Score Calculation: Consistency (days active) * volume (daily goal %)
+    // Hustle Score Calculation
     const uniqueDays = new Set(filteredSessions.map(s => s.date)).size;
     const consistencyFactor = (uniqueDays / Math.max(1, chartData.length));
     const goalMins = profile?.daily_goal_minutes || 360;
@@ -194,7 +194,6 @@ export function AnalyticsDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-        {/* Status Highlights */}
         <Card className="md:col-span-3 rounded-[2rem] border-none shadow-xl bg-primary text-primary-foreground overflow-hidden group relative">
           <div className="absolute top-0 right-0 p-8 opacity-10">
             <Zap className="h-24 w-24" />
@@ -243,9 +242,7 @@ export function AnalyticsDashboard() {
           </CardContent>
         </Card>
 
-        {/* Desktop Layout: Consistency Tracker followed by Focus Areas Stacked */}
         <div className="md:col-span-6 space-y-8">
-           {/* Consistency Tracker */}
           <Card className="rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
@@ -274,7 +271,6 @@ export function AnalyticsDashboard() {
             </CardContent>
           </Card>
 
-          {/* Focus Areas Distribution - Stacked below on Desktop as requested */}
           <Card className="rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
             <CardHeader>
               <CardTitle className="text-xl font-black flex items-center gap-2">
