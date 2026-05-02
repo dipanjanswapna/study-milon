@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, getDocs, where } from 'firebase/firestore';
 import { useFirestore, useCollection, useUser, useDoc } from '@/firebase';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { ProfileSetupGate } from '@/components/dashboard/ProfileSetupGate';
@@ -40,7 +40,7 @@ import {
   Users2,
   ExternalLink,
   MessageSquare,
-  Info
+  CheckCircle2
 } from 'lucide-react';
 import { createGroup, sendJoinRequest, type StudyGroup } from '@/firebase/firestore/groups';
 import { useRouter } from 'next/navigation';
@@ -57,7 +57,11 @@ export default function GroupsPage() {
 
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  
+  // Track requests for the current session to update UI immediately
+  const [requestedGuildIds, setRequestedGuildIds] = useState<Set<string>>(new Set());
+  const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
 
   // User's group info
   const userRef = useMemo(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
@@ -96,7 +100,7 @@ export default function GroupsPage() {
       toast({ variant: 'destructive', title: 'Missing Info', description: 'Guild Name and Discord Link are mandatory.' });
       return;
     }
-    setLoading(true);
+    setCreateLoading(true);
     try {
       const gid = await createGroup(firestore, user.uid, {
         name: newName,
@@ -111,21 +115,30 @@ export default function GroupsPage() {
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Error', description: e.message });
     } finally {
-      setLoading(false);
+      setCreateLoading(false);
     }
   };
 
   const handleJoin = async (group: StudyGroup) => {
-    if (!user) return;
+    if (!user || requestedGuildIds.has(group.id)) return;
+    
+    setLoadingMap(prev => ({ ...prev, [group.id]: true }));
     try {
       await sendJoinRequest(firestore, group.id, {
         uid: user.uid,
         displayName: user.displayName || 'Student',
         photoURL: user.photoURL || ''
       });
-      toast({ title: 'Request Sent', description: 'The guild leader will review your application.' });
+      
+      setRequestedGuildIds(prev => new Set(prev).add(group.id));
+      toast({ 
+        title: 'Request Sent', 
+        description: `Your application to join ${group.name} is now pending leader review.` 
+      });
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Error', description: e.message });
+    } finally {
+      setLoadingMap(prev => ({ ...prev, [group.id]: false }));
     }
   };
 
@@ -220,7 +233,7 @@ export default function GroupsPage() {
                               <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Category</Label>
                               <Select value={newCat} onValueChange={setNewCat}>
                                 <SelectTrigger>
-                                  <SelectValue />
+                                  <SelectValue placeholder="Select" />
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="SSC">SSC</SelectItem>
@@ -246,8 +259,8 @@ export default function GroupsPage() {
                         </div>
                       </ScrollArea>
                       <DialogFooter className="mt-4">
-                        <Button onClick={handleCreate} disabled={loading || !newName || !newDiscord} className="w-full h-12 font-black rounded-xl shadow-xl shadow-primary/20">
-                          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Button onClick={handleCreate} disabled={createLoading || !newName || !newDiscord} className="w-full h-12 font-black rounded-xl shadow-xl shadow-primary/20">
+                          {createLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                           Launch Study Guild
                         </Button>
                       </DialogFooter>
@@ -271,34 +284,56 @@ export default function GroupsPage() {
               {groupsLoading ? (
                 Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-[2rem]" />)
               ) : filteredGroups.length > 0 ? (
-                filteredGroups.map((group) => (
-                  <Card key={group.id} className="rounded-[2rem] overflow-hidden border-none shadow-xl hover:shadow-2xl transition-all group">
-                    <CardHeader className="bg-primary/5 pb-4">
-                      <div className="flex justify-between items-start">
-                        <Badge className="bg-primary/10 text-primary border-none font-black text-[10px] uppercase px-2 mb-2">
-                          {group.category} {group.batch}
-                        </Badge>
-                        <div className="flex items-center gap-1 text-xs font-bold text-muted-foreground">
-                          <Users className="h-3.5 w-3.5" />
-                          {group.memberCount || 1}/{group.memberLimit || 15}
+                filteredGroups.map((group) => {
+                  const isRequested = requestedGuildIds.has(group.id);
+                  const isButtonLoading = loadingMap[group.id];
+
+                  return (
+                    <Card key={group.id} className="rounded-[2rem] overflow-hidden border-none shadow-xl hover:shadow-2xl transition-all group">
+                      <CardHeader className="bg-primary/5 pb-4">
+                        <div className="flex justify-between items-start">
+                          <Badge className="bg-primary/10 text-primary border-none font-black text-[10px] uppercase px-2 mb-2">
+                            {group.category} {group.batch}
+                          </Badge>
+                          <div className="flex items-center gap-1 text-xs font-bold text-muted-foreground">
+                            <Users className="h-3.5 w-3.5" />
+                            {group.memberCount || 1}/{group.memberLimit || 15}
+                          </div>
                         </div>
-                      </div>
-                      <CardTitle className="text-xl font-black group-hover:text-primary transition-colors">{group.name}</CardTitle>
-                      <CardDescription className="line-clamp-2 min-h-[40px]">{group.description}</CardDescription>
-                    </CardHeader>
-                    <CardFooter className="pt-4 flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                         <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-500">
-                            <MessageSquare className="h-4 w-4" />
-                         </div>
-                         <span className="text-[10px] font-bold text-muted-foreground">Discord Enabled</span>
-                      </div>
-                      <Button onClick={() => handleJoin(group)} variant="secondary" className="rounded-full px-6 font-bold">
-                        Request to Join
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))
+                        <CardTitle className="text-xl font-black group-hover:text-primary transition-colors">{group.name}</CardTitle>
+                        <CardDescription className="line-clamp-2 min-h-[40px]">{group.description}</CardDescription>
+                      </CardHeader>
+                      <CardFooter className="pt-4 flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                           <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                              <MessageSquare className="h-4 w-4" />
+                           </div>
+                           <span className="text-[10px] font-bold text-muted-foreground">Discord Enabled</span>
+                        </div>
+                        <Button 
+                          onClick={() => handleJoin(group)} 
+                          variant={isRequested ? "secondary" : "default"} 
+                          className={cn(
+                            "rounded-full px-6 font-bold transition-all",
+                            isRequested && "bg-success/10 text-success hover:bg-success/20 border-none"
+                          )}
+                          disabled={isRequested || isButtonLoading}
+                        >
+                          {isButtonLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : isRequested ? (
+                            <>
+                              <CheckCircle2 className="mr-2 h-4 w-4" />
+                              Requested
+                            </>
+                          ) : (
+                            'Request to Join'
+                          )}
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  );
+                })
               ) : (
                 <div className="col-span-full py-20 text-center space-y-4">
                   <div className="bg-secondary/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto">
@@ -316,4 +351,3 @@ export default function GroupsPage() {
     </ProtectedRoute>
   );
 }
-
