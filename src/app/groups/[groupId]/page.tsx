@@ -43,7 +43,8 @@ import {
   UserPlus,
   Loader2,
   LogOut,
-  ArrowRight
+  ArrowRight,
+  UserX
 } from 'lucide-react';
 import { 
   approveRequest, 
@@ -55,6 +56,7 @@ import {
   deleteGroupAnnouncement,
   updateGroup,
   cleanupExpiredRequests,
+  kickMember,
   type StudyGroup,
   type GroupAnnouncement
 } from '@/firebase/firestore/groups';
@@ -221,6 +223,18 @@ export default function GroupDashboardPage() {
     } finally {
       setLoading(false);
       setIsLeaveOpen(false);
+    }
+  };
+
+  const handleKickMember = async (userId: string, userName: string) => {
+    setLoading(true);
+    try {
+      await kickMember(firestore, groupId as string, userId);
+      toast({ title: "Student Removed", description: `${userName} has been removed from the guild.` });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: "Error", description: e.message });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -546,13 +560,15 @@ export default function GroupDashboardPage() {
                     {memberProfiles.map((member, idx) => {
                       const studyProgress = Math.min(100, (member.daily_study_minutes || 0) / (member.daily_goal_minutes || 360) * 100);
                       const memberKey = member.uid ? `${member.uid}-${idx}` : `member-${idx}`;
+                      const canKick = (isCreator || isMod) && member.uid !== user?.uid && member.uid !== group.creatorId;
+
                       return (
-                        <div key={memberKey} className="p-4 md:p-6 hover:bg-secondary/10 transition-all group">
+                        <div key={memberKey} className="p-4 md:p-6 hover:bg-secondary/10 transition-all group/row">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                            <Link href={`/profile/${member.uid}`} className="flex items-center gap-4 md:gap-5 flex-1 min-w-0">
-                              <span className="font-black text-xl md:text-2xl italic text-muted-foreground/20 w-8 group-hover:text-primary transition-colors">#{idx + 1}</span>
-                              <div className="relative">
-                                <Avatar className="h-12 w-12 md:h-14 md:w-14 ring-2 ring-background shadow-lg">
+                            <div className="flex items-center gap-4 md:gap-5 flex-1 min-w-0">
+                              <span className="font-black text-xl md:text-2xl italic text-muted-foreground/20 w-8 group-hover/row:text-primary transition-colors">#{idx + 1}</span>
+                              <Link href={`/profile/${member.uid}`} className="relative">
+                                <Avatar className="h-12 w-12 md:h-14 md:w-14 ring-2 ring-background shadow-lg transition-transform hover:scale-110">
                                   <AvatarImage src={member.photoURL || undefined} />
                                   <AvatarFallback className="font-black text-lg">{member.displayName?.[0]}</AvatarFallback>
                                 </Avatar>
@@ -564,9 +580,11 @@ export default function GroupDashboardPage() {
                                     <Trophy className="h-3 w-3" />
                                   </div>
                                 )}
-                              </div>
+                              </Link>
                               <div className="space-y-1 min-w-0">
-                                <p className="font-black text-base md:text-lg tracking-tight truncate group-hover:text-primary transition-colors">{member.displayName}</p>
+                                <Link href={`/profile/${member.uid}`} className="font-black text-base md:text-lg tracking-tight truncate group-hover/row:text-primary transition-colors block">
+                                  {member.displayName}
+                                </Link>
                                 <div className="flex flex-wrap items-center gap-2">
                                    <Badge variant="secondary" className="text-[9px] h-4 uppercase font-black tracking-tighter bg-primary/5 text-primary border-none">
                                       {member.daily_study_minutes || 0}m studied
@@ -574,10 +592,42 @@ export default function GroupDashboardPage() {
                                    <Badge variant={member.taskProgress === 100 ? 'default' : 'outline'} className="text-[9px] h-4 uppercase font-black tracking-tighter">
                                       {member.completedTasks}/{member.totalTasks} Tasks
                                    </Badge>
+                                   {member.uid === group.creatorId && (
+                                     <Badge className="bg-indigo-500 text-white text-[8px] font-black uppercase tracking-tighter border-none px-1.5 h-4">Leader</Badge>
+                                   )}
                                 </div>
                               </div>
-                              <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all ml-auto" />
-                            </Link>
+                              
+                              {canKick && (
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/30 hover:text-destructive hover:bg-destructive/10 rounded-full transition-all opacity-0 group-hover/row:opacity-100 ml-2">
+                                      <UserX className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent className="rounded-[2rem] border-none max-w-sm">
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle className="flex items-center gap-2 text-destructive font-black">
+                                        <UserX className="h-5 w-5" /> Kick Student
+                                      </AlertDialogTitle>
+                                      <AlertDialogDescription className="text-base font-medium">
+                                        Are you sure you want to remove <strong>{member.displayName}</strong> from the guild? This action cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter className="flex-col gap-2">
+                                      <AlertDialogAction 
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl font-black h-12"
+                                        onClick={() => handleKickMember(member.uid, member.displayName)}
+                                        disabled={loading}
+                                      >
+                                        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Yes, Kick Member"}
+                                      </AlertDialogAction>
+                                      <AlertDialogCancel className="rounded-xl font-bold h-12">Cancel</AlertDialogCancel>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              )}
+                            </div>
                             
                             <div className="flex-1 sm:max-w-[240px] space-y-3">
                                <div className="space-y-1.5">

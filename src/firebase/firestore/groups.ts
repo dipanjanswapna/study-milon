@@ -1,4 +1,3 @@
-
 'use client';
 import {
   collection,
@@ -216,6 +215,35 @@ export async function leaveGroup(db: Firestore, groupId: string, userId: string)
 
   const members = groupSnap.data().members as string[];
   const updatedMembers = members.filter(m => m !== userId);
+
+  batch.update(groupRef, {
+    members: updatedMembers,
+    memberCount: increment(-1)
+  });
+
+  batch.update(userRef, { groupId: null });
+
+  await batch.commit();
+}
+
+/**
+ * Removes a member from the group (Kick).
+ * Only accessible by creators/moderators.
+ */
+export async function kickMember(db: Firestore, groupId: string, userId: string) {
+  const batch = writeBatch(db);
+  const groupRef = doc(db, 'groups', groupId);
+  const userRef = doc(db, 'users', userId);
+
+  const groupSnap = await getDoc(groupRef);
+  if (!groupSnap.exists()) throw new Error("Guild not found.");
+
+  const groupData = groupSnap.data() as StudyGroup;
+  const updatedMembers = (groupData.members || []).filter(m => m !== userId);
+
+  if (updatedMembers.length === groupData.members.length) {
+    throw new Error("Member not found in guild.");
+  }
 
   batch.update(groupRef, {
     members: updatedMembers,
