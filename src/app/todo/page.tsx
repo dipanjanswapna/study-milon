@@ -2,16 +2,18 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { format, isSameDay, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth } from 'date-fns';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { format, isSameDay, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, subDays } from 'date-fns';
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { addStudyTask, updateTaskStatus, deleteTask, updateTasksOrder, type StudyTask } from '@/firebase/firestore/todo';
+import { addStudyTask, updateTaskStatus, deleteTask, updateTasksOrder, restoreTasks, type StudyTask } from '@/firebase/firestore/todo';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { ProfileSetupGate } from '@/components/dashboard/ProfileSetupGate';
 import { Header } from '@/components/dashboard/Header';
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -44,11 +46,15 @@ import {
   ChevronRight,
   Clock,
   Notebook,
-  GripVertical
+  GripVertical,
+  History,
+  Zap,
+  CalendarCheck
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 
 // DnD Imports
 import {
@@ -80,18 +86,25 @@ export default function TodoPage() {
   const [loading, setLoading] = useState(false);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
 
   // Sensors for DnD
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8, // Avoid accidental drags when clicking handles
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+
+  // Expired Tasks Query (Tasks from past days that are incomplete)
+  const expiredTasksQuery = useMemo(() => {
+    if (!user) return null;
+    return query(
+      collection(firestore, 'users', user.uid, 'tasks'),
+      where('date', '<', todayStr),
+      where('completed', '==', false),
+      orderBy('date', 'desc')
+    );
+  }, [user, firestore, todayStr]);
+  const { data: expiredTasks } = useCollection<StudyTask>(expiredTasksQuery);
 
   // Month tasks query
   const monthStart = startOfMonth(currentMonth);
@@ -114,12 +127,9 @@ export default function TodoPage() {
       where('date', '==', dateStr)
     );
   }, [user, firestore, dateStr]);
-
   const { data: rawTasks, loading: tasksLoading } = useCollection<StudyTask>(tasksQuery);
 
-  // Local state for DnD sorting
   const [localTasks, setLocalTasks] = useState<StudyTask[]>([]);
-
   useEffect(() => {
     if (rawTasks) {
       const sorted = [...rawTasks].sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -134,7 +144,6 @@ export default function TodoPage() {
   const [plannedHours, setPlannedHours] = useState<string>('0');
   const [plannedMinutes, setPlannedMinutes] = useState<string>('25');
 
-  // Subjects & Chapters
   const subjectsQuery = useMemo(() => {
     if (!user) return null;
     return query(collection(firestore, 'users', user.uid, 'subjects'), orderBy('createdAt', 'asc'));
@@ -149,14 +158,11 @@ export default function TodoPage() {
 
   const handleAddTask = async () => {
     if (!user || !selectedSubject || !selectedChapter) return;
-    
     const subject = subjects?.find(s => s.id === selectedSubject);
     const chapter = chapters?.find(c => c.id === selectedChapter);
-
     if (!subject || !chapter) return;
 
     const totalMinutes = (parseInt(plannedHours, 10) || 0) * 60 + (parseInt(plannedMinutes, 10) || 0);
-
     if (totalMinutes <= 0) {
       toast({ variant: 'destructive', title: 'Duration must be greater than 0' });
       return;
@@ -173,6 +179,7 @@ export default function TodoPage() {
         note: taskNote.trim(),
         date: dateStr,
         duration: totalMinutes,
+        source: 'personal'
       }, nextOrder);
       
       setIsDialogOpen(false);
@@ -189,53 +196,37 @@ export default function TodoPage() {
     }
   };
 
+  const handleRestoreAll = async () => {
+    if (!user || !expiredTasks || expiredTasks.length === 0) return;
+    setLoading(true);
+    try {
+      await restoreTasks(firestore, user.uid, expiredTasks.map(t => t.id));
+      toast({ title: "Roadmap Resynchronized", description: "Expired tasks moved to today's schedule." });
+    } catch (e) {
+      toast({ variant: 'destructive', title: "Failed to restore tasks" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!user || !over || active.id === over.id) return;
-
     setLocalTasks((items) => {
       const oldIndex = items.findIndex((i) => i.id === active.id);
       const newIndex = items.findIndex((i) => i.id === over.id);
       const newArray = arrayMove(items, oldIndex, newIndex);
-      
-      // Update order in background
       const updates = newArray.map((t, idx) => ({ id: t.id, order: idx }));
-      updateTasksOrder(firestore, user.uid, updates).catch(() => {
-        toast({ variant: 'destructive', title: 'Failed to sync task order' });
-      });
-
+      updateTasksOrder(firestore, user.uid, updates);
       return newArray;
     });
   };
-
-  const handleToggle = async (taskId: string, currentStatus: boolean) => {
-    if (!user) return;
-    try {
-      await updateTaskStatus(firestore, user.uid, taskId, !currentStatus);
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Error updating task' });
-    }
-  };
-
-  const handleDelete = async (taskId: string) => {
-    if (!user) return;
-    try {
-      await deleteTask(firestore, user.uid, taskId);
-      toast({ title: 'Task deleted' });
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Error deleting task' });
-    }
-  };
-
-  const nextMonth = () => setCurrentMonth(addDays(endOfMonth(currentMonth), 1));
-  const prevMonth = () => setCurrentMonth(addDays(startOfMonth(currentMonth), -1));
 
   const renderCells = () => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
     const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
     const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
-
     const rows = [];
     let days = [];
     let day = startDate;
@@ -249,7 +240,6 @@ export default function TodoPage() {
         const hasTasks = dayTasks.length > 0;
         const allCompleted = hasTasks && dayTasks.every(t => t.completed);
         const someCompleted = hasTasks && dayTasks.some(t => t.completed) && !allCompleted;
-
         const cloneDay = day;
         days.push(
           <div
@@ -258,7 +248,7 @@ export default function TodoPage() {
               "relative h-16 md:h-20 flex flex-col items-center justify-center rounded-xl transition-all cursor-pointer border-2",
               !isCurrentMonth ? "opacity-20 pointer-events-none" : "",
               isSelected 
-                ? "bg-destructive border-destructive text-white shadow-lg" 
+                ? "bg-primary border-primary text-white shadow-lg" 
                 : "bg-white border-transparent text-slate-800 hover:border-slate-300"
             )}
             onClick={() => setSelectedDate(cloneDay)}
@@ -268,27 +258,16 @@ export default function TodoPage() {
             </span>
             <div className="flex flex-col items-center">
               {isSelected ? (
-                <span className="text-[10px] font-black uppercase">To-Do</span>
-              ) : (
-                <>
-                  <span className="text-[10px] text-slate-400 font-bold">-</span>
-                  {hasTasks && (
-                    <div className="flex gap-0.5 mt-1">
-                      <div className={cn("w-1.5 h-1.5 rounded-full", allCompleted ? "bg-success" : someCompleted ? "bg-orange-500" : "bg-destructive")} />
-                    </div>
-                  )}
-                </>
-              )}
+                <span className="text-[10px] font-black uppercase">Active</span>
+              ) : hasTasks ? (
+                <div className={cn("w-2 h-2 rounded-full", allCompleted ? "bg-success" : someCompleted ? "bg-orange-500" : "bg-primary")} />
+              ) : null}
             </div>
           </div>
         );
         day = addDays(day, 1);
       }
-      rows.push(
-        <div className="grid grid-cols-7 gap-2 mb-2" key={day.toString()}>
-          {days}
-        </div>
-      );
+      rows.push(<div className="grid grid-cols-7 gap-2 mb-2" key={day.toString()}>{days}</div>);
       days = [];
     }
     return <div>{rows}</div>;
@@ -297,208 +276,171 @@ export default function TodoPage() {
   const formatDurationDisplay = (totalMinutes: number) => {
     const h = Math.floor(totalMinutes / 60);
     const m = totalMinutes % 60;
-    if (h > 0) return `${h}h ${m}m`;
-    return `${m}m`;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
   };
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-background text-foreground">
+      <div className="min-h-screen bg-background text-foreground pb-20 md:pb-10">
         <Header />
-        <main className="p-4 md:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <main className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
           <ProfileSetupGate>
+            
+            {/* Expired Tasks Banner */}
+            {expiredTasks && expiredTasks.length > 0 && isSameDay(selectedDate, new Date()) && (
+              <Card className="rounded-[2rem] border-none shadow-2xl bg-orange-500 text-white overflow-hidden animate-in slide-in-from-top duration-500">
+                <CardContent className="p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="flex items-center gap-5">
+                    <div className="p-4 bg-white/20 rounded-2xl">
+                      <History className="h-8 w-8" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl md:text-2xl font-black tracking-tighter">Incomplete Objectives Detected</h3>
+                      <p className="text-white/80 font-medium text-sm md:text-base">You have {expiredTasks.length} tasks from previous days. Restore them to today's roadmap.</p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={handleRestoreAll} 
+                    disabled={loading}
+                    variant="secondary" 
+                    className="rounded-full px-8 h-14 font-black uppercase tracking-widest text-[10px] bg-white text-orange-600 hover:bg-white/90 shadow-xl"
+                  >
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4 fill-current" />}
+                    Restore All to Today
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              
               {/* Calendar Section */}
               <div className="lg:col-span-7 xl:col-span-8">
-                <Card className="bg-[#2A2D5B] border-none shadow-2xl rounded-[2rem] p-6 md:p-8">
+                <Card className="bg-[#1A1C3D] border-none shadow-2xl rounded-[2.5rem] p-6 md:p-10">
                   <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-                    <h2 className="text-2xl font-black text-white/90 tracking-tighter uppercase">
-                      {format(currentMonth, 'MMMM yyyy')}
-                    </h2>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="icon" onClick={prevMonth} className="text-white hover:bg-white/10 rounded-full">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/20 rounded-xl">
+                        <CalendarCheck className="h-6 w-6 text-primary" />
+                      </div>
+                      <h2 className="text-2xl font-black text-white tracking-tighter uppercase">
+                        {format(currentMonth, 'MMMM yyyy')}
+                      </h2>
+                    </div>
+                    <div className="flex gap-2 bg-white/5 p-1 rounded-xl">
+                      <Button variant="ghost" size="icon" onClick={prevMonth} className="text-white hover:bg-white/10 rounded-lg">
                         <ChevronLeft className="h-6 w-6" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={nextMonth} className="text-white hover:bg-white/10 rounded-full">
+                      <Button variant="ghost" size="icon" onClick={nextMonth} className="text-white hover:bg-white/10 rounded-lg">
                         <ChevronRight className="h-6 w-6" />
                       </Button>
                     </div>
                   </div>
-
                   <div className="grid grid-cols-7 mb-4 text-center">
-                    {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, idx) => (
-                      <div key={idx} className={cn("text-xs md:text-sm font-bold", idx === 6 ? "text-destructive" : "text-white/60")}>
+                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => (
+                      <div key={idx} className="text-[10px] font-black uppercase tracking-widest text-white/40">
                         {day}
                       </div>
                     ))}
                   </div>
-                  
                   {renderCells()}
-
-                  <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full bg-destructive" />
-                        <span className="text-xs text-white/70 font-medium">Done: Daily Target Complete</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full bg-orange-500" />
-                        <span className="text-xs text-white/70 font-medium">In Progress</span>
-                    </div>
-                  </div>
                 </Card>
               </div>
 
               {/* Task Section */}
               <div className="lg:col-span-5 xl:col-span-4 space-y-6">
-                <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row items-start sm:items-center lg:items-start xl:items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-xl md:text-2xl font-black tracking-tight font-headline">
-                      {format(selectedDate, 'EEEE, MMM do')}
+                <div className="flex flex-col gap-4">
+                  <div className="space-y-1">
+                    <h2 className="text-3xl font-black tracking-tighter uppercase font-headline">
+                      {isSameDay(selectedDate, new Date()) ? "Today's Roadmap" : format(selectedDate, 'MMM do, yyyy')}
                     </h2>
-                    <p className="text-muted-foreground text-sm">{localTasks.length} tasks planned</p>
+                    <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest">{localTasks.length} objectives assigned</p>
                   </div>
-                  
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button className="rounded-full shadow-lg bg-primary hover:bg-primary/90 flex-1">
-                          <Plus className="mr-2 h-4 w-4" /> Add Task
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-md w-[95vw] sm:w-full max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0 border-none shadow-2xl">
-                        <DialogHeader className="p-6 pb-2 shrink-0">
-                          <DialogTitle className="text-xl font-black font-headline">Plan Your Study Session</DialogTitle>
-                        </DialogHeader>
-                        
-                        <ScrollArea className="flex-1 px-6 pb-6 overflow-y-auto">
-                          <div className="space-y-6 py-2">
-                            <div className="space-y-2">
-                              <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Subject</Label>
-                              <Select onValueChange={(val) => {setSelectedSubject(val); setSelectedChapter(null);}}>
-                                <SelectTrigger className="h-11">
-                                  <SelectValue placeholder="Choose a subject" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {subjects?.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Chapter</Label>
-                              <Select onValueChange={setSelectedChapter} disabled={!selectedSubject}>
-                                <SelectTrigger className="h-11">
-                                  <SelectValue placeholder="Choose a chapter" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {chapters?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-                                <Notebook className="h-3 w-3" /> Note
-                              </Label>
-                              <Textarea 
-                                placeholder="Add instructions or session notes..." 
-                                className="min-h-[80px] rounded-xl resize-none"
-                                value={taskNote}
-                                onChange={(e) => setTaskNote(e.target.value)}
-                              />
-                            </div>
-                            <div className="space-y-3">
-                              <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Planned Duration</Label>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                  <Label className="text-[10px] text-muted-foreground uppercase font-bold px-1">Hours</Label>
-                                  <div className="relative">
-                                    <Input 
-                                      type="number" 
-                                      min="0" 
-                                      max="23" 
-                                      value={plannedHours} 
-                                      onChange={(e) => setPlannedHours(e.target.value)}
-                                      className="h-11"
-                                    />
-                                  </div>
-                                </div>
-                                <div className="space-y-1.5">
-                                  <Label className="text-[10px] text-muted-foreground uppercase font-bold px-1">Minutes</Label>
-                                  <div className="relative">
-                                    <Input 
-                                      type="number" 
-                                      min="0" 
-                                      max="59" 
-                                      value={plannedMinutes} 
-                                      onChange={(e) => setPlannedMinutes(e.target.value)}
-                                      className="h-11 pr-10"
-                                    />
-                                    <Clock className="absolute right-3 top-3.5 h-4 w-4 text-muted-foreground" />
-                                  </div>
-                                </div>
+                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="rounded-2xl shadow-xl shadow-primary/20 h-14 font-black uppercase tracking-widest text-xs">
+                        <Plus className="mr-2 h-5 w-5" /> Add New Objective
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md rounded-[2.5rem] border-none shadow-2xl p-8">
+                      <DialogHeader className="pb-4">
+                        <DialogTitle className="text-3xl font-black tracking-tighter">New Objective</DialogTitle>
+                      </DialogHeader>
+                      <ScrollArea className="max-h-[60vh] px-1">
+                        <div className="space-y-6 py-2">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Subject</Label>
+                            <Select onValueChange={(val) => {setSelectedSubject(val); setSelectedChapter(null);}}>
+                              <SelectTrigger className="h-12 rounded-xl">
+                                <SelectValue placeholder="Select Subject" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {subjects?.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Chapter</Label>
+                            <Select onValueChange={setSelectedChapter} disabled={!selectedSubject}>
+                              <SelectTrigger className="h-12 rounded-xl">
+                                <SelectValue placeholder="Select Chapter" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {chapters?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Instructions</Label>
+                            <Textarea 
+                              placeholder="Note for this session..." 
+                              className="min-h-[100px] rounded-xl resize-none"
+                              value={taskNote}
+                              onChange={(e) => setTaskNote(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Planned Duration</Label>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-1.5">
+                                <Label className="text-[9px] font-black uppercase tracking-widest opacity-40 px-1">Hours</Label>
+                                <Input type="number" min="0" value={plannedHours} onChange={(e) => setPlannedHours(e.target.value)} className="h-12 rounded-xl" />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-[9px] font-black uppercase tracking-widest opacity-40 px-1">Minutes</Label>
+                                <Input type="number" min="0" max="59" value={plannedMinutes} onChange={(e) => setPlannedMinutes(e.target.value)} className="h-12 rounded-xl" />
                               </div>
                             </div>
                           </div>
-                        </ScrollArea>
-                        
-                        <DialogFooter className="p-6 pt-2 shrink-0 border-t bg-secondary/10">
-                          <Button onClick={handleAddTask} disabled={loading || !selectedChapter} className="w-full h-12 text-base font-bold rounded-xl shadow-lg shadow-primary/20">
-                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Add to Schedule
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
+                        </div>
+                      </ScrollArea>
+                      <DialogFooter className="pt-6 border-t mt-4">
+                        <Button onClick={handleAddTask} disabled={loading || !selectedChapter} className="w-full h-14 font-black rounded-xl">
+                          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Deploy to Roadmap"}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 </div>
 
-                {/* Progress Summary Card */}
-                <Card className="bg-primary text-primary-foreground overflow-hidden border-none shadow-xl">
-                  <CardContent className="p-6">
-                      <div className="flex justify-between items-center">
-                          <div>
-                              <p className="text-primary-foreground/70 text-[10px] font-bold uppercase tracking-widest">Today's Target</p>
-                              <h3 className="text-3xl font-black">
-                                  {localTasks.length > 0 
-                                      ? Math.round((localTasks.filter(t => t.completed).length / localTasks.length) * 100) 
-                                      : 0}%
-                              </h3>
-                          </div>
-                          <CheckCircle2 className="h-10 w-10 opacity-20" />
-                      </div>
-                  </CardContent>
-                </Card>
-
-                {/* Sortable Task List */}
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEnd}
-                >
-                  <SortableContext
-                    items={localTasks.map(t => t.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <div className="space-y-3">
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={localTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-4">
                       {tasksLoading ? (
-                        Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-20 bg-muted animate-pulse rounded-xl" />)
+                        Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-24 bg-muted animate-pulse rounded-3xl" />)
                       ) : localTasks.length > 0 ? (
                         localTasks.map((task) => (
                           <SortableTaskItem 
                             key={task.id} 
                             task={task} 
-                            onToggle={handleToggle}
-                            onDelete={handleDelete}
+                            onToggle={(id, val) => updateTaskStatus(firestore, user!.uid, id, val)}
+                            onDelete={(id) => deleteTask(firestore, user!.uid, id)}
                             formatDuration={formatDurationDisplay}
                           />
                         ))
                       ) : (
-                        <div className="text-center py-12 md:py-16 bg-secondary/20 rounded-3xl border-2 border-dashed border-muted">
-                          <div className="mx-auto w-10 h-10 bg-secondary rounded-full flex items-center justify-center mb-4">
-                              <Plus className="text-muted-foreground h-5 w-5" />
-                          </div>
-                          <h3 className="text-base font-bold">Empty Schedule</h3>
-                          <p className="text-muted-foreground text-xs px-4">Select a subject to manually add to your schedule.</p>
+                        <div className="text-center py-20 bg-secondary/20 rounded-[2.5rem] border-2 border-dashed">
+                          <Plus className="mx-auto h-12 w-12 text-muted-foreground/20 mb-4" />
+                          <h3 className="text-xl font-black">Empty Schedule</h3>
+                          <p className="text-muted-foreground text-sm max-w-[200px] mx-auto">Select a date or add a new objective to begin.</p>
                         </div>
                       )}
                     </div>
@@ -511,6 +453,9 @@ export default function TodoPage() {
       </div>
     </ProtectedRoute>
   );
+
+  function nextMonth() { setCurrentMonth(addDays(endOfMonth(currentMonth), 1)); }
+  function prevMonth() { setCurrentMonth(addDays(startOfMonth(currentMonth), -1)); }
 }
 
 function SortableTaskItem({ task, onToggle, onDelete, formatDuration }: { 
@@ -519,73 +464,42 @@ function SortableTaskItem({ task, onToggle, onDelete, formatDuration }: {
   onDelete: (id: string) => void;
   formatDuration: (mins: number) => string;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: task.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : undefined,
-    opacity: isDragging ? 0.5 : 1,
-  };
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : undefined, opacity: isDragging ? 0.5 : 1 };
 
   return (
     <Card ref={setNodeRef} style={style} className={cn(
-      "transition-all border-none shadow-sm relative group",
-      task.completed ? "bg-success/5" : "bg-card",
-      isDragging && "shadow-2xl scale-[1.02]"
+      "transition-all border-none shadow-xl overflow-hidden rounded-3xl relative group",
+      task.completed ? "bg-success/5 opacity-60" : "bg-card hover:scale-[1.02]",
+      task.source === 'group' && "ring-2 ring-primary/20",
+      isDragging && "shadow-2xl scale-[1.05]"
     )}>
-      <CardContent className="p-4 flex items-center gap-3">
-        {/* Drag Handle */}
-        <div 
-          {...attributes} 
-          {...listeners} 
-          className="cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-primary transition-colors"
-        >
+      <CardContent className="p-5 flex items-center gap-4">
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-primary transition-colors p-1">
           <GripVertical className="h-5 w-5" />
         </div>
-
-        <Checkbox 
-          checked={task.completed} 
-          onCheckedChange={() => onToggle(task.id, task.completed)}
-          className="h-5 w-5 rounded-full border-primary shrink-0"
-        />
-        
+        <Checkbox checked={task.completed} onCheckedChange={() => onToggle(task.id, task.completed)} className="h-6 w-6 rounded-full border-primary shrink-0" />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="text-[9px] font-black text-primary uppercase tracking-widest truncate">{task.subjectName}</p>
+          <div className="flex items-center gap-2 mb-1">
+            <Badge variant="outline" className="text-[8px] font-black uppercase px-1.5 h-4 border-primary/20 text-primary">
+              {task.subjectName}
+            </Badge>
+            {task.source === 'group' && (
+              <Badge className="text-[8px] font-black uppercase px-1.5 h-4 bg-primary text-white border-none animate-pulse">GUILD</Badge>
+            )}
             <div className="flex items-center gap-1 text-muted-foreground">
-                <Clock className="h-2.5 w-2.5" />
+                <Clock className="h-3 w-3" />
                 <span className="text-[9px] font-bold">{formatDuration(task.duration)}</span>
             </div>
           </div>
-          <h4 className={cn(
-            "text-base font-bold truncate",
-            task.completed ? "line-through text-muted-foreground" : "text-foreground"
-          )}>
-            {task.chapterName}
-          </h4>
-          {task.note && (
-            <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5 italic">
-              "{task.note}"
-            </p>
-          )}
+          <h4 className={cn("text-base font-black truncate", task.completed && "line-through text-muted-foreground")}>{task.chapterName}</h4>
         </div>
-        
-        <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" asChild className="text-primary hover:text-primary hover:bg-primary/10 h-9 w-9">
-                <Link href={`/dashboard?subjectId=${task.subjectId}&chapterId=${task.chapterId}&duration=${task.duration}`}>
-                    <Play className="h-4 w-4 fill-current" />
-                </Link>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button variant="ghost" size="icon" asChild className="text-primary rounded-full hover:bg-primary/10 h-10 w-10">
+                <Link href="/dashboard"><Play className="h-5 w-5 fill-current" /></Link>
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => onDelete(task.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10 h-9 w-9">
-                <Trash2 className="h-4 w-4" />
+            <Button variant="ghost" size="icon" onClick={() => onDelete(task.id)} className="text-destructive rounded-full hover:bg-destructive/10 h-10 w-10">
+                <Trash2 className="h-5 w-5" />
             </Button>
         </div>
       </CardContent>

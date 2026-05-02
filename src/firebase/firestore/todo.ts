@@ -9,7 +9,11 @@ import {
   type Firestore,
   doc,
   writeBatch,
+  getDocs,
+  query,
+  where,
 } from 'firebase/firestore';
+import { format } from 'date-fns';
 
 export type StudyTask = {
   id: string;
@@ -22,6 +26,8 @@ export type StudyTask = {
   duration: number; // in minutes
   completed: boolean;
   order: number;
+  source?: 'personal' | 'group';
+  groupId?: string;
   createdAt: any;
 };
 
@@ -37,6 +43,7 @@ export async function addStudyTask(
     ...task,
     completed: false,
     order: nextOrder,
+    source: task.source || 'personal',
     createdAt: serverTimestamp(),
   });
 }
@@ -71,5 +78,31 @@ export async function updateTasksOrder(
     const taskRef = doc(db, 'users', userId, 'tasks', task.id);
     batch.update(taskRef, { order: task.order });
   });
+  await batch.commit();
+}
+
+/**
+ * Moves expired (incomplete) tasks from previous days to today.
+ */
+export async function restoreTasks(db: Firestore, userId: string, taskIds: string[]) {
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const batch = writeBatch(db);
+  
+  // Get today's current task count to determine order
+  const todayQuery = query(
+    collection(db, 'users', userId, 'tasks'),
+    where('date', '==', todayStr)
+  );
+  const todaySnap = await getDocs(todayQuery);
+  let nextOrder = todaySnap.size;
+
+  for (const id of taskIds) {
+    const taskRef = doc(db, 'users', userId, 'tasks', id);
+    batch.update(taskRef, { 
+      date: todayStr,
+      order: nextOrder++ 
+    });
+  }
+
   await batch.commit();
 }
