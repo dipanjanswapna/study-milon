@@ -25,7 +25,8 @@ export function StudyActivityChart({ data, showTargetLine, targetValue = 360 }: 
   // Determine dynamic width based on data length to enable horizontal scrolling
   // Daily view has 24 bars, weekly 7, monthly 5, yearly 12.
   const barCount = data.length;
-  const minWidth = barCount > 7 ? barCount * 50 : 0;
+  // Increase spacing for scrollability if many bars
+  const minWidth = barCount > 7 ? barCount * 60 : 0;
 
   return (
     <div className="w-full">
@@ -68,7 +69,7 @@ export function StudyActivityChart({ data, showTargetLine, targetValue = 360 }: 
                   dataKey="minutes" 
                   fill="var(--color-minutes)" 
                   radius={[6, 6, 0, 0]} 
-                  barSize={barCount > 12 ? 14 : 28} 
+                  barSize={barCount > 12 ? 18 : 32} 
                   animationDuration={1500}
                 />
               </BarChart>

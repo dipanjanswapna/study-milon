@@ -9,7 +9,6 @@ import {
   ChartLegendContent,
   type ChartConfig,
 } from '@/components/ui/chart';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 interface SubjectDistributionChartProps {
   data: { name: string; value: number }[];
@@ -41,7 +40,7 @@ export function SubjectDistributionChart({
     return (
       <div className="h-[350px] flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-[2rem] m-2 bg-secondary/5">
         <PieChart className="h-10 w-10 opacity-20 mb-4" />
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">No Focus Data Recorded</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 text-center px-4">No Focus Data for this Period</p>
       </div>
     );
   }
@@ -73,9 +72,9 @@ export function SubjectDistributionChart({
                 data={data} 
                 dataKey="value" 
                 nameKey="name" 
-                innerRadius={70} 
-                outerRadius={100} 
-                paddingAngle={10}
+                innerRadius={60} 
+                outerRadius={90} 
+                paddingAngle={5}
                 stroke="none"
               >
                 {data.map((entry, index) => (

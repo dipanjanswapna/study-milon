@@ -9,7 +9,7 @@ import { SubjectDistributionChart } from './SubjectDistributionChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, PieChart, BarChart, Trophy, Zap, TrendingUp, Calendar, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { subDays, format, isAfter, startOfMonth, eachDayOfInterval, endOfMonth, startOfWeek, endOfWeek, getISOWeek, isSameMonth } from 'date-fns';
+import { subDays, format, isAfter, startOfMonth, eachDayOfInterval, endOfMonth, startOfWeek, endOfWeek, getISOWeek, isSameMonth, parseISO, isSameDay } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 
@@ -78,7 +78,6 @@ export function AnalyticsDashboard() {
     }
     else if (filter === 'monthly') {
       const startOfCurrentMonth = startOfMonth(now);
-      const endOfCurrentMonth = endOfMonth(now);
       
       const dailyAgg: Record<string, number> = {};
       sessions.forEach(s => {
