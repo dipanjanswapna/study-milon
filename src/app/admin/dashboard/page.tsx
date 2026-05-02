@@ -4,7 +4,7 @@
 import { useMemo, useState } from 'react';
 import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
 import { useFirestore, useCollection } from '@/firebase';
-import { AdminRoute } from '@/components/auth/ProtectedRoute';
+import { AdminRoute } from '@/components/auth/AdminRoute';
 import { Header } from '@/components/dashboard/Header';
 import {
   Card,
