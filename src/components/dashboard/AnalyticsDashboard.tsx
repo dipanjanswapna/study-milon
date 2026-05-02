@@ -8,7 +8,7 @@ import type { UserProfile } from '@/firebase/firestore/users';
 import { StudyActivityChart } from './StudyActivityChart';
 import { SubjectDistributionChart } from './SubjectDistributionChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, PieChart, BarChart, Trophy, Zap, TrendingUp, Calendar, ChevronRight } from 'lucide-react';
+import { Clock, PieChart, BarChart, Trophy, Zap, TrendingUp, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { subDays, format, isAfter, startOfMonth, eachDayOfInterval, isSameMonth } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -26,6 +26,7 @@ export function AnalyticsDashboard() {
 
   const sessionsQuery = useMemo(() => {
     if (!user) return null;
+    // Real-time listener for sessions
     return query(
       collection(firestore, 'users', user.uid, 'studySessions'),
       orderBy('createdAt', 'desc')
@@ -47,11 +48,13 @@ export function AnalyticsDashboard() {
       const todaySessions = sessions.filter(s => s.date === todayStr);
       filteredSessions = todaySessions;
 
-      // Initialize 24 hour buckets
+      // Initialize 24 hour buckets for a full day view
       const hourlyData: Record<string, any> = {};
       for (let i = 0; i < 24; i++) {
-        const displayLabel = i === 0 ? '12 AM' : i < 12 ? `${i} AM` : i === 12 ? '12 PM' : `${i - 12} PM`;
-        hourlyData[i] = { date: displayLabel, hour: i };
+        const dateObj = new Date();
+        dateObj.setHours(i, 0, 0, 0);
+        const label = format(dateObj, 'h a');
+        hourlyData[i] = { date: label, hour: i };
       }
 
       for (const session of todaySessions) {
@@ -60,7 +63,9 @@ export function AnalyticsDashboard() {
         if (session.hourlyBreakdown) {
           Object.entries(session.hourlyBreakdown).forEach(([hr, mins]) => {
             const h = parseInt(hr);
-            hourlyData[h][subName] = (hourlyData[h][subName] || 0) + (mins as number);
+            if (hourlyData[h]) {
+              hourlyData[h][subName] = (hourlyData[h][subName] || 0) + (mins as number);
+            }
           });
         }
       }
@@ -89,7 +94,6 @@ export function AnalyticsDashboard() {
       chartData = Object.values(dailyAgg);
     }
     else if (filter === 'monthly') {
-      const startOfCurrentMonth = startOfMonth(now);
       const dailyAgg: Record<string, number> = {};
       sessions.forEach(s => {
         if (s.date && isSameMonth(new Date(s.date), now)) {
@@ -137,7 +141,7 @@ export function AnalyticsDashboard() {
     }
     const subjectData = Object.entries(subjectMinutes).map(([name, value]) => ({ name, value }));
 
-    // Hustle Score
+    // Hustle Score Calculation
     const uniqueDays = new Set(filteredSessions.map(s => s.date)).size;
     const consistencyFactor = (uniqueDays / Math.max(1, chartData.length));
     const goalMins = profile?.daily_goal_minutes || 360;
@@ -189,7 +193,7 @@ export function AnalyticsDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-        {/* Status Card */}
+        {/* Status Highlights */}
         <Card className="md:col-span-3 rounded-[2rem] border-none shadow-xl bg-primary text-primary-foreground overflow-hidden group relative">
           <div className="absolute top-0 right-0 p-8 opacity-10">
             <Zap className="h-24 w-24" />
@@ -215,7 +219,6 @@ export function AnalyticsDashboard() {
           </CardContent>
         </Card>
 
-        {/* Quest Card */}
         <Card className="md:col-span-3 rounded-[2rem] border-none shadow-xl bg-card overflow-hidden border">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">
@@ -239,41 +242,46 @@ export function AnalyticsDashboard() {
           </CardContent>
         </Card>
 
-        {/* Main Chart */}
-        <Card className="md:col-span-4 rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div>
-              <CardTitle className="text-lg font-black flex items-center gap-2">
-                <BarChart className="h-5 w-5 text-primary" /> Consistency Tracker
-              </CardTitle>
-            </div>
-            <div className="flex items-center gap-2 bg-secondary/50 px-3 py-1 rounded-full border border-border/50">
-               <ChevronRight className="h-2.5 w-2.5 text-muted-foreground animate-pulse" />
-               <span className="text-[8px] font-black uppercase text-muted-foreground">Scroll to explore</span>
-            </div>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <StudyActivityChart 
-              data={stats.chartData} 
-              showTargetLine={filter === 'daily' || filter === 'weekly'} 
-              targetValue={profile?.daily_goal_minutes || 360}
-              isHourly={filter === 'daily'}
-              subjects={stats.activeSubjects}
-            />
-          </CardContent>
-        </Card>
+        {/* Dynamic Charts Section - Stacked for Desktop as requested */}
+        <div className="md:col-span-6 space-y-8">
+           {/* Consistency Tracker */}
+          <Card className="rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div>
+                <CardTitle className="text-xl font-black flex items-center gap-2">
+                  <BarChart className="h-6 w-6 text-primary" /> Consistency Tracker
+                </CardTitle>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">Live Hourly Session Mapping</p>
+              </div>
+              <div className="flex items-center gap-2 bg-secondary/50 px-3 py-1.5 rounded-full border border-border/50">
+                 <ChevronRight className="h-3 w-3 text-muted-foreground animate-pulse" />
+                 <span className="text-[8px] font-black uppercase text-muted-foreground">Scroll to explore</span>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 pt-4">
+              <StudyActivityChart 
+                data={stats.chartData} 
+                showTargetLine={filter === 'daily' || filter === 'weekly'} 
+                targetValue={profile?.daily_goal_minutes || 360}
+                isHourly={filter === 'daily'}
+                subjects={stats.activeSubjects}
+              />
+            </CardContent>
+          </Card>
 
-        {/* Distribution Chart */}
-        <Card className="md:col-span-2 rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
-          <CardHeader>
-            <CardTitle className="text-lg font-black flex items-center gap-2">
-              <PieChart className="h-5 w-5 text-primary" /> Focus Areas
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-2">
-            <SubjectDistributionChart data={stats.subjectData} />
-          </CardContent>
-        </Card>
+          {/* Focus Areas Distribution - Now below the main chart */}
+          <Card className="rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
+            <CardHeader>
+              <CardTitle className="text-xl font-black flex items-center gap-2">
+                <PieChart className="h-6 w-6 text-primary" /> Focus Areas
+              </CardTitle>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">Subject-wise Distribution for {filter}</p>
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+              <SubjectDistributionChart data={stats.subjectData} />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
