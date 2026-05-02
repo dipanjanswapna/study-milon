@@ -129,7 +129,7 @@ export async function updateChapterStatus(
   await updateDoc(chapterRef, updatePayload);
 }
 
-// Atomic Auto-saving timer logic with 12AM reset sync & Live Sync
+// Atomic Auto-saving timer logic with 12AM reset sync & Hourly Tracking
 export async function logStudyTime(
     db: Firestore,
     userId: string,
@@ -141,13 +141,12 @@ export async function logStudyTime(
     const chapterRef = doc(db, 'users', userId, 'subjects', subjectId, 'chapters', chapterId);
     const subjectRef = doc(db, 'users', userId, 'subjects', subjectId);
     
-    // Use local timezone strings for bucket synchronization
     const now = new Date();
     const dateStr = format(now, 'yyyy-MM-dd');
     const weekStr = `${now.getFullYear()}-W${getISOWeek(now)}`;
     const monthStr = format(now, 'yyyy-MM');
+    const hour = now.getHours().toString();
 
-    // Consistent session ID for charts
     const sessionDocId = `${dateStr}_${subjectId}`;
     const sessionRef = doc(db, 'users', userId, 'studySessions', sessionDocId);
 
@@ -168,38 +167,36 @@ export async function logStudyTime(
         const lastStudyWeek = userData.last_study_week;
         const lastStudyMonth = userData.last_study_month;
         
-        // RESET LOGIC: 
-        // If the period has changed (e.g., it's after 12AM), we start a fresh bucket.
         const dailyUpdate = lastStudyDay === dateStr ? increment(minutes) : minutes;
         const weeklyUpdate = lastStudyWeek === weekStr ? increment(minutes) : minutes;
         const monthlyUpdate = lastStudyMonth === monthStr ? increment(minutes) : minutes;
 
-        // Update user aggregate stats (Buckets used by Leaderboard & Display)
         batch.update(userRef, {
             total_study_minutes: increment(minutes),
             daily_study_minutes: dailyUpdate,
             weekly_study_minutes: weeklyUpdate,
             monthly_study_minutes: monthlyUpdate,
-            last_active_date: serverTimestamp(), // Critical for Live Sync check
+            last_active_date: serverTimestamp(),
             last_study_day: dateStr,
             last_study_week: weekStr,
             last_study_month: monthStr,
-            isStudying: true // Force status on active log
+            isStudying: true
         });
 
-        // Update chapter aggregate time
         batch.update(chapterRef, {
             time_spent: increment(minutes)
         });
 
-        // Log session for Analytics (Consistency Tracker)
         const subjectName = subjectSnap.exists() ? subjectSnap.data().name : 'Unknown';
+        
+        // Track overall duration AND hourly breakdown within the daily-subject doc
         batch.set(sessionRef, {
           duration: increment(minutes),
+          [`hourlyBreakdown.${hour}`]: increment(minutes),
           subject: subjectName,
           subjectId: subjectId,
           createdAt: serverTimestamp(),
-          date: dateStr // Crucial for chart alignment
+          date: dateStr 
         }, { merge: true });
 
         await batch.commit();
