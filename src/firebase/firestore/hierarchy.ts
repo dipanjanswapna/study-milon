@@ -1,4 +1,3 @@
-
 'use client';
 import {
   collection,
@@ -130,7 +129,7 @@ export async function updateChapterStatus(
   await updateDoc(chapterRef, updatePayload);
 }
 
-// Auto-saving timer logic with 12AM reset sync
+// Atomic Auto-saving timer logic with 12AM reset sync
 export async function logStudyTime(
     db: Firestore,
     userId: string,
@@ -142,10 +141,10 @@ export async function logStudyTime(
     const chapterRef = doc(db, 'users', userId, 'subjects', subjectId, 'chapters', chapterId);
     const subjectRef = doc(db, 'users', userId, 'subjects', subjectId);
     
-    // Exact local timing anchors
+    // Use local timezone strings for bucket synchronization
     const now = new Date();
     const dateStr = format(now, 'yyyy-MM-dd');
-    const weekStr = `${now.getFullYear()}-${getISOWeek(now)}`;
+    const weekStr = `${now.getFullYear()}-W${getISOWeek(now)}`;
     const monthStr = format(now, 'yyyy-MM');
 
     const sessionDocId = `${dateStr}_${subjectId}`;
@@ -168,12 +167,13 @@ export async function logStudyTime(
         const lastStudyWeek = userData.last_study_week;
         const lastStudyMonth = userData.last_study_month;
         
-        // Reset logic for Leaderboard fields
+        // Reset logic: If the period has changed, the update value is just the current minutes.
+        // Otherwise, we increment the existing bucket value.
         const dailyUpdate = lastStudyDay === dateStr ? increment(minutes) : minutes;
         const weeklyUpdate = lastStudyWeek === weekStr ? increment(minutes) : minutes;
         const monthlyUpdate = lastStudyMonth === monthStr ? increment(minutes) : minutes;
 
-        // Update user aggregate stats (Root fields for Leaderboard)
+        // Update user aggregate stats (Buckets used by Leaderboard & Display)
         batch.update(userRef, {
             total_study_minutes: increment(minutes),
             daily_study_minutes: dailyUpdate,
@@ -197,7 +197,7 @@ export async function logStudyTime(
           subject: subjectName,
           subjectId: subjectId,
           createdAt: serverTimestamp(),
-          date: dateStr
+          date: dateStr // This ensures the point lands on the correct local date in the chart
         }, { merge: true });
 
         await batch.commit();

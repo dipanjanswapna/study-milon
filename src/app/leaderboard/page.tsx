@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -30,6 +29,7 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { format, getISOWeek } from 'date-fns';
 import Link from 'next/link';
 
 type TimeFilter = 'daily' | 'weekly' | 'monthly' | 'yearly';
@@ -81,16 +81,32 @@ export default function LeaderboardPage() {
 
   const { data: allRankings, loading } = useCollection<any>(leaderboardQuery);
 
-  // Apply filters client-side
+  // Apply filters and "Virtual Reset" logic for 12AM UI consistency
   const rankings = useMemo(() => {
     if (!allRankings) return [];
     
+    const now = new Date();
+    const todayStr = format(now, 'yyyy-MM-dd');
+    const thisWeekStr = `${now.getFullYear()}-W${getISOWeek(now)}`;
+    const thisMonthStr = format(now, 'yyyy-MM');
+
     return allRankings.filter(u => {
       const matchCategory = categoryFilter === 'All' || u.category === categoryFilter;
       const matchBatch = batchFilter === 'All' || u.batch === batchFilter;
       return matchCategory && matchBatch;
-    }).slice(0, 50);
-  }, [allRankings, categoryFilter, batchFilter]);
+    }).map(u => {
+      // Apply the same reset logic used in the Analytics Dashboard
+      let currentVal = u[getSortField(timeFilter)] || 0;
+      
+      if (timeFilter === 'daily' && u.last_study_day !== todayStr) currentVal = 0;
+      if (timeFilter === 'weekly' && u.last_study_week !== thisWeekStr) currentVal = 0;
+      if (timeFilter === 'monthly' && u.last_study_month !== thisMonthStr) currentVal = 0;
+
+      return { ...u, displayMinutes: currentVal };
+    })
+    .sort((a, b) => b.displayMinutes - a.displayMinutes)
+    .slice(0, 50);
+  }, [allRankings, categoryFilter, batchFilter, timeFilter]);
 
   const top3 = rankings?.slice(0, 3) || [];
 
@@ -194,7 +210,7 @@ export default function LeaderboardPage() {
                         <div className="text-center px-1">
                             <p className="font-black text-[10px] md:text-base truncate max-w-[80px] md:max-w-[120px]">{top3[1].displayName}</p>
                             <p className="text-primary font-black text-[10px] md:text-xs uppercase">
-                                {formatTime(top3[1][getSortField(timeFilter)])}
+                                {formatTime(top3[1].displayMinutes)}
                             </p>
                         </div>
                     </>
@@ -218,7 +234,7 @@ export default function LeaderboardPage() {
                         <div className="text-center px-1">
                             <p className="font-black text-xs md:text-xl truncate max-w-[100px] md:max-w-[150px]">{top3[0].displayName}</p>
                             <Badge className="font-black text-[10px] md:text-sm uppercase bg-yellow-500 hover:bg-yellow-600 px-2 md:px-4 py-0 md:py-1">
-                                {formatTime(top3[0][getSortField(timeFilter)])}
+                                {formatTime(top3[0].displayMinutes)}
                             </Badge>
                         </div>
                     </>
@@ -242,7 +258,7 @@ export default function LeaderboardPage() {
                         <div className="text-center px-1">
                             <p className="font-black text-[10px] md:text-base truncate max-w-[80px] md:max-w-[120px]">{top3[2].displayName}</p>
                             <p className="text-primary font-black text-[10px] md:text-xs uppercase">
-                                {formatTime(top3[2][getSortField(timeFilter)])}
+                                {formatTime(top3[2].displayMinutes)}
                             </p>
                         </div>
                     </>
@@ -261,8 +277,7 @@ export default function LeaderboardPage() {
                 <ScrollArea className="h-[400px] md:h-[600px]">
                     <div className="divide-y">
                         {rankings.map((contender: any, idx) => {
-                            const sortField = getSortField(timeFilter);
-                            const currentMinutes = contender[sortField] || 0;
+                            const currentMinutes = contender.displayMinutes || 0;
                             const userGuildName = contender.groupId ? groupMap[contender.groupId] : null;
 
                             return (

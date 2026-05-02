@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -9,9 +8,9 @@ import type { UserProfile } from '@/firebase/firestore/users';
 import { StudyActivityChart } from './StudyActivityChart';
 import { SubjectDistributionChart } from './SubjectDistributionChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, PieChart, BarChart, Trophy, Filter, Target } from 'lucide-react';
+import { Clock, PieChart, BarChart, Trophy, Filter, Target } from 'lucide-center';
 import { Skeleton } from '@/components/ui/skeleton';
-import { subDays, format, isAfter, startOfDay } from 'date-fns';
+import { subDays, format, isAfter, startOfDay, getISOWeek } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 
@@ -27,15 +26,26 @@ export function AnalyticsDashboard() {
 
   const dailyGoalMinutes = profile?.daily_goal_minutes || 360;
 
-  // Real-time synchronization fields for insights summary
+  // Real-time synchronization buckets with "Virtual Reset" for immediate 12AM UI updates
   const summaryMinutes = useMemo(() => {
     if (!profile) return 0;
+    
+    const now = new Date();
+    const todayStr = format(now, 'yyyy-MM-dd');
+    const thisWeekStr = `${now.getFullYear()}-W${getISOWeek(now)}`;
+    const thisMonthStr = format(now, 'yyyy-MM');
+
     switch (filter) {
-      case 'daily': return profile.daily_study_minutes || 0;
-      case 'weekly': return profile.weekly_study_minutes || 0;
-      case 'monthly': return profile.monthly_study_minutes || 0;
-      case 'yearly': return profile.total_study_minutes || 0;
-      default: return profile.daily_study_minutes || 0;
+      case 'daily': 
+        return profile.last_study_day === todayStr ? (profile.daily_study_minutes || 0) : 0;
+      case 'weekly': 
+        return profile.last_study_week === thisWeekStr ? (profile.weekly_study_minutes || 0) : 0;
+      case 'monthly': 
+        return profile.last_study_month === thisMonthStr ? (profile.monthly_study_minutes || 0) : 0;
+      case 'yearly': 
+        return profile.total_study_minutes || 0;
+      default: 
+        return profile.daily_study_minutes || 0;
     }
   }, [profile, filter]);
 
@@ -76,7 +86,7 @@ export function AnalyticsDashboard() {
 
     const filterTotalMinutes = filteredSessions.reduce((acc, s) => acc + s.duration, 0);
 
-    // Chart logic uses the specific 'date' string for alignment
+    // Sync chart labels with local date keys for absolute consistency
     const dailyMinutes: Record<string, number> = {};
     for (const session of sessions) {
       if (!session.date) continue;
@@ -119,7 +129,7 @@ export function AnalyticsDashboard() {
     return `${h}h ${m}m`;
   };
 
-  const todayMinutes = profile?.daily_study_minutes || 0;
+  const todayMinutes = profile?.last_study_day === format(new Date(), 'yyyy-MM-dd') ? (profile.daily_study_minutes || 0) : 0;
   const dailyGoalProgress = Math.min(100, (todayMinutes / dailyGoalMinutes) * 100);
   const totalMinutes = profile?.total_study_minutes || 0;
   const millionMinutesProgress = (totalMinutes / 1000000) * 100;
@@ -155,7 +165,7 @@ export function AnalyticsDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-        {/* Dynamic Summary Card */}
+        {/* Dynamic Summary Card with Virtual Reset */}
         <Card className="md:col-span-3 shadow-md border-primary/10 overflow-hidden bg-card group">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-widest">
