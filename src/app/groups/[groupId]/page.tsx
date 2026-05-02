@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -70,6 +69,17 @@ import {
   DialogFooter,
   DialogDescription
 } from '@/components/ui/dialog';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -94,6 +104,7 @@ export default function GroupDashboardPage() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isTaskOpen, setIsTaskOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isLeaveOpen, setIsLeaveOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [announcementText, setAnnouncementText] = useState('');
@@ -189,9 +200,16 @@ export default function GroupDashboardPage() {
   };
 
   const handleLeave = async () => {
-    if (confirm("Are you sure you want to leave this guild?")) {
+    setLoading(true);
+    try {
       await leaveGroup(firestore, groupId as string, user!.uid);
       router.push('/groups');
+      toast({ title: "Guild Left", description: "You have left the study guild." });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: "Error", description: e.message });
+    } finally {
+      setLoading(false);
+      setIsLeaveOpen(false);
     }
   };
 
@@ -460,9 +478,33 @@ export default function GroupDashboardPage() {
                       </DialogContent>
                     </Dialog>
                   ) : (
-                    <Button variant="ghost" className="text-white/40 hover:bg-destructive/20 hover:text-white rounded-full h-12 w-12 md:h-14 md:w-14" onClick={handleLeave}>
-                      <LogOut className="h-5 w-5" />
-                    </Button>
+                    <AlertDialog open={isLeaveOpen} onOpenChange={setIsLeaveOpen}>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" className="text-white/40 hover:bg-destructive/20 hover:text-white rounded-full h-12 w-12 md:h-14 md:w-14">
+                          <LogOut className="h-5 w-5" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="rounded-[2rem] border-none max-w-sm">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                            <LogOut className="h-5 w-5" /> Leave Guild
+                          </AlertDialogTitle>
+                          <AlertDialogDescription className="font-medium text-base pt-2">
+                            Are you sure you want to leave <strong>{group.name}</strong>? You will lose access to guild objectives and broadcasts.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="flex-col gap-2 mt-4">
+                          <AlertDialogAction 
+                            className="w-full h-12 rounded-xl font-bold bg-destructive text-destructive-foreground hover:bg-destructive/90" 
+                            onClick={handleLeave}
+                            disabled={loading}
+                          >
+                            {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Yes, Leave Guild"}
+                          </AlertDialogAction>
+                          <AlertDialogCancel className="w-full h-12 rounded-xl font-bold">Stay in Squad</AlertDialogCancel>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
                 </div>
               </div>
