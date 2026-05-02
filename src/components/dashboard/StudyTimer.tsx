@@ -333,30 +333,6 @@ export function StudyTimer() {
                        transform={`rotate(${i * 2})`}
                     />
                  ))}
-                 
-                 {/* Numbers around the perimeter */}
-                 {Array.from({ length: 18 }).map((_, i) => {
-                    const angle = i * 20;
-                    const rad = ((angle - 90) * Math.PI) / 180;
-                    const x = 105 * Math.cos(rad);
-                    const y = 105 * Math.sin(rad);
-                    const isActiveArea = angle <= (progress * 3.6);
-                    return (
-                       <text
-                          key={i}
-                          x={x}
-                          y={y}
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                          fontSize="12"
-                          fontWeight="900"
-                          fill={isActiveArea ? "#8866FF" : "#ffffff"}
-                          className="transition-colors duration-500"
-                       >
-                          {i * 10}
-                       </text>
-                    );
-                 })}
               </g>
 
               {/* Progress Wedge (Purple) */}
