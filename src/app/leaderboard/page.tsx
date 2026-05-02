@@ -215,7 +215,7 @@ export default function LeaderboardPage() {
                                 <Medal className="h-4 w-4 md:h-5 md:w-5 text-slate-500" />
                             </div>
                             {top3[1].isLive && (
-                              <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-success text-white text-[8px] font-black px-1.5 py-0.5 rounded-full animate-bounce shadow-lg z-20">LIVE</div>
+                              <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full animate-bounce shadow-lg z-20">LIVE</div>
                             )}
                         </Link>
                         <div className="text-center px-1">
@@ -242,7 +242,7 @@ export default function LeaderboardPage() {
                                 <Crown className="h-8 w-8 md:h-12 md:w-12 text-yellow-500 fill-yellow-500 drop-shadow-lg" />
                             </div>
                             {top3[0].isLive && (
-                              <div className="absolute top-0 right-0 bg-success text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-lg z-20">LIVE</div>
+                              <div className="absolute top-0 right-0 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-lg z-20">LIVE</div>
                             )}
                         </Link>
                         <div className="text-center px-1">
@@ -269,7 +269,7 @@ export default function LeaderboardPage() {
                                 <Medal className="h-4 w-4 md:h-5 md:w-5 text-amber-900" />
                             </div>
                             {top3[2].isLive && (
-                              <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-success text-white text-[8px] font-black px-1.5 py-0.5 rounded-full animate-bounce shadow-lg z-20">LIVE</div>
+                              <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full animate-bounce shadow-lg z-20">LIVE</div>
                             )}
                         </Link>
                         <div className="text-center px-1">
@@ -288,7 +288,7 @@ export default function LeaderboardPage() {
                 <div className="p-4 md:p-6 bg-secondary/30 border-b flex justify-between items-center">
                     <h3 className="font-black text-[10px] md:text-sm uppercase tracking-widest text-muted-foreground">The Contenders</h3>
                     <div className="text-[9px] md:text-[10px] font-bold text-muted-foreground flex items-center gap-1">
-                        <Wifi className="h-3 w-3 text-success animate-pulse" /> Live Hustle Tracker Active
+                        <Wifi className="h-3 w-3 text-red-600 animate-pulse" /> Live Hustle Tracker Active
                     </div>
                 </div>
                 <ScrollArea className="h-[400px] md:h-[600px]">
@@ -316,7 +316,7 @@ export default function LeaderboardPage() {
                                                 <AvatarFallback>{getInitials(contender.displayName)}</AvatarFallback>
                                             </Avatar>
                                             {contender.isLive && (
-                                                <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-success rounded-full border-2 border-background flex items-center justify-center">
+                                                <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-red-600 rounded-full border-2 border-background flex items-center justify-center">
                                                     <div className="h-1.5 w-1.5 bg-white rounded-full animate-ping" />
                                                 </div>
                                             )}
@@ -328,7 +328,7 @@ export default function LeaderboardPage() {
                                                     <Badge variant="outline" className="text-[8px] md:text-[9px] h-4 font-black bg-primary/10 text-primary border-primary/20 px-1.5">YOU</Badge>
                                                 )}
                                                 {contender.isLive && (
-                                                    <span className="text-[7px] md:text-[8px] font-black text-success uppercase tracking-widest bg-success/10 px-1.5 py-0.5 rounded border border-success/20">Studying</span>
+                                                    <span className="text-[7px] md:text-[8px] font-black text-red-600 uppercase tracking-widest bg-red-600/10 px-1.5 py-0.5 rounded border border-red-600/20">Studying</span>
                                                 )}
                                             </div>
                                             <div className="flex flex-wrap items-center gap-2">

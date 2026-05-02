@@ -320,20 +320,20 @@ export function StudyTimer() {
       {isActive && (
         <div className={cn(
           "absolute inset-0 opacity-5 animate-pulse pointer-events-none",
-          isBreak ? "bg-orange-500" : "bg-primary"
+          isBreak ? "bg-orange-500" : "bg-red-600"
         )} />
       )}
 
       <CardHeader className="bg-white/5 pb-4 flex flex-row items-center justify-between relative z-10">
         <CardTitle className="flex items-center gap-2 text-xl font-headline">
-          {isBreak ? <Coffee className="text-orange-400" /> : <BookOpenCheck className="text-primary" />}
+          {isBreak ? <Coffee className="text-orange-400" /> : <BookOpenCheck className="text-red-600" />}
           <span className="tracking-tight">{isBreak ? 'Rest Cycle' : 'Focus Session'}</span>
         </CardTitle>
         <div className="flex gap-2 items-center">
             {isActive && !isBreak && (
-              <div className="flex items-center gap-1.5 bg-primary/20 px-3 py-1 rounded-full border border-primary/20 animate-pulse shadow-lg">
-                <Wifi className="h-3 w-3 text-primary" />
-                <span className="text-[9px] font-black uppercase text-primary tracking-widest">LIVE SYNCING</span>
+              <div className="flex items-center gap-1.5 bg-red-600/20 px-3 py-1 rounded-full border border-red-600/20 animate-pulse shadow-lg">
+                <Wifi className="h-3 w-3 text-red-600" />
+                <span className="text-[9px] font-black uppercase text-red-600 tracking-widest">LIVE SYNCING</span>
               </div>
             )}
             {isBreak && (
@@ -353,7 +353,7 @@ export function StudyTimer() {
             <circle
               className={cn(
                 "stroke-current transition-all duration-1000 ease-linear",
-                isBreak ? "text-orange-400" : "text-primary"
+                isBreak ? "text-orange-400" : "text-red-600"
               )}
               strokeWidth="6" cx="50" cy="50" r="44" fill="transparent"
               strokeDasharray="276.46"
@@ -367,7 +367,7 @@ export function StudyTimer() {
               {String(minutesDisplay).padStart(2, '0')}:{String(secondsDisplay).padStart(2, '0')}
             </span>
             {isActive && !isBreak && (
-              <span className="text-[10px] font-black uppercase text-primary mt-4 flex items-center gap-2 tracking-[0.3em] bg-primary/10 px-4 py-1 rounded-full border border-primary/20">
+              <span className="text-[10px] font-black uppercase text-red-600 mt-4 flex items-center gap-2 tracking-[0.3em] bg-red-600/10 px-4 py-1 rounded-full border border-red-600/20">
                 <ShieldCheck className="h-3 w-3" /> UNSTOPPABLE
               </span>
             )}
@@ -378,7 +378,7 @@ export function StudyTimer() {
           <Button 
             onClick={isActive ? handlePause : handleStart} 
             size="lg" 
-            className="w-48 h-16 text-xl font-black rounded-3xl shadow-2xl shadow-primary/20 transition-all active:scale-95" 
+            className="w-48 h-16 text-xl font-black rounded-3xl shadow-2xl shadow-red-600/20 transition-all active:scale-95 bg-red-600 hover:bg-red-700" 
             disabled={!canStart && !isActive}
           >
             {isActive ? <Pause className="mr-2 h-7 w-7" /> : <Play className="mr-2 h-7 w-7 fill-current" />}
@@ -396,7 +396,7 @@ export function StudyTimer() {
             <div className="space-y-2">
                 <Label className="text-white/40 text-[10px] font-black uppercase tracking-widest px-1">Active Subject</Label>
                 <Select value={selectedSubject || ''} onValueChange={(value) => {setSelectedSubject(value); setSelectedChapter(null);}} disabled={isActive}>
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white h-14 rounded-2xl focus:ring-primary/50">
+                    <SelectTrigger className="bg-white/5 border-white/10 text-white h-14 rounded-2xl focus:ring-red-600/50">
                         <SelectValue placeholder="Select Subject" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#1A1C23] border-white/10 text-white rounded-2xl">
@@ -409,7 +409,7 @@ export function StudyTimer() {
             <div className="space-y-2">
                 <Label className="text-white/40 text-[10px] font-black uppercase tracking-widest px-1">Specific Chapter</Label>
                  <Select onValueChange={setSelectedChapter} value={selectedChapter || ''} disabled={!selectedSubject || isActive || chaptersLoading}>
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white h-14 rounded-2xl focus:ring-primary/50">
+                    <SelectTrigger className="bg-white/5 border-white/10 text-white h-14 rounded-2xl focus:ring-red-600/50">
                         <SelectValue placeholder="Select Chapter" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#1A1C23] border-white/10 text-white rounded-2xl">
@@ -425,11 +425,11 @@ export function StudyTimer() {
         <div className="space-y-4 w-full pt-4">
           <div className="flex items-center justify-between px-1">
             <Label className="text-white/40 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-              <Settings2 className="h-4 w-4 text-primary" /> Session Duration
+              <Settings2 className="h-4 w-4 text-red-600" /> Session Duration
             </Label>
-            <div className="flex items-center gap-2 bg-primary/10 px-3 py-1 rounded-full border border-primary/10">
-               <Clock className="h-3 w-3 text-primary" />
-               <span className="text-xs font-black font-mono text-primary">
+            <div className="flex items-center gap-2 bg-red-600/10 px-3 py-1 rounded-full border border-red-600/10">
+               <Clock className="h-3 w-3 text-red-600" />
+               <span className="text-xs font-black font-mono text-red-600">
                  {Math.floor(workDuration / 60)}h {workDuration % 60}m
                </span>
             </div>
@@ -479,4 +479,3 @@ export function StudyTimer() {
     </Card>
   );
 }
-

@@ -64,7 +64,7 @@ export function PinnedExamTicker() {
                 {timeLeft}
              </span>
           </div>
-          <span className="text-[8px] font-black bg-primary text-white px-1.5 rounded-full">LIVE</span>
+          <span className="text-[8px] font-black bg-red-600 text-white px-1.5 rounded-full">LIVE</span>
         </div>
       </div>
     </Link>

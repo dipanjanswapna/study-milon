@@ -170,7 +170,7 @@ export default function PublicProfilePage() {
                     <AvatarFallback className="text-3xl font-black bg-white/10">{profile.displayName?.[0]}</AvatarFallback>
                   </Avatar>
                   {isLive && (
-                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-success text-white text-[10px] font-black px-3 py-1 rounded-full animate-pulse flex items-center gap-1.5 shadow-xl border-2 border-[#1A1C3D]">
+                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-full animate-pulse flex items-center gap-1.5 shadow-xl border-2 border-[#1A1C3D]">
                       <Wifi className="h-3 w-3" /> LIVE
                     </div>
                   )}
@@ -187,7 +187,7 @@ export default function PublicProfilePage() {
                       </Badge>
                     )}
                     {isLive && (
-                      <Badge className="bg-success/20 text-success border-none font-black text-[10px] uppercase px-3 animate-pulse">
+                      <Badge className="bg-red-600/20 text-red-600 border-none font-black text-[10px] uppercase px-3 animate-pulse">
                         Studying Now
                       </Badge>
                     )}
@@ -287,7 +287,7 @@ export default function PublicProfilePage() {
                     <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Global Status</p>
                     <div className="flex items-center justify-between">
                       <h4 className="text-2xl font-black">{isLive ? 'Studying Now' : 'Active Student'}</h4>
-                      {isLive ? <Wifi className="h-8 w-8 text-success animate-pulse" /> : <Trophy className="h-8 w-8 text-indigo-500/20" />}
+                      {isLive ? <Wifi className="h-8 w-8 text-red-600 animate-pulse" /> : <Trophy className="h-8 w-8 text-indigo-500/20" />}
                     </div>
                   </Card>
                </div>
