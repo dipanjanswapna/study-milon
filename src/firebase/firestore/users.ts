@@ -18,6 +18,7 @@ export type FocusSettings = {
   blockYoutubeShorts: boolean;
   restrictMessenger: boolean;
   restrictWhatsapp: boolean;
+  strictMode?: boolean;
 };
 
 export type UserProfile = {
@@ -38,6 +39,7 @@ export type UserProfile = {
   phoneNumber?: string;
   groupId?: string;
   focusSettings?: FocusSettings;
+  focusPoints?: number;
 };
 
 export async function createUserProfile(
@@ -65,12 +67,14 @@ export async function createUserProfile(
         last_active_date: serverTimestamp(),
         institution: '',
         phoneNumber: '',
+        focusPoints: 0,
         focusSettings: {
           blockFbReels: false,
           blockInstaReels: false,
           blockYoutubeShorts: false,
           restrictMessenger: false,
           restrictWhatsapp: false,
+          strictMode: false,
         }
       });
     } catch (error) {

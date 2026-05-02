@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useUser, useFirestore, useCollection } from '@/firebase';
+import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { logStudyTime } from '@/firebase/firestore/hierarchy';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -13,7 +14,7 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RotateCcw, Coffee, BookOpenCheck, Settings2 } from 'lucide-react';
+import { Play, Pause, RotateCcw, Coffee, BookOpenCheck, Settings2, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -23,7 +24,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { cn } from '@/lib/utils';
 
 const BREAK_MINUTES = 5;
 
@@ -32,6 +34,15 @@ export function StudyTimer() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const searchParams = useSearchParams();
+
+  // Fetch Focus Settings to show protection status
+  const userRef = useMemo(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
+  const { data: profile } = useDoc<any>(userRef as any);
+  const isFocusModeEnabled = useMemo(() => {
+    if (!profile?.focusSettings) return false;
+    const { blockFbReels, blockInstaReels, blockYoutubeShorts, restrictMessenger, restrictWhatsapp } = profile.focusSettings;
+    return blockFbReels || blockInstaReels || blockYoutubeShorts || restrictMessenger || restrictWhatsapp;
+  }, [profile?.focusSettings]);
 
   const [workDuration, setWorkDuration] = useState(25);
   const [timeLeft, setTimeLeft] = useState(workDuration * 60);
@@ -142,13 +153,12 @@ export function StudyTimer() {
       interval = setInterval(() => {
         if (!startTimeRef.current) return;
         
-        // Calculate EXACT elapsed time based on system clock (immune to background throttling)
+        // Calculate EXACT elapsed time based on system clock
         const elapsedSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
         const newTimeLeft = Math.max(0, baseSecondsRef.current - elapsedSeconds);
         
         setTimeLeft(newTimeLeft);
 
-        // Logging logic - check if a new whole minute has passed since start
         if (!isBreak) {
           const currentElapsedMinutes = Math.floor(elapsedSeconds / 60);
           if (currentElapsedMinutes > lastLoggedMinuteRef.current) {
@@ -195,11 +205,17 @@ export function StudyTimer() {
 
   return (
     <Card className="w-full shadow-2xl bg-slate-900 text-white border-none overflow-hidden">
-      <CardHeader className="bg-slate-800/50 pb-4">
+      <CardHeader className="bg-slate-800/50 pb-4 flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 text-xl font-headline">
           {isBreak ? <Coffee className="text-orange-400" /> : <BookOpenCheck className="text-primary" />}
           <span>{isBreak ? 'Break' : 'Focus Session'}</span>
         </CardTitle>
+        {isFocusModeEnabled && !isBreak && (
+          <div className="flex items-center gap-1.5 bg-success/10 px-2 py-1 rounded-full border border-success/20 animate-pulse">
+             <ShieldCheck className="h-3.5 w-3.5 text-success" />
+             <span className="text-[10px] font-black uppercase text-success tracking-tighter">Protected</span>
+          </div>
+        )}
       </CardHeader>
       
       <CardContent className="flex flex-col items-center justify-center gap-8 py-10">
@@ -207,17 +223,25 @@ export function StudyTimer() {
           <svg className="h-full w-full" viewBox="0 0 100 100">
             <circle className="stroke-current text-slate-700" strokeWidth="6" cx="50" cy="50" r="44" fill="transparent"/>
             <circle
-              className="stroke-current text-primary transition-all duration-1000 ease-linear"
+              className={cn(
+                "stroke-current transition-all duration-1000 ease-linear",
+                isBreak ? "text-orange-400" : "text-primary"
+              )}
               strokeWidth="6" cx="50" cy="50" r="44" fill="transparent"
               strokeDasharray="276.46"
               strokeDashoffset={`${276.46 - (276.46 * progress) / 100}`}
               strokeLinecap="round" transform="rotate(-90 50 50)"
             />
           </svg>
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-5xl md:text-6xl font-bold font-mono tracking-tighter">
               {String(minutesDisplay).padStart(2, '0')}:{String(secondsDisplay).padStart(2, '0')}
             </span>
+            {isActive && !isBreak && isFocusModeEnabled && (
+              <span className="text-[9px] font-black uppercase text-primary mt-2 flex items-center gap-1">
+                <ShieldAlert className="h-3 w-3" /> Blocker Running
+              </span>
+            )}
           </div>
         </div>
         

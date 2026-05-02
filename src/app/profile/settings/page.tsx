@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser, useCollection } from '@/firebase';
 import { updateUserProfile, type FocusSettings } from '@/firebase/firestore/users';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Header } from '@/components/dashboard/Header';
@@ -24,7 +24,9 @@ import {
   AlertTriangle,
   Loader2,
   Info,
-  Smartphone
+  Smartphone,
+  Lock,
+  Zap
 } from 'lucide-react';
 import Link from 'next/link';
 import { 
@@ -38,6 +40,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// Define a bridge interface for native communication (Android/iOS WebView)
+declare global {
+  interface Window {
+    StudyMilonBridge?: {
+      toggleBlocker: (app: string, enabled: boolean) => void;
+      checkPermissions: () => Promise<boolean>;
+      requestPermissions: () => void;
+      setStrictMode: (enabled: boolean) => void;
+    };
+  }
+}
+
 export default function FocusSettingsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -49,6 +63,7 @@ export default function FocusSettingsPage() {
     blockYoutubeShorts: false,
     restrictMessenger: false,
     restrictWhatsapp: false,
+    strictMode: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -72,11 +87,34 @@ export default function FocusSettingsPage() {
 
   const handleToggle = async (app: keyof FocusSettings, val: boolean) => {
     if (val) {
-      // Simulate permission check for native bridge
-      setPendingApp(app);
-      setIsPermissionDialogOpen(true);
-    } else {
-      await updateSettings({ ...settings, [app]: false });
+      // Logic for Native Bridge or Web-based Simulation
+      if (window.StudyMilonBridge) {
+        const hasPerms = await window.StudyMilonBridge.checkPermissions();
+        if (!hasPerms) {
+          setPendingApp(app);
+          setIsPermissionDialogOpen(true);
+          return;
+        }
+      } else {
+        // PWA Simulation mode
+        setPendingApp(app);
+        setIsPermissionDialogOpen(true);
+        return;
+      }
+    }
+
+    await updateSettings({ ...settings, [app]: val });
+    
+    // Notify native bridge if exists
+    if (window.StudyMilonBridge) {
+      window.StudyMilonBridge.toggleBlocker(app, val);
+    }
+  };
+
+  const handleToggleStrictMode = async (val: boolean) => {
+    await updateSettings({ ...settings, strictMode: val });
+    if (window.StudyMilonBridge) {
+      window.StudyMilonBridge.setStrictMode(val);
     }
   };
 
@@ -94,6 +132,10 @@ export default function FocusSettingsPage() {
   };
 
   const grantPermission = async () => {
+    if (window.StudyMilonBridge) {
+      window.StudyMilonBridge.requestPermissions();
+    }
+    
     if (pendingApp) {
       await updateSettings({ ...settings, [pendingApp]: true });
       setIsPermissionDialogOpen(false);
@@ -190,7 +232,7 @@ export default function FocusSettingsPage() {
                    <CardFooter className="bg-secondary/30 p-4 border-t flex items-start gap-3">
                       <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                       <p className="text-[10px] font-medium leading-relaxed text-muted-foreground">
-                        Note: Full system-level app blocking requires Study Milon to be installed as an Android/iOS app via our native bridge. In the web version, this logs your focus commitment.
+                        Note: Full system-level app blocking requires Study Milon to be installed via our native bridge. In the web version, this logs your focus commitment.
                       </p>
                    </CardFooter>
                 </Card>
@@ -205,16 +247,26 @@ export default function FocusSettingsPage() {
                    </CardHeader>
                    <CardContent className="space-y-4">
                       <div className="flex items-center justify-between p-4 bg-secondary/20 rounded-2xl">
-                         <div>
-                            <p className="text-sm font-bold">Strict Mode</p>
-                            <p className="text-[10px] text-muted-foreground">Cannot disable blocker while timer is running.</p>
+                         <div className="flex gap-3 items-center">
+                            <div className="p-2 bg-orange-500/10 rounded-lg">
+                               <Lock className="h-4 w-4 text-orange-500" />
+                            </div>
+                            <div>
+                               <p className="text-sm font-bold">Strict Mode</p>
+                               <p className="text-[10px] text-muted-foreground">Cannot disable blocker while timer is running.</p>
+                            </div>
                          </div>
-                         <Switch disabled />
+                         <Switch checked={settings.strictMode} onCheckedChange={handleToggleStrictMode} />
                       </div>
-                      <div className="flex items-center justify-between p-4 bg-secondary/20 rounded-2xl">
-                         <div>
-                            <p className="text-sm font-bold">Schedule Blocking</p>
-                            <p className="text-[10px] text-muted-foreground">Automatically block apps from 8 PM to 11 PM.</p>
+                      <div className="flex items-center justify-between p-4 bg-secondary/20 rounded-2xl group opacity-50 cursor-not-allowed">
+                         <div className="flex gap-3 items-center">
+                            <div className="p-2 bg-indigo-500/10 rounded-lg">
+                               <Zap className="h-4 w-4 text-indigo-500" />
+                            </div>
+                            <div>
+                               <p className="text-sm font-bold">Smart Rewards</p>
+                               <p className="text-[10px] text-muted-foreground">Earn 2x Leaderboard points for Strict Mode sessions.</p>
+                            </div>
                          </div>
                          <Switch disabled />
                       </div>
