@@ -68,6 +68,11 @@ import {
   Phone,
   User as UserIcon,
   Target,
+  Download,
+  Apple,
+  Monitor,
+  Smartphone,
+  Info
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -117,24 +122,36 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    control,
-    formState: { errors, isSubmitting },
-  } = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      category: 'HSC',
-      batch: '2026',
-      institution: '',
-      phoneNumber: '',
-      dailyGoalHours: '6',
-      dailyGoalMinutes: '0',
+  useEffect(() => {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    });
+  }, []);
+
+  const handleInstall = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+      }
+    } else {
+      toast({
+        title: "PWA Installation",
+        description: "To install, open your browser menu (usually three dots or share icon) and select 'Add to Home Screen' or 'Install App'.",
+      });
     }
-  });
+  };
+
+  const showAppleInstructions = () => {
+    toast({
+      title: "iOS Installation",
+      description: "Tap the 'Share' icon (square with arrow) and select 'Add to Home Screen' to install Study Million.",
+    });
+  };
 
   useEffect(() => {
     if (user) {
@@ -166,6 +183,24 @@ export default function ProfilePage() {
       setLoading(false);
     }
   }, [user, firestore, reset, userLoading]);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    formState: { errors, isSubmitting },
+  } = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      category: 'HSC',
+      batch: '2026',
+      institution: '',
+      phoneNumber: '',
+      dailyGoalHours: '6',
+      dailyGoalMinutes: '0',
+    }
+  });
 
   const onSubmit = async (data: ProfileFormValues) => {
     if (!user) return;
@@ -355,6 +390,34 @@ export default function ProfilePage() {
                       <p className="text-xs text-muted-foreground mt-2">
                         Setting a daily goal helps us track your progress on the dashboard.
                       </p>
+                    </div>
+
+                    {/* Download App Section */}
+                    <div className="pt-8 border-t">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Download className="h-5 w-5 text-primary" />
+                        <h4 className="text-sm font-bold uppercase tracking-wider">Download App</h4>
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                         <Button variant="outline" className="flex flex-col h-auto py-4 gap-2 rounded-2xl border-2 hover:bg-primary/5 hover:border-primary transition-all group" onClick={showAppleInstructions}>
+                            <Apple className="h-6 w-6 group-hover:scale-110 transition-transform" />
+                            <span className="text-[10px] font-black uppercase tracking-tighter">Apple</span>
+                         </Button>
+                         <Button variant="outline" className="flex flex-col h-auto py-4 gap-2 rounded-2xl border-2 hover:bg-primary/5 hover:border-primary transition-all group" onClick={handleInstall}>
+                            <Monitor className="h-6 w-6 group-hover:scale-110 transition-transform" />
+                            <span className="text-[10px] font-black uppercase tracking-tighter">Windows</span>
+                         </Button>
+                         <Button variant="outline" className="flex flex-col h-auto py-4 gap-2 rounded-2xl border-2 hover:bg-primary/5 hover:border-primary transition-all group" onClick={handleInstall}>
+                            <Smartphone className="h-6 w-6 group-hover:scale-110 transition-transform" />
+                            <span className="text-[10px] font-black uppercase tracking-tighter">Android</span>
+                         </Button>
+                      </div>
+                      <div className="mt-4 flex items-center gap-2 p-3 bg-secondary/50 rounded-xl">
+                         <Info className="h-4 w-4 text-primary shrink-0" />
+                         <p className="text-[10px] font-medium leading-tight text-muted-foreground">
+                            Study Million supports PWA installation. After installing, the app will work offline and the timer will run more accurately.
+                         </p>
+                      </div>
                     </div>
 
                     <div className="flex justify-end pt-4">

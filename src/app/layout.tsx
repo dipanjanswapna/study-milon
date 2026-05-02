@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
@@ -9,6 +9,23 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 export const metadata: Metadata = {
   title: 'Study Million',
   description: 'Track your hustle to the first million minutes.',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Study Million',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#3B82F6',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -29,6 +46,7 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap"
           rel="stylesheet"
         />
+        <link rel="apple-touch-icon" href="https://placehold.co/192x192/3B82F6/white?text=SM" />
       </head>
       <body className="font-body antialiased overflow-hidden">
         <FirebaseClientProvider>

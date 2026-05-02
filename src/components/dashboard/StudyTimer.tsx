@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -34,10 +35,14 @@ export function StudyTimer() {
   const searchParams = useSearchParams();
 
   const [workDuration, setWorkDuration] = useState(25);
-  const [minutes, setMinutes] = useState(workDuration);
-  const [seconds, setSeconds] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(workDuration * 60);
   const [isActive, setIsActive] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
+  
+  // Refs to track time exactly even if app goes to background
+  const startTimeRef = useRef<number | null>(null);
+  const initialTimeRef = useRef<number>(workDuration * 60);
+  const lastLoggedMinuteRef = useRef<number>(0);
 
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<string | null>(null);
@@ -54,7 +59,6 @@ export function StudyTimer() {
   }, [user, firestore, selectedSubject]);
   const { data: chapters, loading: chaptersLoading } = useCollection(chaptersQuery);
 
-  // Deep linking logic with auto-start support
   const initializedFromParams = useRef(false);
   
   useEffect(() => {
@@ -69,12 +73,10 @@ export function StudyTimer() {
       const d = parseInt(durationParam, 10);
       if (!isNaN(d) && d > 0) {
         setWorkDuration(d);
-        setMinutes(d);
-        setSeconds(0);
+        if (!isActive) setTimeLeft(d * 60);
         
-        // Auto-start if it's the first time processing these params
         if (!initializedFromParams.current && subId && chapId) {
-            setIsActive(true);
+            handleStart();
             initializedFromParams.current = true;
             toast({
                 title: "Session Started!",
@@ -85,18 +87,36 @@ export function StudyTimer() {
     }
   }, [searchParams, toast]);
 
+  const handleStart = () => {
+    if (!isActive) {
+      startTimeRef.current = Date.now();
+      initialTimeRef.current = timeLeft;
+      lastLoggedMinuteRef.current = 0;
+      setIsActive(true);
+    }
+  };
+
+  const handlePause = () => {
+    setIsActive(false);
+    startTimeRef.current = null;
+  };
+
   const reset = useCallback(() => {
     setIsActive(false);
     setIsBreak(false);
-    setMinutes(workDuration);
-    setSeconds(0);
+    startTimeRef.current = null;
+    const initialSeconds = workDuration * 60;
+    setTimeLeft(initialSeconds);
   }, [workDuration]);
 
   const startBreak = useCallback(() => {
-    setIsActive(true);
     setIsBreak(true);
-    setMinutes(BREAK_MINUTES);
-    setSeconds(0);
+    const breakSeconds = BREAK_MINUTES * 60;
+    setTimeLeft(breakSeconds);
+    startTimeRef.current = Date.now();
+    initialTimeRef.current = breakSeconds;
+    lastLoggedMinuteRef.current = 0;
+    setIsActive(true);
     toast({
         title: "Time for a break!",
         description: `Take 5 minutes to recharge.`
@@ -108,43 +128,51 @@ export function StudyTimer() {
     try {
         await logStudyTime(firestore, user.uid, selectedSubject, selectedChapter, 1);
     } catch (error) {
-        // Silently fail logging in background to avoid interrupting flow
+        // Silent catch
     }
   }, [user, firestore, selectedSubject, selectedChapter]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
-    if (isActive && (minutes > 0 || seconds > 0)) {
+    if (isActive) {
       interval = setInterval(() => {
-        if (seconds === 0) {
-          if (minutes > 0) {
-            setMinutes((m) => m - 1);
-            setSeconds(59);
-            if (!isBreak) {
-                handleMinuteLog();
-            }
+        if (!startTimeRef.current) return;
+        
+        const elapsedSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        const newTimeLeft = Math.max(0, initialTimeRef.current - elapsedSeconds);
+        
+        setTimeLeft(newTimeLeft);
+
+        // Logging logic using elapsed time to ensure accuracy
+        if (!isBreak) {
+          const totalElapsedSessionSeconds = (initialTimeRef.current - newTimeLeft);
+          const currentElapsedMinutes = Math.floor(totalElapsedSessionSeconds / 60);
+          
+          if (currentElapsedMinutes > lastLoggedMinuteRef.current) {
+            handleMinuteLog();
+            lastLoggedMinuteRef.current = currentElapsedMinutes;
           }
-        } else {
-          setSeconds((s) => s - 1);
         }
-      }, 1000);
-    } 
-    
-    if (isActive && minutes === 0 && seconds === 0) {
-        if (isBreak) {
+
+        if (newTimeLeft === 0) {
+          clearInterval(interval!);
+          setIsActive(false);
+          if (isBreak) {
             if (Notification.permission === "granted") new Notification("Break's over! Time to get back.");
             reset();
-        } else {
+          } else {
             if (Notification.permission === "granted") new Notification("Study session complete!");
             startBreak();
+          }
         }
+      }, 1000);
     }
 
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isActive, seconds, minutes, isBreak, reset, startBreak, handleMinuteLog]);
+  }, [isActive, isBreak, reset, startBreak, handleMinuteLog]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
@@ -152,9 +180,10 @@ export function StudyTimer() {
     }
   }, []);
 
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
   const totalSeconds = (isBreak ? BREAK_MINUTES : workDuration) * 60;
-  const remainingSeconds = minutes * 60 + seconds;
-  const progress = totalSeconds > 0 ? 100 - (remainingSeconds / totalSeconds) * 100 : 0;
+  const progress = 100 - (timeLeft / totalSeconds) * 100;
   
   const canStart = !!selectedSubject && !!selectedChapter;
 
@@ -188,7 +217,7 @@ export function StudyTimer() {
         
         <div className="flex items-center gap-4">
           <Button 
-            onClick={() => setIsActive(!isActive)} 
+            onClick={isActive ? handlePause : handleStart} 
             size="lg" 
             className="w-40 h-12 text-lg font-bold shadow-lg shadow-primary/20" 
             disabled={!canStart}
@@ -245,7 +274,7 @@ export function StudyTimer() {
               const val = parseInt(e.target.value, 10);
               if (val > 0) {
                 setWorkDuration(val);
-                if (!isActive) setMinutes(val);
+                if (!isActive) setTimeLeft(val * 60);
               }
             }}
             disabled={isActive} min="1"
