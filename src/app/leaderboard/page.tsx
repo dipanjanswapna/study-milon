@@ -33,7 +33,7 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 
 type TimeFilter = 'daily' | 'weekly' | 'monthly' | 'yearly';
-type CategoryFilter = 'All' | 'SSC' | 'HSC' | 'Admission 1st' | 'Admission 2nd' | 'Job Prep';
+type CategoryFilter = 'All' | 'SSC' | 'HSC' | 'Admission 1st' | 'Admission 2nd' | 'Job Prep' | 'University';
 
 const YEARS = Array.from({ length: 18 }, (_, i) => (2023 + i).toString());
 
@@ -126,6 +126,7 @@ export default function LeaderboardPage() {
                                 <SelectItem value="Admission 1st">Admission 1st</SelectItem>
                                 <SelectItem value="Admission 2nd">Admission 2nd</SelectItem>
                                 <SelectItem value="Job Prep">Job Prep</SelectItem>
+                                <SelectItem value="University">University</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

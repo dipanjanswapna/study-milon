@@ -437,6 +437,7 @@ export default function GroupDashboardPage() {
                                         <SelectItem value="HSC">HSC</SelectItem>
                                         <SelectItem value="Admission">Admission</SelectItem>
                                         <SelectItem value="Job Prep">Job Prep</SelectItem>
+                                        <SelectItem value="University">University</SelectItem>
                                       </SelectContent>
                                     </Select>
                                   </div>

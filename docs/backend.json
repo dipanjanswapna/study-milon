@@ -17,7 +17,7 @@
         "daily_study_minutes": { "type": "number" },
         "daily_goal_minutes": { "type": "number" },
         "last_active_date": { "type": "string", "format": "date" },
-        "category": { "type": "string", "enum": ["SSC", "HSC", "Admission 1st", "Admission 2nd", "Job Prep"] },
+        "category": { "type": "string", "enum": ["SSC", "HSC", "Admission 1st", "Admission 2nd", "Job Prep", "University"] },
         "batch": { "type": "string" },
         "institution": { "type": "string" },
         "phoneNumber": { "type": "string" },

@@ -91,7 +91,7 @@ import Link from 'next/link';
 const profileSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
   photoURL: z.string().url('Please enter a valid URL.').or(z.literal('')),
-  category: z.enum(['SSC', 'HSC', 'Admission 1st', 'Admission 2nd', 'Job Prep']),
+  category: z.enum(['SSC', 'HSC', 'Admission 1st', 'Admission 2nd', 'Job Prep', 'University']),
   religion: z.enum(['Muslim', 'Hindu']),
   batch: z.string().min(1, 'Batch is required.'),
   institution: z.string().min(2, 'Institution name must be at least 2 characters.').or(z.literal('')),
@@ -336,6 +336,7 @@ export default function ProfilePage() {
                                   <SelectItem value="Admission 1st">Admission 1st</SelectItem>
                                   <SelectItem value="Admission 2nd">Admission 2nd</SelectItem>
                                   <SelectItem value="Job Prep">Job Prep</SelectItem>
+                                  <SelectItem value="University">University</SelectItem>
                                 </SelectContent>
                               </Select>
                             )}
@@ -383,10 +384,10 @@ export default function ProfilePage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="institution">School / College</Label>
+                        <Label htmlFor="institution">School / College / University</Label>
                         <div className="relative">
                           <School className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input id="institution" className="pl-9" placeholder="e.g. Dhaka College" {...register('institution')} />
+                          <Input id="institution" className="pl-9" placeholder="e.g. Dhaka University" {...register('institution')} />
                         </div>
                       </div>
 
