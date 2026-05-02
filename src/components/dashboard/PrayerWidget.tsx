@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -13,7 +13,7 @@ import {
   MapPin,
   Loader2
 } from 'lucide-react';
-import { format, parse, isAfter, isBefore, addDays } from 'date-fns';
+import { format, parse, isAfter } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 type PrayerTimes = {
@@ -29,9 +29,28 @@ export function PrayerWidget() {
   const [loading, setLoading] = useState(true);
   const [nextPrayer, setNextPrayer] = useState<string | null>(null);
 
+  const calculateNextPrayer = useCallback((data: PrayerTimes) => {
+    const now = new Date();
+    const prayerNames = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'] as const;
+    
+    let found = false;
+    for (const name of prayerNames) {
+      const prayerTime = parse(data[name], 'HH:mm', now);
+      if (isAfter(prayerTime, now)) {
+        setNextPrayer(name);
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      setNextPrayer('Fajr');
+    }
+  }, []);
+
+  // Effect 1: Initial Fetch and Cache Logic
   useEffect(() => {
     async function fetchPrayerTimes() {
-      // Try to load from cache first for offline support
       const cached = localStorage.getItem('prayer_times_cache');
       const cachedDate = localStorage.getItem('prayer_times_date');
       const today = new Date().toDateString();
@@ -69,34 +88,18 @@ export function PrayerWidget() {
     }
 
     fetchPrayerTimes();
-    
-    // Refresh next prayer calculation every minute
+  }, [calculateNextPrayer]);
+
+  // Effect 2: Refresh next prayer calculation every minute
+  useEffect(() => {
+    if (!timings) return;
+
     const interval = setInterval(() => {
-      if (timings) calculateNextPrayer(timings);
+      calculateNextPrayer(timings);
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [timings]);
-
-  const calculateNextPrayer = (data: PrayerTimes) => {
-    const now = new Date();
-    const prayerNames = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'] as const;
-    
-    let found = false;
-    for (const name of prayerNames) {
-      const prayerTime = parse(data[name], 'HH:mm', now);
-      if (isAfter(prayerTime, now)) {
-        setNextPrayer(name);
-        found = true;
-        break;
-      }
-    }
-
-    // If all prayers today have passed, the next one is Fajr tomorrow
-    if (!found) {
-      setNextPrayer('Fajr');
-    }
-  };
+  }, [timings, calculateNextPrayer]);
 
   const prayerIcons: Record<string, React.ReactNode> = {
     Fajr: <Sunrise className="h-4 w-4" />,
@@ -142,7 +145,6 @@ export function PrayerWidget() {
           {(Object.keys(timings) as Array<keyof PrayerTimes>).map((name) => {
             const isNext = nextPrayer === name;
             const time24 = timings[name];
-            // Format to 12h for easier reading
             const time12 = format(parse(time24, 'HH:mm', new Date()), 'hh:mm a');
 
             return (
