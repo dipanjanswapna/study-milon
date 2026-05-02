@@ -374,18 +374,18 @@ export function StudyTimer() {
           </div>
         </div>
         
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           <Button 
             onClick={isActive ? handlePause : handleStart} 
             size="lg" 
-            className="w-48 h-16 text-xl font-black rounded-3xl shadow-2xl shadow-red-600/20 transition-all active:scale-95 bg-red-600 hover:bg-red-700" 
+            className="w-40 h-12 text-sm font-bold rounded-xl shadow-lg shadow-red-600/10 transition-all active:scale-95 bg-red-600 hover:bg-red-700" 
             disabled={!canStart && !isActive}
           >
-            {isActive ? <Pause className="mr-2 h-7 w-7" /> : <Play className="mr-2 h-7 w-7 fill-current" />}
-            {isActive ? 'PAUSE' : 'START FOCUS'}
+            {isActive ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4 fill-current" />}
+            {isActive ? 'Pause' : 'Start Focus'}
           </Button>
-          <Button onClick={handleReset} variant="ghost" size="icon" className="h-16 w-16 rounded-3xl bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all">
-            <RotateCcw className="h-8 w-8" />
+          <Button onClick={handleReset} variant="ghost" size="icon" className="h-12 w-12 rounded-xl bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all">
+            <RotateCcw className="h-5 w-5" />
           </Button>
         </div>
       </CardContent>
