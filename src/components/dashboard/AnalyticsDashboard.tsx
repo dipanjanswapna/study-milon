@@ -115,23 +115,30 @@ export function AnalyticsDashboard() {
       filteredSessions = sessions.filter(s => s.date && isSameMonth(new Date(s.date), now));
     }
     else if (filter === 'yearly') {
-      // Start from the month the user joined
+      // Logic: Start from account creation month to current month
       const createdAt = profile?.createdAt?.toDate() || now;
       const startOfJoinMonth = startOfMonth(createdAt);
       const monthsInterval = eachMonthOfInterval({ start: startOfJoinMonth, end: now });
 
-      const monthsAgg: Record<string, number> = {};
+      const monthsAgg: Record<string, any> = {};
+      monthsInterval.forEach(month => {
+        const mKey = format(month, 'MMM yy');
+        monthsAgg[mKey] = { date: mKey };
+      });
+
       sessions.forEach(s => {
         if (s.date) {
-          const m = format(new Date(s.date), 'MMM yy');
-          monthsAgg[m] = (monthsAgg[m] || 0) + s.duration;
+          const date = new Date(s.date);
+          const mKey = format(date, 'MMM yy');
+          if (monthsAgg[mKey]) {
+            const subName = s.subject || 'Other';
+            activeSubjectsSet.add(subName);
+            monthsAgg[mKey][subName] = (monthsAgg[mKey][subName] || 0) + s.duration;
+          }
         }
       });
 
-      chartData = monthsInterval.map(month => {
-        const mKey = format(month, 'MMM yy');
-        return { date: mKey, minutes: monthsAgg[mKey] || 0 };
-      });
+      chartData = Object.values(monthsAgg);
       filteredSessions = sessions;
     }
 
@@ -282,7 +289,7 @@ export function AnalyticsDashboard() {
             <CardContent className="p-6 pt-0">
               <SubjectDistributionChart data={stats.subjectData} />
             </CardContent>
-          </div>
+          </Card>
         </div>
       </div>
     </div>
