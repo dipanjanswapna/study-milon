@@ -82,7 +82,7 @@ export async function updateTasksOrder(
 }
 
 /**
- * Moves expired (incomplete) tasks from previous days to today.
+ * Moves incomplete tasks from previous days to today.
  */
 export async function restoreTasks(db: Firestore, userId: string, taskIds: string[]) {
   const todayStr = format(new Date(), 'yyyy-MM-dd');

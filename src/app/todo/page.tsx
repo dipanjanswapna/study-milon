@@ -222,6 +222,9 @@ export default function TodoPage() {
     });
   };
 
+  const nextMonth = () => setCurrentMonth(addDays(endOfMonth(currentMonth), 1));
+  const prevMonth = () => setCurrentMonth(addDays(startOfMonth(currentMonth), -1));
+
   const renderCells = () => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
@@ -453,9 +456,6 @@ export default function TodoPage() {
       </div>
     </ProtectedRoute>
   );
-
-  function nextMonth() { setCurrentMonth(addDays(endOfMonth(currentMonth), 1)); }
-  function prevMonth() { setCurrentMonth(addDays(startOfMonth(currentMonth), -1)); }
 }
 
 function SortableTaskItem({ task, onToggle, onDelete, formatDuration }: { 

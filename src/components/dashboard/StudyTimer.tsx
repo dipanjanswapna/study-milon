@@ -13,10 +13,9 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RotateCcw, Coffee, BookOpenCheck, ShieldCheck, Wifi, Zap, Clock, ArrowRight, ListTodo } from 'lucide-react';
+import { Play, Pause, RotateCcw, Coffee, BookOpenCheck, Wifi, Zap, Clock, ArrowRight, ListTodo } from 'lucide-react';
 import { collection, query, where, doc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -30,7 +29,7 @@ export function StudyTimer() {
   const { toast } = useToast();
   const router = useRouter();
 
-  // Profile data for session recovery
+  // Profile data for session recovery and status
   const userRef = useMemo(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: profile } = useDoc<any>(userRef as any);
 
@@ -46,7 +45,7 @@ export function StudyTimer() {
   }, [user, firestore, todayStr]);
   const { data: tasks, loading: tasksLoading } = useCollection<StudyTask>(tasksQuery);
 
-  // Derive Current Active Task (First Incomplete)
+  // Determine the Active Task: The first one in the list that is NOT completed
   const activeTask = useMemo(() => {
     if (!tasks) return null;
     return tasks.find(t => !t.completed);
@@ -56,10 +55,16 @@ export function StudyTimer() {
   const [isActive, setIsActive] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
 
-  // Background Persistence Refs
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastLoggedMinuteRef = useRef<number>(0);
   const initializedFromCloud = useRef(false);
+
+  // Update time when active task changes or is loaded
+  useEffect(() => {
+    if (activeTask && !isActive && !isBreak) {
+      setTimeLeft(activeTask.duration * 60);
+    }
+  }, [activeTask, isActive, isBreak]);
 
   const handleReset = useCallback(async () => {
     if (user) {
@@ -124,9 +129,9 @@ export function StudyTimer() {
 
   const startBreak = useCallback(async () => {
     if (user && activeTask) {
-      // Mark current task as COMPLETED automatically
+      // Automatic task completion when timer reaches zero
       await updateTaskStatus(firestore, user.uid, activeTask.id, true);
-      toast({ title: "Objective Secured!", description: `${activeTask.chapterName} marked as complete.` });
+      toast({ title: "Objective Secured!", description: `${activeTask.chapterName} is complete.` });
 
       setIsBreak(true);
       const breakSeconds = BREAK_MINUTES * 60;
@@ -156,20 +161,11 @@ export function StudyTimer() {
     } catch (error) { }
   }, [user, firestore, activeTask, isBreak]);
 
-  // INITIALIZE BACKGROUND SERVICE
   useEffect(() => {
     audioRef.current = new Audio(SILENT_AUDIO_URI);
     audioRef.current.loop = true;
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: 'Elite Session Active',
-        artist: 'Study Milon',
-        artwork: [{ src: 'https://picsum.photos/seed/focus/512/512', sizes: '512x512', type: 'image/png' }]
-      });
-    }
   }, []);
 
-  // SESSION RECOVERY
   useEffect(() => {
     if (profile?.currentSession && !initializedFromCloud.current) {
       const { startTime, duration, status, isBreak: cloudIsBreak } = profile.currentSession;
@@ -189,14 +185,11 @@ export function StudyTimer() {
         } else {
           handleReset();
         }
-      } else if (activeTask) {
-        setTimeLeft(activeTask.duration * 60);
       }
       initializedFromCloud.current = true;
     }
   }, [profile?.currentSession, activeTask, handleReset]);
 
-  // ENGINE
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
@@ -252,10 +245,10 @@ export function StudyTimer() {
           <div className="space-y-2">
             <h3 className="text-2xl font-black tracking-tight">No Active Roadmap</h3>
             <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-              Your focus session is empty. Add tasks to your study planner to begin the sequence.
+              Your focus sequence is empty. Add tasks to your study planner to begin.
             </p>
           </div>
-          <Button onClick={() => router.push('/todo')} className="rounded-full px-8 h-12 font-bold gap-2">
+          <Button onClick={() => router.push('/todo')} className="rounded-full px-8 h-12 font-bold gap-2 bg-primary hover:bg-primary/90 text-white">
             Build Roadmap <ArrowRight className="h-4 w-4" />
           </Button>
         </CardContent>
@@ -280,7 +273,7 @@ export function StudyTimer() {
           </CardTitle>
           {!isBreak && activeTask && (
             <p className="text-[10px] font-black text-primary uppercase tracking-widest px-1">
-              Objective: {activeTask.subjectName}
+              Active: {activeTask.subjectName}
             </p>
           )}
         </div>
@@ -352,14 +345,14 @@ export function StudyTimer() {
                   <Clock className="h-5 w-5 text-primary" />
                </div>
                <div>
-                  <p className="text-[10px] font-black uppercase text-white/40 tracking-widest">Active Cycle</p>
+                  <p className="text-[10px] font-black uppercase text-white/40 tracking-widest">Planned Duration</p>
                   <p className="text-sm font-bold">{durationForMode} Minutes</p>
                </div>
             </div>
             <div className="text-right">
                <p className="text-[10px] font-black uppercase text-white/40 tracking-widest">Status</p>
                <p className={cn("text-sm font-bold uppercase", isActive ? "text-success" : "text-orange-500")}>
-                  {isActive ? 'In Progress' : 'Idle'}
+                  {isActive ? 'Tracking' : 'Idle'}
                </p>
             </div>
          </div>
