@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 
 const BREAK_MINUTES = 5;
@@ -107,7 +107,10 @@ export function StudyTimer() {
       lastLoggedMinuteRef.current = 0;
       setIsActive(true);
       if (!isBreak) {
-        updateUserProfile(firestore, user.uid, { isStudying: true });
+        updateUserProfile(firestore, user.uid, { 
+          isStudying: true,
+          last_active_date: serverTimestamp()
+        });
       }
     }
   };
@@ -153,6 +156,7 @@ export function StudyTimer() {
     if (!user || !selectedSubject || !selectedChapter) return;
     try {
         await logStudyTime(firestore, user.uid, selectedSubject, selectedChapter, 1);
+        // last_active_date is updated within logStudyTime
     } catch (error) {
         // Silent catch for offline sync
     }
@@ -257,9 +261,9 @@ export function StudyTimer() {
             <span className="text-5xl md:text-6xl font-bold font-mono tracking-tighter">
               {String(minutesDisplay).padStart(2, '0')}:{String(secondsDisplay).padStart(2, '0')}
             </span>
-            {isActive && !isBreak && isFocusModeEnabled && (
-              <span className="text-[9px] font-black uppercase text-primary mt-2 flex items-center gap-1">
-                <ShieldAlert className="h-3 w-3" /> Blocker Running
+            {isActive && !isBreak && (
+              <span className="text-[10px] font-black uppercase text-primary mt-2 flex items-center gap-1 animate-pulse">
+                <Wifi className="h-3 w-3" /> LIVE FOCUS
               </span>
             )}
           </div>

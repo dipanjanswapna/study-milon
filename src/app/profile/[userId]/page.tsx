@@ -187,7 +187,7 @@ export default function PublicProfilePage() {
                       </Badge>
                     )}
                     {isLive && (
-                      <Badge className="bg-success/20 text-success border-none font-black text-[10px] uppercase px-3">
+                      <Badge className="bg-success/20 text-success border-none font-black text-[10px] uppercase px-3 animate-pulse">
                         Studying Now
                       </Badge>
                     )}
@@ -284,10 +284,10 @@ export default function PublicProfilePage() {
                     </div>
                   </Card>
                   <Card className="rounded-[2rem] border-none shadow-lg bg-indigo-500/5 p-6 space-y-2">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Global Rank</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Global Status</p>
                     <div className="flex items-center justify-between">
-                      <h4 className="text-2xl font-black">Elite Student</h4>
-                      <Trophy className="h-8 w-8 text-indigo-500/20" />
+                      <h4 className="text-2xl font-black">{isLive ? 'Studying Now' : 'Active Student'}</h4>
+                      {isLive ? <Wifi className="h-8 w-8 text-success animate-pulse" /> : <Trophy className="h-8 w-8 text-indigo-500/20" />}
                     </div>
                   </Card>
                </div>

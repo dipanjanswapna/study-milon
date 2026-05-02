@@ -80,7 +80,7 @@ export default function LeaderboardPage() {
 
   const { data: allRankings, loading } = useCollection<any>(leaderboardQuery);
 
-  // VIRTUAL RESET: Ensure visual reset at 12AM local time even if DB hasn't been updated yet.
+  // VIRTUAL RESET & LIVE CHECK
   const rankings = useMemo(() => {
     if (!allRankings) return [];
     
@@ -215,7 +215,7 @@ export default function LeaderboardPage() {
                                 <Medal className="h-4 w-4 md:h-5 md:w-5 text-slate-500" />
                             </div>
                             {top3[1].isLive && (
-                              <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-success text-white text-[8px] font-black px-1.5 py-0.5 rounded-full animate-bounce shadow-lg">LIVE</div>
+                              <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-success text-white text-[8px] font-black px-1.5 py-0.5 rounded-full animate-bounce shadow-lg z-20">LIVE</div>
                             )}
                         </Link>
                         <div className="text-center px-1">
@@ -269,7 +269,7 @@ export default function LeaderboardPage() {
                                 <Medal className="h-4 w-4 md:h-5 md:w-5 text-amber-900" />
                             </div>
                             {top3[2].isLive && (
-                              <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-success text-white text-[8px] font-black px-1.5 py-0.5 rounded-full animate-bounce shadow-lg">LIVE</div>
+                              <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-success text-white text-[8px] font-black px-1.5 py-0.5 rounded-full animate-bounce shadow-lg z-20">LIVE</div>
                             )}
                         </Link>
                         <div className="text-center px-1">

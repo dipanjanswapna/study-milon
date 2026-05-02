@@ -1,4 +1,3 @@
-
 'use client';
 import {
   collection,
@@ -130,8 +129,7 @@ export async function updateChapterStatus(
   await updateDoc(chapterRef, updatePayload);
 }
 
-// Atomic Auto-saving timer logic with 12AM reset sync
-// "Gora theke" - From the roots, this function handles bucket resets atomically.
+// Atomic Auto-saving timer logic with 12AM reset sync & Live Sync
 export async function logStudyTime(
     db: Firestore,
     userId: string,
@@ -172,7 +170,6 @@ export async function logStudyTime(
         
         // RESET LOGIC: 
         // If the period has changed (e.g., it's after 12AM), we start a fresh bucket.
-        // Otherwise, we increment the existing bucket value.
         const dailyUpdate = lastStudyDay === dateStr ? increment(minutes) : minutes;
         const weeklyUpdate = lastStudyWeek === weekStr ? increment(minutes) : minutes;
         const monthlyUpdate = lastStudyMonth === monthStr ? increment(minutes) : minutes;
@@ -183,10 +180,11 @@ export async function logStudyTime(
             daily_study_minutes: dailyUpdate,
             weekly_study_minutes: weeklyUpdate,
             monthly_study_minutes: monthlyUpdate,
-            last_active_date: serverTimestamp(),
+            last_active_date: serverTimestamp(), // Critical for Live Sync check
             last_study_day: dateStr,
             last_study_week: weekStr,
-            last_study_month: monthStr
+            last_study_month: monthStr,
+            isStudying: true // Force status on active log
         });
 
         // Update chapter aggregate time
