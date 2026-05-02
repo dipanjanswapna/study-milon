@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -40,9 +41,10 @@ import {
   Users2,
   ExternalLink,
   MessageSquare,
-  CheckCircle2
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
-import { createGroup, sendJoinRequest, type StudyGroup } from '@/firebase/firestore/groups';
+import { createGroup, sendJoinRequest, cancelJoinRequest, type StudyGroup } from '@/firebase/firestore/groups';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -60,7 +62,7 @@ export default function GroupsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   
-  // Track requests for the current session to update UI immediately
+  // Track actual pending requests from the database
   const [requestedGuildIds, setRequestedGuildIds] = useState<Set<string>>(new Set());
   const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
 
@@ -68,12 +70,40 @@ export default function GroupsPage() {
   const userRef = useMemo(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: profile } = useDoc<any>(userRef as any);
 
-  // REDIRECTION FIX: Move router logic to useEffect to prevent state update during render
+  // Redirection if already in a group
   useEffect(() => {
     if (profile?.groupId) {
       router.replace(`/groups/${profile.groupId}`);
     }
   }, [profile?.groupId, router]);
+
+  // Fetch existing requests for this user on load
+  useEffect(() => {
+    if (!user) return;
+    
+    const fetchRequests = async () => {
+      try {
+        const groupsSnap = await getDocs(collection(firestore, 'groups'));
+        const pendingIds = new Set<string>();
+        
+        for (const gDoc of groupsSnap.docs) {
+          const reqSnap = await getDocs(query(
+            collection(firestore, 'groups', gDoc.id, 'requests'),
+            where('userId', '==', user.uid),
+            where('status', '==', 'pending')
+          ));
+          if (!reqSnap.empty) {
+            pendingIds.add(gDoc.id);
+          }
+        }
+        setRequestedGuildIds(pendingIds);
+      } catch (e) {
+        console.error("Error checking pending requests", e);
+      }
+    };
+    
+    fetchRequests();
+  }, [user, firestore]);
 
   // Fetch all groups
   const groupsQuery = useMemo(() => {
@@ -121,7 +151,7 @@ export default function GroupsPage() {
   };
 
   const handleJoin = async (group: StudyGroup) => {
-    if (!user || requestedGuildIds.has(group.id)) return;
+    if (!user) return;
     
     setLoadingMap(prev => ({ ...prev, [group.id]: true }));
     try {
@@ -143,7 +173,25 @@ export default function GroupsPage() {
     }
   };
 
-  // If user already belongs to a group, show a loader while the redirection effect takes place
+  const handleCancelRequest = async (groupId: string) => {
+    if (!user) return;
+    
+    setLoadingMap(prev => ({ ...prev, [groupId]: true }));
+    try {
+      await cancelJoinRequest(firestore, groupId, user.uid);
+      setRequestedGuildIds(prev => {
+        const next = new Set(prev);
+        next.delete(groupId);
+        return next;
+      });
+      toast({ title: 'Request Withdrawn', description: 'Your application has been canceled.' });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Error', description: e.message });
+    } finally {
+      setLoadingMap(prev => ({ ...prev, [groupId]: false }));
+    }
+  };
+
   if (profile?.groupId) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -176,7 +224,6 @@ export default function GroupsPage() {
                 </DialogTrigger>
                 <DialogContent className="max-w-xl rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl">
                   <div className="grid md:grid-cols-5 h-full">
-                    {/* Roadmap Sidebar */}
                     <div className="md:col-span-2 bg-[#1A1C3D] text-white p-6 space-y-6">
                        <div className="space-y-2">
                           <h3 className="text-lg font-black flex items-center gap-2">
@@ -189,19 +236,19 @@ export default function GroupsPage() {
                        <div className="space-y-6">
                           <div className="flex gap-3">
                              <div className="h-6 w-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-black shrink-0">01</div>
-                             <p className="text-[11px] font-bold text-white/80">Go to Discord and create a new server for your study group.</p>
+                             <p className="text-[11px] font-bold text-white/80">Create a Discord server for your study group.</p>
                           </div>
                           <div className="flex gap-3">
                              <div className="h-6 w-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-black shrink-0">02</div>
-                             <p className="text-[11px] font-bold text-white/80">Create a voice channel named 'Focus Zone' and a text channel 'Study Logs'.</p>
+                             <p className="text-[11px] font-bold text-white/80">Create a voice channel 'Focus Zone'.</p>
                           </div>
                           <div className="flex gap-3">
                              <div className="h-6 w-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-black shrink-0">03</div>
-                             <p className="text-[11px] font-bold text-white/80">Generate a 'Never Expire' invite link for your server.</p>
+                             <p className="text-[11px] font-bold text-white/80">Generate a 'Never Expire' invite link.</p>
                           </div>
                           <div className="flex gap-3">
                              <div className="h-6 w-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-black shrink-0">04</div>
-                             <p className="text-[11px] font-bold text-white/80">Paste the link in the form to the right to launch your guild.</p>
+                             <p className="text-[11px] font-bold text-white/80">Paste the link in the form to launch.</p>
                           </div>
                        </div>
 
@@ -214,7 +261,6 @@ export default function GroupsPage() {
                        </div>
                     </div>
 
-                    {/* Form Area */}
                     <div className="md:col-span-3 p-8 bg-card">
                        <DialogHeader>
                         <DialogTitle className="text-2xl font-black">Guild Basics</DialogTitle>
@@ -252,10 +298,8 @@ export default function GroupsPage() {
                           <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                                <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Discord Server Link *</Label>
-                               <span className="text-[9px] font-bold text-muted-foreground italic">Mandatory</span>
                             </div>
                             <Input placeholder="https://discord.gg/..." value={newDiscord} onChange={e => setNewDiscord(e.target.value)} />
-                            <p className="text-[9px] text-muted-foreground leading-relaxed mt-1">This link will be used for group voice study and resource sharing.</p>
                           </div>
                         </div>
                       </ScrollArea>
@@ -311,26 +355,34 @@ export default function GroupsPage() {
                            </div>
                            <span className="text-[10px] font-bold text-muted-foreground">Discord Enabled</span>
                         </div>
-                        <Button 
-                          onClick={() => handleJoin(group)} 
-                          variant={isRequested ? "secondary" : "default"} 
-                          className={cn(
-                            "rounded-full px-6 font-bold transition-all",
-                            isRequested && "bg-success/10 text-success hover:bg-success/20 border-none"
-                          )}
-                          disabled={isRequested || isButtonLoading}
-                        >
-                          {isButtonLoading ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : isRequested ? (
-                            <>
-                              <CheckCircle2 className="mr-2 h-4 w-4" />
-                              Requested
-                            </>
-                          ) : (
-                            'Request to Join'
-                          )}
-                        </Button>
+                        
+                        {isRequested ? (
+                          <Button 
+                            onClick={() => handleCancelRequest(group.id)} 
+                            variant="secondary" 
+                            className="rounded-full px-6 font-bold bg-success/10 text-success hover:bg-destructive/10 hover:text-destructive border-none transition-all group/btn"
+                            disabled={isButtonLoading}
+                          >
+                            {isButtonLoading ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <CheckCircle2 className="mr-2 h-4 w-4 group-hover/btn:hidden" />
+                                <XCircle className="mr-2 h-4 w-4 hidden group-hover/btn:inline" />
+                                <span className="group-hover/btn:hidden">Requested</span>
+                                <span className="hidden group-hover/btn:inline">Withdraw</span>
+                              </>
+                            )}
+                          </Button>
+                        ) : (
+                          <Button 
+                            onClick={() => handleJoin(group)} 
+                            disabled={isButtonLoading}
+                            className="rounded-full px-6 font-bold"
+                          >
+                            {isButtonLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Request to Join'}
+                          </Button>
+                        )}
                       </CardFooter>
                     </Card>
                   );

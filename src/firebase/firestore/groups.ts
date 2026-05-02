@@ -74,7 +74,15 @@ export async function updateGroup(
 }
 
 export async function sendJoinRequest(db: Firestore, groupId: string, user: { uid: string; displayName: string; photoURL: string }) {
+  // Check if request already exists to prevent duplicates
   const requestsRef = collection(db, 'groups', groupId, 'requests');
+  const q = query(requestsRef, where('userId', '==', user.uid), where('status', '==', 'pending'));
+  const snap = await getDocs(q);
+  
+  if (!snap.empty) {
+    throw new Error("You already have a pending request for this guild.");
+  }
+
   await addDoc(requestsRef, {
     userId: user.uid,
     userName: user.displayName,
@@ -82,6 +90,20 @@ export async function sendJoinRequest(db: Firestore, groupId: string, user: { ui
     status: 'pending',
     createdAt: serverTimestamp(),
   });
+}
+
+export async function cancelJoinRequest(db: Firestore, groupId: string, userId: string) {
+  const requestsRef = collection(db, 'groups', groupId, 'requests');
+  const q = query(requestsRef, where('userId', '==', userId), where('status', '==', 'pending'));
+  const snap = await getDocs(q);
+  
+  if (!snap.empty) {
+    const batch = writeBatch(db);
+    snap.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+    await batch.commit();
+  }
 }
 
 export async function approveRequest(db: Firestore, groupId: string, requestId: string, userId: string) {
