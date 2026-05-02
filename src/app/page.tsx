@@ -1,5 +1,6 @@
 import { Header } from '@/components/landing/Header';
 import { Hero } from '@/components/landing/Hero';
+import { DownloadSection } from '@/components/landing/DownloadSection';
 import { Features } from '@/components/landing/Features';
 import { HowItWorks } from '@/components/landing/HowItWorks';
 import { SocialProof } from '@/components/landing/SocialProof';
@@ -13,6 +14,7 @@ export default function LandingPage() {
         <Header />
         <main className="flex-grow">
           <Hero />
+          <DownloadSection />
           <Features />
           <HowItWorks />
           <SocialProof />
