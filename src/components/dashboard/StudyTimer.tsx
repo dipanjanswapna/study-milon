@@ -15,6 +15,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { Play, Pause, RotateCcw, Clock, ArrowRight, ListTodo, CheckCircle2, Target, Zap, Wifi } from 'lucide-react';
 import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
@@ -45,7 +46,6 @@ export function StudyTimer() {
 
   const incompleteTasks = useMemo(() => {
     if (!rawTasks) return [];
-    // Client-side sorting to avoid index requirement
     return [...rawTasks]
       .filter(t => !t.completed)
       .sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -76,6 +76,14 @@ export function StudyTimer() {
   const progress = useMemo(() => {
     return ((totalSeconds - timeLeft) / totalSeconds) * 100;
   }, [timeLeft, totalSeconds]);
+
+  // Daily Goal Progress Logic
+  const dailyStudyProgress = useMemo(() => {
+    if (!profile) return 0;
+    const current = profile.daily_study_minutes || 0;
+    const goal = profile.daily_goal_minutes || 360;
+    return Math.min(100, (current / goal) * 100);
+  }, [profile]);
 
   const handleReset = useCallback(async () => {
     if (user) {
@@ -288,38 +296,43 @@ export function StudyTimer() {
       </div>
 
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-white/10 pb-4 relative z-10">
-        <div className="space-y-1">
+        <div className="space-y-1 overflow-hidden">
           <div className="flex items-center gap-2">
             <Target className="h-5 w-5 text-blue-200" />
             <CardTitle className="font-headline uppercase text-white">{isBreak ? 'Rest Cycle' : 'Elite Focus'}</CardTitle>
           </div>
-          <CardDescription className="text-blue-100/70 truncate max-w-[200px]">
-            {isBreak ? 'Time to recharge.' : `Active: ${activeTask?.subjectName}`}
+          <CardDescription className="text-blue-100/80 truncate font-bold text-[11px] uppercase tracking-wide">
+            {isBreak ? 'Time to recharge.' : `Active: ${activeTask?.subjectName} | ${activeTask?.chapterName}${activeTask?.note ? ` | ${activeTask.note}` : ''}`}
           </CardDescription>
         </div>
         {isActive && !isBreak && (
-          <div className="flex items-center gap-1.5 bg-red-500/20 px-3 py-1 rounded-full border border-red-500/30 animate-pulse">
+          <div className="flex items-center gap-1.5 bg-red-500/20 px-3 py-1 rounded-full border border-red-500/30 animate-pulse shrink-0">
             <Wifi className="h-3 w-3 text-red-400" />
             <span className="text-[9px] font-black uppercase text-red-400 tracking-widest">LIVE</span>
           </div>
         )}
       </CardHeader>
+
+      {/* Daily Study Goal Progress Line */}
+      <div className="px-6 md:px-8 pt-4 relative z-10">
+        <div className="flex justify-between items-center mb-1.5 text-[9px] font-black uppercase tracking-widest text-blue-100/60">
+           <span>Daily Study Goal Status</span>
+           <span>{Math.round(dailyStudyProgress)}% Secured</span>
+        </div>
+        <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden shadow-inner">
+           <div 
+             className="h-full bg-blue-300 transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(147,197,253,0.5)]" 
+             style={{ width: `${dailyStudyProgress}%` }}
+           />
+        </div>
+      </div>
       
       <CardContent className="flex flex-col items-center justify-center gap-8 py-10 relative z-10">
-        {!isBreak && activeTask && (
-           <div className="text-center space-y-1 px-4">
-              <h2 className="text-2xl md:text-3xl font-black tracking-tighter text-white font-headline uppercase">{activeTask.chapterName}</h2>
-              {activeTask.note && <p className="text-xs text-blue-100/50 italic">"{activeTask.note}"</p>}
-           </div>
-        )}
-
         {/* WATCH STYLE TIMER UI */}
         <div className="relative h-[280px] w-[280px] flex items-center justify-center scale-90 md:scale-100">
-           {/* Dark Outer Face */}
            <div className="absolute inset-0 rounded-full bg-[#444444] shadow-[0_0_40px_rgba(0,0,0,0.5)] border-4 border-[#333333]" />
            
            <svg className="absolute inset-0" viewBox="0 0 300 300">
-              {/* Ticks Logic */}
               <g transform="translate(150, 150)">
                  {Array.from({ length: 180 }).map((_, i) => (
                     <line
@@ -335,7 +348,6 @@ export function StudyTimer() {
                  ))}
               </g>
 
-              {/* Progress Wedge (Purple) */}
               <g transform="translate(150, 150) rotate(-90)">
                  {progress > 0 && (
                    <path
@@ -347,7 +359,6 @@ export function StudyTimer() {
                  )}
               </g>
 
-              {/* Handle (Purple Circle) */}
               <g transform="translate(150, 150)">
                  <circle
                     cx={130 * Math.cos(((progress * 3.6 - 90) * Math.PI) / 180)}
@@ -367,7 +378,6 @@ export function StudyTimer() {
               </g>
            </svg>
 
-           {/* Central Digital Display */}
            <div className="flex flex-col items-center justify-center z-10">
             <span className={cn(
               "text-5xl font-black font-mono tracking-tighter tabular-nums text-white transition-all",
@@ -412,7 +422,6 @@ export function StudyTimer() {
             </Button>
           )}
 
-          {/* Upcoming Tasks Section */}
           {!isBreak && upcomingTasks.length > 0 && (
             <div className="w-full mt-6 space-y-3 pt-6 border-t border-white/10">
               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-100/40 px-1">
@@ -441,7 +450,6 @@ export function StudyTimer() {
   );
 }
 
-// Helper for SVG Arc calculation
 function describeArc(x: number, y: number, radius: number, startAngle: number, endAngle: number) {
   const start = polarToCartesian(x, y, radius, endAngle);
   const end = polarToCartesian(x, y, radius, startAngle);
