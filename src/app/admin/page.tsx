@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useAuth, useFirestore } from '@/firebase';
@@ -16,7 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { BrainCircuit, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -66,7 +67,13 @@ export default function AdminLoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-secondary">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader className="text-center">
-          <BrainCircuit className="mx-auto h-12 w-12 text-primary" />
+          <Image 
+            src="/Screenshot 2026-05-02 103540.png" 
+            alt="Admin Logo" 
+            width={48} 
+            height={48} 
+            className="mx-auto rounded-lg shadow-sm"
+          />
           <CardTitle className="text-2xl mt-4">Admin Panel</CardTitle>
           <CardDescription>
             Log in to the FocusFlow Admin Panel.

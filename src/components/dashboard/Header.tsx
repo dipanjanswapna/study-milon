@@ -9,27 +9,24 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
-  BrainCircuit,
   LogOut,
   User as UserIcon,
   LayoutDashboard,
   BookMarked,
-  Menu
 } from 'lucide-react';
 import { useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useAuth } from '@/firebase';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Skeleton } from '../ui/skeleton';
 import { SidebarTrigger } from '../ui/sidebar';
-import { Button } from '../ui/button';
 
 export function Header() {
   const { user, loading } = useUser();
   const auth = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -51,7 +48,13 @@ export function Header() {
         <SidebarTrigger className="hidden md:flex h-9 w-9 text-muted-foreground hover:text-primary transition-colors" />
         
         <Link href="/dashboard" className="flex items-center gap-2 md:hidden">
-          <BrainCircuit className="h-6 w-6 text-primary" />
+          <Image 
+            src="/Screenshot 2026-05-02 103540.png" 
+            alt="Study Million Logo" 
+            width={24} 
+            height={24} 
+            className="rounded-sm"
+          />
           <h1 className="text-xl font-bold tracking-tight text-foreground font-headline">Study Million</h1>
         </Link>
       </div>

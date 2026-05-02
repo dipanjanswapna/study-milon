@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
@@ -20,7 +21,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { BrainCircuit, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { createUserProfile } from '@/firebase/firestore/users';
 
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -109,7 +110,13 @@ export default function SignupPage() {
     <div className="flex items-center justify-center min-h-screen bg-secondary">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader className="text-center">
-          <BrainCircuit className="mx-auto h-12 w-12 text-primary" />
+          <Image 
+            src="/Screenshot 2026-05-02 103540.png" 
+            alt="Logo" 
+            width={48} 
+            height={48} 
+            className="mx-auto rounded-lg shadow-sm"
+          />
           <CardTitle className="text-2xl mt-4">Create an Account</CardTitle>
           <CardDescription>
             Join FocusFlow and start tracking your progress.

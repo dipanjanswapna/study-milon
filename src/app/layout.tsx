@@ -7,16 +7,31 @@ import { AppSidebar } from '@/components/navigation/AppSidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
 
 export const metadata: Metadata = {
-  title: 'Study Million',
-  description: 'Track your hustle to the first million minutes.',
+  title: 'Study Million | Track Your Academic Hustle',
+  description: 'Join the elite community of students tracking their way to a million study minutes. Set goals, join guilds, and conquer the leaderboard.',
+  keywords: ['study tracking', 'student productivity', 'academic goals', 'study guilds', 'million minutes', 'study timer'],
   manifest: '/manifest.json',
+  metadataBase: new URL('https://study-million.vercel.app'),
+  openGraph: {
+    title: 'Study Million | The Ultimate Study Tracker',
+    description: 'Track your hustle to the first million minutes. Join study guilds and rank globally.',
+    images: ['/Screenshot 2026-05-02 103540.png'],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Study Million | Track Your Hustle',
+    description: 'Transform your study habits and join elite student guilds.',
+    images: ['/Screenshot 2026-05-02 103540.png'],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'Study Million',
   },
-  formatDetection: {
-    telephone: false,
+  icons: {
+    icon: '/Screenshot 2026-05-02 103540.png',
+    apple: '/Screenshot 2026-05-02 103540.png',
   },
 };
 
@@ -46,7 +61,6 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap"
           rel="stylesheet"
         />
-        <link rel="apple-touch-icon" href="https://placehold.co/192x192/3B82F6/white?text=SM" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className="font-body antialiased overflow-hidden">

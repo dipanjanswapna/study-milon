@@ -1,13 +1,12 @@
-
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   User,
   BookMarked,
-  BrainCircuit,
   CalendarCheck,
   Trophy,
   Users2,
@@ -72,7 +71,13 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="hidden md:flex border-r bg-card transition-all duration-300">
       <SidebarHeader className="h-14 flex items-center px-4 border-b overflow-hidden">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <BrainCircuit className="h-6 w-6 text-primary shrink-0" />
+          <Image 
+            src="/Screenshot 2026-05-02 103540.png" 
+            alt="Logo" 
+            width={32} 
+            height={32} 
+            className="shrink-0 rounded-md"
+          />
           {state === 'expanded' && (
             <span className="font-bold text-lg font-headline tracking-tight whitespace-nowrap">
               Study Million

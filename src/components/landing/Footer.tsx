@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { BrainCircuit, Twitter, Instagram, Facebook } from 'lucide-react';
+import Image from 'next/image';
+import { Twitter, Instagram, Facebook } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -8,7 +9,13 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="flex flex-col gap-4">
             <Link href="/" className="flex items-center gap-2">
-              <BrainCircuit className="h-6 w-6 text-primary" />
+              <Image 
+                src="/Screenshot 2026-05-02 103540.png" 
+                alt="Study Million Logo" 
+                width={32} 
+                height={32} 
+                className="rounded-md"
+              />
               <span className="font-bold text-lg font-headline">Study Million</span>
             </Link>
             <p className="text-sm text-muted-foreground">
