@@ -22,16 +22,23 @@ export default function ExamsPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // Initialize audio
+    // The filename contains '#' which is a special character in URLs. 
+    // We must ensure the browser requests it correctly by encoding the filename.
+    const filename = "Eiii tomra kmn acho #exam #helicopter #milon #education #study #ssc26 #sscexam #ssc #tenthclass.mp3";
+    const audioPath = "/" + filename.split('#').join('%23');
+
     if (!audioRef.current) {
-      audioRef.current = new Audio("/Eiii tomra kmn acho #exam #helicopter #milon #education #study #ssc26 #sscexam #ssc #tenthclass.mp3");
+      audioRef.current = new Audio(audioPath);
     }
 
     if (isMusicOn) {
-      audioRef.current.play().catch(err => {
-        console.log("Autoplay blocked by browser. Interaction required.", err);
-        setIsMusicOn(false); // Update UI if blocked
-      });
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          console.log("Autoplay blocked or file not found:", err);
+          setIsMusicOn(false); 
+        });
+      }
     } else {
       audioRef.current.pause();
     }
@@ -71,8 +78,8 @@ export default function ExamsPage() {
                   variant="ghost" 
                   size="icon" 
                   className={cn(
-                    "rounded-full h-12 w-12 transition-all",
-                    isMusicOn ? "bg-primary/10 text-primary hover:bg-primary/20" : "bg-secondary text-muted-foreground"
+                    "rounded-full h-12 w-12 transition-all shadow-lg",
+                    isMusicOn ? "bg-primary text-white hover:bg-primary/90" : "bg-secondary text-muted-foreground"
                   )}
                   onClick={toggleMusic}
                 >
