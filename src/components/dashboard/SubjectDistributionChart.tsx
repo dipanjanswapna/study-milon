@@ -39,16 +39,16 @@ export function SubjectDistributionChart({
 
   if (!data || data.length === 0) {
     return (
-      <div className="h-[300px] flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-[2rem] m-2 bg-secondary/5">
-        <PieChart className="h-10 w-10 opacity-20 mb-2" />
-        <p className="text-[10px] font-black uppercase tracking-widest opacity-40">No Focus Data Recorded</p>
+      <div className="h-[350px] flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-[2rem] m-2 bg-secondary/5">
+        <PieChart className="h-10 w-10 opacity-20 mb-4" />
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">No Focus Data Recorded</p>
       </div>
     );
   }
 
   return (
     <div className="w-full">
-      <ScrollArea className="h-[350px] w-full">
+      <div className="h-[350px] w-full">
         <ChartContainer
           config={chartConfig}
           className="w-full h-full"
@@ -59,9 +59,10 @@ export function SubjectDistributionChart({
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
                     return (
-                      <div className="bg-background border rounded-xl p-3 shadow-2xl">
-                        <p className="text-[10px] font-black uppercase tracking-widest mb-1">{payload[0].name}</p>
-                        <p className="text-lg font-black text-primary">{formatValue(payload[0].value as number)}</p>
+                      <div className="bg-background border-2 border-primary/10 rounded-2xl p-4 shadow-2xl backdrop-blur-xl">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{payload[0].name}</p>
+                        <p className="text-2xl font-black text-primary">{formatValue(payload[0].value as number)}</p>
+                        <p className="text-[9px] font-bold text-success uppercase mt-1">Focus Time Logged</p>
                       </div>
                     );
                   }
@@ -72,23 +73,27 @@ export function SubjectDistributionChart({
                 data={data} 
                 dataKey="value" 
                 nameKey="name" 
-                innerRadius={60} 
-                outerRadius={90} 
-                paddingAngle={8}
+                innerRadius={70} 
+                outerRadius={100} 
+                paddingAngle={10}
                 stroke="none"
               >
                 {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={`hsl(var(--chart-${(index % 5) + 1}))`} className="hover:opacity-80 transition-opacity cursor-pointer" />
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={`hsl(var(--chart-${(index % 5) + 1}))`} 
+                    className="hover:opacity-80 transition-all duration-300 cursor-pointer outline-none" 
+                  />
                 ))}
               </Pie>
               <ChartLegend
                 content={<ChartLegendContent nameKey="name" />}
-                className="flex-wrap pt-4 justify-center gap-x-4 gap-y-2"
+                className="flex-wrap pt-6 justify-center gap-x-6 gap-y-3"
               />
             </PieChart>
           </ResponsiveContainer>
         </ChartContainer>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

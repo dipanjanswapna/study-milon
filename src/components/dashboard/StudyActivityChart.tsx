@@ -24,15 +24,16 @@ const chartConfig = {
 export function StudyActivityChart({ data, showTargetLine, targetValue = 360 }: StudyActivityChartProps) {
   // Determine dynamic width based on data length to enable horizontal scrolling
   // Daily view has 24 bars, weekly 7, monthly 5, yearly 12.
-  const minWidth = data.length > 7 ? data.length * 50 : 0;
+  const barCount = data.length;
+  const minWidth = barCount > 7 ? barCount * 50 : 0;
 
   return (
     <div className="w-full">
       <ScrollArea className="w-full whitespace-nowrap rounded-xl pb-4">
-        <div style={{ minWidth: minWidth || '100%' }} className="h-[300px]">
+        <div style={{ minWidth: minWidth || '100%' }} className="h-[350px]">
           <ChartContainer config={chartConfig} className="w-full h-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data} margin={{ top: 20, right: 20, left: -10, bottom: 20 }}>
+              <BarChart data={data} margin={{ top: 20, right: 30, left: -10, bottom: 20 }}>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--muted)/0.3)" />
                 <XAxis
                   dataKey="date"
@@ -60,14 +61,15 @@ export function StudyActivityChart({ data, showTargetLine, targetValue = 360 }: 
                     y={targetValue} 
                     stroke="hsl(var(--success))" 
                     strokeDasharray="5 5"
-                    label={{ value: 'Goal', position: 'right', fill: 'hsl(var(--success))', fontSize: 10, fontWeight: 900 }}
+                    label={{ value: 'Daily Goal', position: 'right', fill: 'hsl(var(--success))', fontSize: 9, fontWeight: 900 }}
                   />
                 )}
                 <Bar 
                   dataKey="minutes" 
                   fill="var(--color-minutes)" 
-                  radius={[4, 4, 0, 0]} 
-                  barSize={data.length > 12 ? 16 : 32} 
+                  radius={[6, 6, 0, 0]} 
+                  barSize={barCount > 12 ? 14 : 28} 
+                  animationDuration={1500}
                 />
               </BarChart>
             </ResponsiveContainer>
