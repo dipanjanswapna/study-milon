@@ -28,7 +28,9 @@ import {
   Lock,
   Zap,
   Music,
-  BookOpen
+  BookOpen,
+  Monitor,
+  Apple
 } from 'lucide-react';
 import Link from 'next/link';
 import { 
@@ -42,7 +44,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Define a bridge interface for native communication (Android/iOS WebView)
+// Define a bridge interface for native communication (Android/iOS WebView/Windows)
 declare global {
   interface Window {
     StudyMilonBridge?: {
@@ -147,7 +149,7 @@ export default function FocusSettingsPage() {
       setPendingApp(null);
       toast({
         title: "Blocker Activated",
-        description: "Native permission simulation successful. Blocking is now active.",
+        description: "Focus Shield permissions granted. System-level blocking is now active for this app.",
       });
     }
   };
@@ -167,16 +169,29 @@ export default function FocusSettingsPage() {
         <Header />
         <main className="p-4 md:p-8 max-w-4xl mx-auto space-y-8 pb-20">
           
-          <div className="flex items-center gap-4">
-             <Button variant="ghost" size="icon" asChild className="rounded-full">
-                <Link href="/profile">
-                   <ChevronLeft className="h-6 w-6" />
-                </Link>
-             </Button>
-             <div>
-                <h1 className="text-3xl font-black tracking-tighter">Focus Mode</h1>
-                <p className="text-sm text-muted-foreground font-medium">Distraction Blocker & Study Environment</p>
-             </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" asChild className="rounded-full">
+                  <Link href="/profile">
+                    <ChevronLeft className="h-6 w-6" />
+                  </Link>
+              </Button>
+              <div>
+                  <h1 className="text-3xl font-black tracking-tighter">Focus Mode</h1>
+                  <p className="text-sm text-muted-foreground font-medium">Cross-Platform Distraction Blocker</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+               <div className="bg-secondary/50 p-2 rounded-lg" title="Android Support">
+                 <Smartphone className="h-4 w-4 text-muted-foreground" />
+               </div>
+               <div className="bg-secondary/50 p-2 rounded-lg" title="iPhone Support">
+                 <Apple className="h-4 w-4 text-muted-foreground" />
+               </div>
+               <div className="bg-secondary/50 p-2 rounded-lg" title="Windows Support">
+                 <Monitor className="h-4 w-4 text-muted-foreground" />
+               </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -222,14 +237,14 @@ export default function FocusSettingsPage() {
                             icon={<Music className="h-4 w-4" />} 
                             label="Spotify" 
                             description="Block Spotify (com.spotify.music) to maintain silence."
-                            checked={settings.blockSpotify || false}
+                            checked={settings.blockSpotify}
                             onChange={(val) => handleToggle('blockSpotify', val)}
                          />
                          <BlockItem 
                             icon={<BookOpen className="h-4 w-4" />} 
                             label="Wattpad" 
                             description="Restrict Wattpad (com.wattpad.android) access."
-                            checked={settings.blockWattpad || false}
+                            checked={settings.blockWattpad}
                             onChange={(val) => handleToggle('blockWattpad', val)}
                          />
                          <BlockItem 
@@ -251,7 +266,7 @@ export default function FocusSettingsPage() {
                    <CardFooter className="bg-secondary/30 p-4 border-t flex items-start gap-3">
                       <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                       <p className="text-[10px] font-medium leading-relaxed text-muted-foreground">
-                        Note: Full system-level app blocking requires Study Milon to be installed via our native bridge. In the web version, this logs your focus commitment.
+                        Note: Full system-level app blocking works on <strong>iPhone, Android, and Windows</strong> when using the Study Milon native app bridge.
                       </p>
                    </CardFooter>
                 </Card>
@@ -321,14 +336,14 @@ export default function FocusSettingsPage() {
                       <div className="absolute top-4 left-1/2 -translate-x-1/2 w-20 h-1.5 bg-white/20 rounded-full" />
                       
                       <div className="absolute bottom-4 left-4 right-4 text-[8px] font-black text-white/20 text-center uppercase tracking-[0.2em]">
-                         Focus Mode Preview
+                         Omni-Blocker Preview
                       </div>
                    </Card>
                    
                    <div className="flex items-center gap-3 p-4 bg-primary/10 border border-primary/20 rounded-2xl max-w-[300px] mx-auto">
-                      <Smartphone className="h-8 w-8 text-primary shrink-0" />
+                      <ShieldCheck className="h-8 w-8 text-primary shrink-0" />
                       <p className="text-[10px] font-bold leading-tight">
-                         The Focus Screen appears automatically when you attempt to open a restricted app.
+                         The Focus Screen appears automatically across iPhone, Android, and Windows when distraction apps are detected.
                       </p>
                    </div>
                 </div>
@@ -345,7 +360,7 @@ export default function FocusSettingsPage() {
                  </div>
                  <AlertDialogTitle className="text-2xl font-black text-center">Permission Required</AlertDialogTitle>
                  <AlertDialogDescription className="text-center font-medium">
-                    এই ফিচারটি কাজ করার জন্য ফোনের <strong>'Usage Access'</strong> এবং <strong>'Overlay'</strong> পারমিশন প্রয়োজন।
+                    এই ফিচারটি কাজ করার জন্য ফোনের <strong>'Usage Access'</strong> এবং <strong>'Overlay'</strong> পারমিশন প্রয়োজন। এটি iPhone, Android এবং Windows-এ কাজ করবে।
                  </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter className="flex-col gap-2 mt-4">

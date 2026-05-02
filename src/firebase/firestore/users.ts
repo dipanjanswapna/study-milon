@@ -23,9 +23,9 @@ export type FocusSettings = {
   blockYoutubeShorts: boolean;
   restrictMessenger: boolean;
   restrictWhatsapp: boolean;
-  blockSpotify?: boolean;
-  blockWattpad?: boolean;
-  strictMode?: boolean;
+  blockSpotify: boolean;
+  blockWattpad: boolean;
+  strictMode: boolean;
 };
 
 export type UserProfile = {
