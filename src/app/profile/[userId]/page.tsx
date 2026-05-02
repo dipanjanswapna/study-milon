@@ -21,16 +21,28 @@ import {
   BarChart,
   PieChart,
   Target,
-  Wifi
+  Wifi,
+  Activity
 } from 'lucide-react';
-import { format, startOfDay, isAfter, subDays, getISOWeek, subSeconds } from 'date-fns';
+import { 
+  format, 
+  startOfDay, 
+  isAfter, 
+  subDays, 
+  getISOWeek, 
+  subSeconds, 
+  eachDayOfInterval, 
+  isSameMonth, 
+  startOfMonth, 
+  eachMonthOfInterval 
+} from 'date-fns';
 import { StudyActivityChart } from '@/components/dashboard/StudyActivityChart';
 import { SubjectDistributionChart } from '@/components/dashboard/SubjectDistributionChart';
 
 export default function PublicProfilePage() {
   const { userId } = useParams();
   const firestore = useFirestore();
-  const [filter, setFilter] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('weekly');
+  const [filter, setFilter] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
 
   // Fetch Target User Profile
   const userRef = useMemo(() => doc(firestore, 'users', userId as string), [firestore, userId]);
@@ -62,73 +74,128 @@ export default function PublicProfilePage() {
   const { data: sessions, loading: sessionsLoading } = useCollection<any>(sessionsQuery);
 
   const stats = useMemo(() => {
-    if (!sessions) return { chartData: [], subjectData: [], totalMinutes: 0, currentPeriodMins: 0 };
+    if (!sessions) return { chartData: [], subjectData: [], currentPeriodMins: 0, activeSubjects: [] };
 
     const now = new Date();
-    const todayStr = format(now, 'yyyy-MM-dd');
-    const thisWeekStr = `${now.getFullYear()}-W${getISOWeek(now)}`;
-    const thisMonthStr = format(now, 'yyyy-MM');
-
-    let filteredSessions = sessions;
-    let chartDays = 7;
+    let chartData: any[] = [];
+    let filteredSessions: any[] = [];
+    const activeSubjectsSet = new Set<string>();
 
     if (filter === 'daily') {
-      const today = startOfDay(now);
-      filteredSessions = sessions.filter(s => s.createdAt && isAfter(s.createdAt.toDate(), today));
-      chartDays = 1;
-    } else if (filter === 'weekly') {
-      const weekAgo = startOfDay(subDays(now, 6));
-      filteredSessions = sessions.filter(s => s.createdAt && isAfter(s.createdAt.toDate(), weekAgo));
-      chartDays = 7;
-    } else if (filter === 'monthly') {
-      const monthAgo = startOfDay(subDays(now, 29));
-      filteredSessions = sessions.filter(s => s.createdAt && isAfter(s.createdAt.toDate(), monthAgo));
-      chartDays = 30;
-    } else if (filter === 'yearly') {
-      const yearAgo = startOfDay(subDays(now, 364));
-      filteredSessions = sessions.filter(s => s.createdAt && isAfter(s.createdAt.toDate(), yearAgo));
-      chartDays = 14; 
-    }
+      const todayStr = format(now, 'yyyy-MM-dd');
+      const todaySessions = sessions.filter(s => s.date === todayStr);
+      filteredSessions = todaySessions;
 
-    const totalMinutes = sessions.reduce((acc: number, s: any) => acc + (s.duration || 0), 0);
-
-    // Calculate display minutes with Virtual Reset for consistency
-    let currentPeriodMins = 0;
-    if (profile) {
-      if (filter === 'daily') currentPeriodMins = profile.last_study_day === todayStr ? (profile.daily_study_minutes || 0) : 0;
-      else if (filter === 'weekly') currentPeriodMins = profile.last_study_week === thisWeekStr ? (profile.weekly_study_minutes || 0) : 0;
-      else if (filter === 'monthly') currentPeriodMins = profile.last_study_month === thisMonthStr ? (profile.monthly_study_minutes || 0) : 0;
-      else currentPeriodMins = profile.total_study_minutes || 0;
-    }
-
-    // Activity Chart Data (Synced with local keys)
-    const dailyMinutes: Record<string, number> = {};
-    for (const session of sessions) {
-      if (!session.date) continue;
-      dailyMinutes[session.date] = (dailyMinutes[session.date] || 0) + session.duration;
-    }
-
-    const chartData = Array.from({ length: chartDays })
-      .map((_, i) => {
-        const date = subDays(now, i);
-        const dayKey = format(date, 'yyyy-MM-dd');
-        return { 
-          date: filter === 'monthly' || filter === 'yearly' ? format(date, 'd MMM') : format(date, 'E'), 
-          minutes: dailyMinutes[dayKey] || 0 
+      const hourlyData: Record<number, any> = {};
+      for (let i = 0; i < 24; i++) {
+        const dateObj = new Date();
+        dateObj.setHours(i, 0, 0, 0);
+        hourlyData[i] = { 
+          date: format(dateObj, 'h a'), 
+          hour: i 
         };
-      })
-      .reverse();
+      }
 
-    // Subject Breakdown
+      for (const session of todaySessions) {
+        const subName = session.subject || 'Other';
+        activeSubjectsSet.add(subName);
+        if (session.hourlyBreakdown) {
+          Object.entries(session.hourlyBreakdown).forEach(([hr, mins]) => {
+            const h = parseInt(hr);
+            if (hourlyData[h]) {
+              hourlyData[h][subName] = (hourlyData[h][subName] || 0) + (mins as number);
+            }
+          });
+        }
+      }
+      chartData = Object.values(hourlyData);
+    } 
+    else if (filter === 'weekly') {
+      const sevenDaysAgo = startOfDay(subDays(now, 6));
+      const interval = eachDayOfInterval({ start: sevenDaysAgo, end: now });
+      
+      const dailyAgg: Record<string, any> = {};
+      interval.forEach(day => {
+        const key = format(day, 'yyyy-MM-dd');
+        dailyAgg[key] = { date: format(day, 'EEE'), key };
+      });
+
+      filteredSessions = sessions.filter(s => s.date && isAfter(new Date(s.date), subDays(now, 7)));
+      
+      filteredSessions.forEach(s => {
+        if (dailyAgg[s.date]) {
+          const subName = s.subject || 'Other';
+          activeSubjectsSet.add(subName);
+          dailyAgg[s.date][subName] = (dailyAgg[s.date][subName] || 0) + s.duration;
+        }
+      });
+
+      chartData = Object.values(dailyAgg);
+    }
+    else if (filter === 'monthly') {
+      const dailyAgg: Record<string, number> = {};
+      sessions.forEach(s => {
+        if (s.date && isSameMonth(new Date(s.date), now)) {
+          dailyAgg[s.date] = (dailyAgg[s.date] || 0) + s.duration;
+        }
+      });
+
+      const weeks: Record<string, number> = {};
+      Object.entries(dailyAgg).forEach(([dateStr, mins]) => {
+        const date = new Date(dateStr);
+        const weekOfMonth = Math.ceil(date.getDate() / 7);
+        const w = `Week ${weekOfMonth}`;
+        weeks[w] = (weeks[w] || 0) + mins;
+      });
+
+      chartData = ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'].map(w => ({
+        date: w,
+        minutes: weeks[w] || 0
+      }));
+      filteredSessions = sessions.filter(s => s.date && isSameMonth(new Date(s.date), now));
+    }
+    else if (filter === 'yearly') {
+      const createdAt = profile?.createdAt?.toDate() || now;
+      const startOfJoinMonth = startOfMonth(createdAt);
+      const monthsInterval = eachMonthOfInterval({ start: startOfJoinMonth, end: now });
+
+      const monthsAgg: Record<string, any> = {};
+      monthsInterval.forEach(month => {
+        const mKey = format(month, 'MMM yy');
+        monthsAgg[mKey] = { date: mKey };
+      });
+
+      sessions.forEach(s => {
+        if (s.date) {
+          const date = new Date(s.date);
+          const mKey = format(date, 'MMM yy');
+          if (monthsAgg[mKey]) {
+            const subName = s.subject || 'Other';
+            activeSubjectsSet.add(subName);
+            monthsAgg[mKey][subName] = (monthsAgg[mKey][subName] || 0) + s.duration;
+          }
+        }
+      });
+
+      chartData = Object.values(monthsAgg);
+      filteredSessions = sessions;
+    }
+
+    const currentPeriodMins = filteredSessions.reduce((acc, curr) => acc + curr.duration, 0);
+
     const subjectMinutes: Record<string, number> = {};
     for (const session of filteredSessions) {
       const sub = session.subject || 'Other';
       subjectMinutes[sub] = (subjectMinutes[sub] || 0) + session.duration;
     }
-
     const subjectData = Object.entries(subjectMinutes).map(([name, value]) => ({ name, value }));
 
-    return { chartData, subjectData, totalMinutes, currentPeriodMins };
+    return { 
+      chartData, 
+      subjectData, 
+      currentPeriodMins, 
+      activeSubjects: Array.from(activeSubjectsSet) 
+    };
   }, [sessions, filter, profile]);
 
   const formatTime = (minutes: number = 0) => {
@@ -186,11 +253,6 @@ export default function PublicProfilePage() {
                         <Users2 className="h-3 w-3" /> {guild.name}
                       </Badge>
                     )}
-                    {isLive && (
-                      <Badge className="bg-red-600/20 text-red-600 border-none font-black text-[10px] uppercase px-3 animate-pulse">
-                        Studying Now
-                      </Badge>
-                    )}
                   </div>
                   
                   <h1 className="text-3xl md:text-6xl font-black tracking-tighter leading-none">{profile.displayName}</h1>
@@ -233,34 +295,49 @@ export default function PublicProfilePage() {
                </Tabs>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-               
-               {/* Left Column: Activity Chart */}
-               <Card className="lg:col-span-8 rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-black flex items-center gap-2">
-                       <CalendarIcon className="h-5 w-5 text-primary" /> Consistency Tracker
-                    </CardTitle>
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
+               <Card className="md:col-span-6 rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <div>
+                      <CardTitle className="text-xl font-black flex items-center gap-2">
+                        <CalendarIcon className="h-6 w-6 text-primary" /> Consistency Tracker
+                      </CardTitle>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">
+                        {filter === 'daily' ? 'Hourly Session Mapping' : filter === 'yearly' ? 'Full Hustle History' : `Activity Overview for ${filter}`}
+                      </p>
+                    </div>
+                    {filter === 'daily' && isLive && (
+                      <div className="flex items-center gap-2 bg-red-600/10 px-3 py-1.5 rounded-full border border-red-600/20 animate-pulse">
+                         <Activity className="h-3 w-3 text-red-600" />
+                         <span className="text-[8px] font-black uppercase text-red-600 tracking-widest">Live Sync</span>
+                      </div>
+                    )}
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-4 pt-4">
                     {sessionsLoading ? (
-                      <Skeleton className="h-[300px] w-full" />
+                      <Skeleton className="h-[380px] w-full" />
                     ) : (
-                      <StudyActivityChart data={stats.chartData} showTargetLine={filter === 'weekly' || filter === 'daily'} targetValue={profile.daily_goal_minutes || 360} />
+                      <StudyActivityChart 
+                        data={stats.chartData} 
+                        showTargetLine={filter === 'daily' || filter === 'weekly'} 
+                        targetValue={profile.daily_goal_minutes || 360}
+                        scrollable={filter === 'daily' || filter === 'yearly'}
+                        subjects={stats.activeSubjects}
+                      />
                     )}
                   </CardContent>
                </Card>
 
-               {/* Right Column: Distribution */}
-               <Card className="lg:col-span-4 rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
+               <Card className="md:col-span-6 rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
                   <CardHeader>
-                    <CardTitle className="text-lg font-black flex items-center gap-2">
-                       <PieChart className="h-5 w-5 text-primary" /> Focus Areas
+                    <CardTitle className="text-xl font-black flex items-center gap-2">
+                       <PieChart className="h-6 w-6 text-primary" /> Focus Areas
                     </CardTitle>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">Subject-wise Distribution for {filter}</p>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-6 pt-0">
                     {sessionsLoading ? (
-                      <Skeleton className="h-[300px] w-full" />
+                      <Skeleton className="h-[350px] w-full" />
                     ) : (
                       <SubjectDistributionChart data={stats.subjectData} />
                     )}
@@ -268,7 +345,7 @@ export default function PublicProfilePage() {
                </Card>
 
                {/* Summary Stats */}
-               <div className="lg:col-span-12 grid grid-cols-1 sm:grid-cols-3 gap-6">
+               <div className="md:col-span-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
                   <Card className="rounded-[2rem] border-none shadow-lg bg-primary/5 p-6 space-y-2">
                     <p className="text-[10px] font-black uppercase tracking-widest text-primary">Daily Goal</p>
                     <div className="flex items-center justify-between">
@@ -291,7 +368,6 @@ export default function PublicProfilePage() {
                     </div>
                   </Card>
                </div>
-
             </div>
           </div>
         </main>
