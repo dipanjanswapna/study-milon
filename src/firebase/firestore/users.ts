@@ -39,9 +39,13 @@ export type UserProfile = {
   religion?: Religion;
   total_study_minutes?: number;
   daily_study_minutes?: number;
+  weekly_study_minutes?: number;
+  monthly_study_minutes?: number;
   daily_goal_minutes?: number;
   last_active_date?: any;
   last_study_day?: string; // Format: YYYY-MM-DD
+  last_study_week?: string; // Format: YYYY-WW
+  last_study_month?: string; // Format: YYYY-MM
   category?: AcademicCategory;
   batch?: string;
   institution?: string;
@@ -62,7 +66,8 @@ export async function createUserProfile(
   if (!userSnap.exists()) {
     const { uid, email, displayName, photoURL } = user;
     const createdAt = serverTimestamp();
-    const todayStr = new Date().toISOString().split('T')[0];
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
     try {
       await setDoc(userRef, {
         uid,
@@ -71,10 +76,12 @@ export async function createUserProfile(
         photoURL,
         createdAt,
         role: user.uid === SUPER_ADMIN_UID ? 'admin' : 'student',
-        religion: 'Muslim', // Explicit default on creation
+        religion: 'Muslim', 
         total_study_minutes: 0,
         daily_study_minutes: 0,
-        daily_goal_minutes: 360, // Default 6 hours
+        weekly_study_minutes: 0,
+        monthly_study_minutes: 0,
+        daily_goal_minutes: 360, 
         last_active_date: serverTimestamp(),
         last_study_day: todayStr,
         institution: '',
@@ -124,9 +131,6 @@ export async function pinExamToDashboard(db: Firestore, uid: string, examId: str
   await updateDoc(userRef, { pinnedExamId: examId });
 }
 
-/**
- * Deletes a user profile and cleans up group memberships if applicable.
- */
 export async function deleteUserProfile(db: Firestore, userId: string) {
   const userRef = doc(db, 'users', userId);
   const userSnap = await getDoc(userRef);
@@ -136,7 +140,6 @@ export async function deleteUserProfile(db: Firestore, userId: string) {
   const userData = userSnap.data() as UserProfile;
   const batch = writeBatch(db);
 
-  // If user is in a group, remove them from it
   if (userData.groupId) {
     const groupRef = doc(db, 'groups', userData.groupId);
     const groupSnap = await getDoc(groupRef);
@@ -150,8 +153,6 @@ export async function deleteUserProfile(db: Firestore, userId: string) {
     }
   }
 
-  // Delete profile document
   batch.delete(userRef);
-  
   await batch.commit();
 }

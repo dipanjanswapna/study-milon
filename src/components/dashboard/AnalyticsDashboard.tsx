@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -10,7 +11,7 @@ import { SubjectDistributionChart } from './SubjectDistributionChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, PieChart, BarChart, Trophy, Filter, Target } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { subDays, format, isAfter, startOfDay, differenceInDays } from 'date-fns';
+import { subDays, format, isAfter, startOfDay } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 
@@ -21,11 +22,22 @@ export function AnalyticsDashboard() {
   const firestore = useFirestore();
   const [filter, setFilter] = useState<FilterType>('weekly');
 
-  // Fetch user profile for daily goal
   const userRef = useMemo(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
-  const { data: profile } = useDoc<UserProfile>(userRef as any);
+  const { data: profile, loading: profileLoading } = useDoc<UserProfile>(userRef as any);
 
   const dailyGoalMinutes = profile?.daily_goal_minutes || 360;
+
+  // Real-time synchronization fields for insights summary
+  const summaryMinutes = useMemo(() => {
+    if (!profile) return 0;
+    switch (filter) {
+      case 'daily': return profile.daily_study_minutes || 0;
+      case 'weekly': return profile.weekly_study_minutes || 0;
+      case 'monthly': return profile.monthly_study_minutes || 0;
+      case 'yearly': return profile.total_study_minutes || 0;
+      default: return profile.daily_study_minutes || 0;
+    }
+  }, [profile, filter]);
 
   const sessionsQuery = useMemo(() => {
     if (!user) return null;
@@ -35,22 +47,18 @@ export function AnalyticsDashboard() {
     );
   }, [user, firestore]);
 
-  const { data: sessions, loading } = useCollection<StudySession>(sessionsQuery);
+  const { data: sessions, loading: sessionsLoading } = useCollection<StudySession>(sessionsQuery);
 
   const stats = useMemo(() => {
-    if (!sessions) return { totalMinutes: 0, todayMinutes: 0, chartData: [], subjectData: [], subjectList: [] };
+    if (!sessions) return { chartData: [], subjectData: [], subjectList: [] };
 
     const now = new Date();
-    const todayStart = startOfDay(now);
-    
-    const todaySessions = sessions.filter(s => s.createdAt && isAfter(s.createdAt.toDate(), todayStart));
-    const todayMinutes = todaySessions.reduce((acc, s) => acc + s.duration, 0);
-
     let filteredSessions = sessions;
     let chartDays = 7;
 
     if (filter === 'daily') {
-      filteredSessions = todaySessions;
+      const todayStart = startOfDay(now);
+      filteredSessions = sessions.filter(s => s.createdAt && isAfter(s.createdAt.toDate(), todayStart));
       chartDays = 1;
     } else if (filter === 'weekly') {
       const sevenDaysAgo = startOfDay(subDays(now, 6));
@@ -63,18 +71,16 @@ export function AnalyticsDashboard() {
     } else if (filter === 'yearly') {
       const yearAgo = startOfDay(subDays(now, 364));
       filteredSessions = sessions.filter(s => s.createdAt && isAfter(s.createdAt.toDate(), yearAgo));
-      chartDays = 14; // We'll show the last 14 days of activity in the chart for yearly view to keep it readable
+      chartDays = 14; 
     }
 
-    const totalMinutes = sessions.reduce((acc, s) => acc + s.duration, 0);
     const filterTotalMinutes = filteredSessions.reduce((acc, s) => acc + s.duration, 0);
 
-    // Activity Chart Data - Logic depends on filter
+    // Chart logic uses the specific 'date' string for alignment
     const dailyMinutes: Record<string, number> = {};
-    for (const session of filteredSessions) {
-      if (!session.createdAt) continue;
-      const day = format(session.createdAt.toDate(), 'yyyy-MM-dd');
-      dailyMinutes[day] = (dailyMinutes[day] || 0) + session.duration;
+    for (const session of sessions) {
+      if (!session.date) continue;
+      dailyMinutes[session.date] = (dailyMinutes[session.date] || 0) + session.duration;
     }
 
     const chartData = Array.from({ length: chartDays })
@@ -93,10 +99,7 @@ export function AnalyticsDashboard() {
       subjectMinutes[sub] = (subjectMinutes[sub] || 0) + session.duration;
     }
 
-    const subjectData = Object.entries(subjectMinutes).map(([name, value]) => ({
-      name,
-      value,
-    }));
+    const subjectData = Object.entries(subjectMinutes).map(([name, value]) => ({ name, value }));
 
     const subjectList = Object.entries(subjectMinutes)
       .map(([name, minutes]) => ({
@@ -106,7 +109,7 @@ export function AnalyticsDashboard() {
       }))
       .sort((a, b) => b.minutes - a.minutes);
 
-    return { totalMinutes, todayMinutes, chartData, subjectData, subjectList };
+    return { chartData, subjectData, subjectList };
   }, [sessions, filter]);
 
   const formatStudyTime = (minutes: number) => {
@@ -116,10 +119,12 @@ export function AnalyticsDashboard() {
     return `${h}h ${m}m`;
   };
 
-  const dailyGoalProgress = Math.min(100, (stats.todayMinutes / dailyGoalMinutes) * 100);
-  const millionMinutesProgress = (stats.totalMinutes / 1000000) * 100;
+  const todayMinutes = profile?.daily_study_minutes || 0;
+  const dailyGoalProgress = Math.min(100, (todayMinutes / dailyGoalMinutes) * 100);
+  const totalMinutes = profile?.total_study_minutes || 0;
+  const millionMinutesProgress = (totalMinutes / 1000000) * 100;
 
-  if (loading) {
+  if (profileLoading || sessionsLoading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-48" />
@@ -137,24 +142,24 @@ export function AnalyticsDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <BarChart className="h-6 w-6 text-primary" />
-          <h2 className="text-2xl font-bold tracking-tight text-foreground font-headline">Study Analytics</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground font-headline">Hustle Insights</h2>
         </div>
         <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)} className="w-full sm:w-auto">
           <TabsList className="grid w-full grid-cols-4 bg-secondary/50 p-1">
             <TabsTrigger value="daily">Daily</TabsTrigger>
             <TabsTrigger value="weekly">Weekly</TabsTrigger>
             <TabsTrigger value="monthly">Monthly</TabsTrigger>
-            <TabsTrigger value="yearly">Yearly</TabsTrigger>
+            <TabsTrigger value="yearly">Total</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-        {/* Daily Goal Card */}
+        {/* Dynamic Summary Card */}
         <Card className="md:col-span-3 shadow-md border-primary/10 overflow-hidden bg-card group">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-widest">
-              <Target className="h-4 w-4 text-primary" /> Today's Hustle Goal
+              <Target className="h-4 w-4 text-primary" /> {filter} Hustle Tracker
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -162,20 +167,24 @@ export function AnalyticsDashboard() {
               <div className="flex items-baseline justify-between">
                 <div className="flex items-baseline gap-2">
                   <span className="text-4xl font-extrabold text-primary tracking-tighter">
-                    {formatStudyTime(stats.todayMinutes)}
+                    {formatStudyTime(summaryMinutes)}
                   </span>
-                  <span className="text-sm font-medium text-muted-foreground">/ {formatStudyTime(dailyGoalMinutes)}</span>
+                  {filter === 'daily' && (
+                    <span className="text-sm font-medium text-muted-foreground">/ {formatStudyTime(dailyGoalMinutes)}</span>
+                  )}
                 </div>
-                <div className="text-right">
-                  <span className="text-lg font-bold text-primary">{dailyGoalProgress.toFixed(1)}%</span>
-                </div>
+                {filter === 'daily' && (
+                  <div className="text-right">
+                    <span className="text-lg font-bold text-primary">{dailyGoalProgress.toFixed(1)}%</span>
+                  </div>
+                )}
               </div>
-              <Progress value={dailyGoalProgress} className="h-2.5 bg-secondary" />
+              {filter === 'daily' && <Progress value={dailyGoalProgress} className="h-2.5 bg-secondary" />}
             </div>
           </CardContent>
         </Card>
 
-        {/* Total Progress Card */}
+        {/* Million Minute Quest */}
         <Card className="md:col-span-3 shadow-md border-primary/10 overflow-hidden bg-card group">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-widest">
@@ -187,7 +196,7 @@ export function AnalyticsDashboard() {
               <div className="flex items-baseline justify-between">
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-extrabold text-primary tracking-tighter">
-                    {stats.totalMinutes.toLocaleString()}
+                    {totalMinutes.toLocaleString()}
                   </span>
                   <span className="text-xs font-medium text-muted-foreground">mins total</span>
                 </div>
@@ -204,7 +213,7 @@ export function AnalyticsDashboard() {
         <Card className="md:col-span-4 shadow-sm border-none bg-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg font-headline">
-              <Clock className="h-5 w-5 text-primary" /> Study Activity
+              <Clock className="h-5 w-5 text-primary" /> Consistency Tracker
             </CardTitle>
           </CardHeader>
           <CardContent className="px-2">
@@ -212,56 +221,15 @@ export function AnalyticsDashboard() {
           </CardContent>
         </Card>
 
-        {/* Pie Chart Distribution */}
+        {/* Distribution */}
         <Card className="md:col-span-2 shadow-sm border-none bg-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg font-headline">
-              <PieChart className="h-5 w-5 text-primary" /> Distribution
+              <PieChart className="h-5 w-5 text-primary" /> Subject Distribution
             </CardTitle>
           </CardHeader>
           <CardContent className="px-2">
             <SubjectDistributionChart data={stats.subjectData} />
-          </CardContent>
-        </Card>
-
-        {/* Breakdown List */}
-        <Card className="md:col-span-6 shadow-sm border-none bg-card">
-          <CardHeader>
-            <CardTitle className="text-lg font-headline flex items-center gap-2">
-              <Filter className="h-5 w-5 text-primary" /> Subject Breakdown
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {stats.subjectList.length > 0 ? (
-                stats.subjectList.map((item, idx) => (
-                  <div key={item.name} className="p-4 rounded-xl border bg-secondary/30 space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: `hsl(var(--chart-${(idx % 5) + 1}))` }} />
-                        <span className="font-bold text-foreground">{item.name}</span>
-                      </div>
-                      <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
-                        {item.percentage.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-2xl font-black tracking-tight">{formatStudyTime(item.minutes)}</span>
-                    </div>
-                    <Progress 
-                      value={item.percentage} 
-                      className="h-1.5"
-                      style={{ '--progress-background': `hsl(var(--chart-${(idx % 5) + 1}))` } as React.CSSProperties}
-                    />
-                  </div>
-                ))
-              ) : (
-                <div className="col-span-full py-12 text-center text-muted-foreground italic bg-secondary/20 rounded-xl border-dashed border-2">
-                  No study sessions logged for this period.
-                </div>
-              )}
-            </div>
           </CardContent>
         </Card>
       </div>

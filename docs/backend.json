@@ -15,13 +15,19 @@
         "religion": { "type": "string", "enum": ["Muslim", "Hindu"], "default": "Muslim" },
         "total_study_minutes": { "type": "number" },
         "daily_study_minutes": { "type": "number" },
+        "weekly_study_minutes": { "type": "number" },
+        "monthly_study_minutes": { "type": "number" },
         "daily_goal_minutes": { "type": "number" },
-        "last_active_date": { "type": "string", "format": "date" },
+        "last_active_date": { "type": "string", "format": "date-time" },
+        "last_study_day": { "type": "string", "description": "YYYY-MM-DD" },
+        "last_study_week": { "type": "string", "description": "YYYY-WW" },
+        "last_study_month": { "type": "string", "description": "YYYY-MM" },
         "category": { "type": "string", "enum": ["SSC", "HSC", "Admission 1st", "Admission 2nd", "Job Prep", "University"] },
         "batch": { "type": "string" },
         "institution": { "type": "string" },
         "phoneNumber": { "type": "string" },
         "groupId": { "type": "string", "description": "The ID of the group the user belongs to." },
+        "pinnedExamId": { "type": "string", "nullable": true },
         "focusSettings": {
           "type": "object",
           "properties": {
@@ -29,7 +35,10 @@
             "blockInstaReels": { "type": "boolean", "default": false },
             "blockYoutubeShorts": { "type": "boolean", "default": false },
             "restrictMessenger": { "type": "boolean", "default": false },
-            "restrictWhatsapp": { "type": "boolean", "default": false }
+            "restrictWhatsapp": { "type": "boolean", "default": false },
+            "blockSpotify": { "type": "boolean", "default": false },
+            "blockWattpad": { "type": "boolean", "default": false },
+            "strictMode": { "type": "boolean", "default": false }
           }
         }
       },

@@ -13,7 +13,7 @@ import {
   increment,
   Timestamp,
 } from 'firebase/firestore';
-import { format } from 'date-fns';
+import { format, getISOWeek } from 'date-fns';
 
 // Subject CRUD
 export async function addSubject(db: Firestore, userId: string, name: string) {
@@ -130,7 +130,7 @@ export async function updateChapterStatus(
   await updateDoc(chapterRef, updatePayload);
 }
 
-// Auto-saving timer logic
+// Auto-saving timer logic with 12AM reset sync
 export async function logStudyTime(
     db: Firestore,
     userId: string,
@@ -142,9 +142,12 @@ export async function logStudyTime(
     const chapterRef = doc(db, 'users', userId, 'subjects', subjectId, 'chapters', chapterId);
     const subjectRef = doc(db, 'users', userId, 'subjects', subjectId);
     
-    // Always use local date for day-tracking to match client-side analytics
-    const today = new Date();
-    const dateStr = format(today, 'yyyy-MM-dd');
+    // Exact local timing anchors
+    const now = new Date();
+    const dateStr = format(now, 'yyyy-MM-dd');
+    const weekStr = `${now.getFullYear()}-${getISOWeek(now)}`;
+    const monthStr = format(now, 'yyyy-MM');
+
     const sessionDocId = `${dateStr}_${subjectId}`;
     const sessionRef = doc(db, 'users', userId, 'studySessions', sessionDocId);
 
@@ -162,21 +165,24 @@ export async function logStudyTime(
         
         const userData = userSnap.data();
         const lastStudyDay = userData.last_study_day;
+        const lastStudyWeek = userData.last_study_week;
+        const lastStudyMonth = userData.last_study_month;
         
-        let dailyMinutesUpdate;
-        // If the date string has changed, it's a new day: reset the daily counter
-        if (lastStudyDay === dateStr) {
-            dailyMinutesUpdate = increment(minutes);
-        } else {
-            dailyMinutesUpdate = minutes;
-        }
+        // Reset logic for Leaderboard fields
+        const dailyUpdate = lastStudyDay === dateStr ? increment(minutes) : minutes;
+        const weeklyUpdate = lastStudyWeek === weekStr ? increment(minutes) : minutes;
+        const monthlyUpdate = lastStudyMonth === monthStr ? increment(minutes) : minutes;
 
-        // Update user aggregate stats
+        // Update user aggregate stats (Root fields for Leaderboard)
         batch.update(userRef, {
             total_study_minutes: increment(minutes),
-            daily_study_minutes: dailyMinutesUpdate,
+            daily_study_minutes: dailyUpdate,
+            weekly_study_minutes: weeklyUpdate,
+            monthly_study_minutes: monthlyUpdate,
             last_active_date: serverTimestamp(),
-            last_study_day: dateStr // Update study day anchor
+            last_study_day: dateStr,
+            last_study_week: weekStr,
+            last_study_month: monthStr
         });
 
         // Update chapter aggregate time
@@ -184,13 +190,13 @@ export async function logStudyTime(
             time_spent: increment(minutes)
         });
 
-        // Log session for analytics
+        // Log session for Analytics (Consistency Tracker)
         const subjectName = subjectSnap.exists() ? subjectSnap.data().name : 'Unknown';
         batch.set(sessionRef, {
           duration: increment(minutes),
           subject: subjectName,
           subjectId: subjectId,
-          createdAt: serverTimestamp(), // Keep timestamp for accurate chart filtering
+          createdAt: serverTimestamp(),
           date: dateStr
         }, { merge: true });
 

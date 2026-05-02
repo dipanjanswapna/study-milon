@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -58,17 +59,27 @@ export default function LeaderboardPage() {
     fetchGroups();
   }, [firestore]);
 
-  // Fetch top performers
+  // Map filters to correct Firestore field for sorting
+  const getSortField = (filter: TimeFilter) => {
+    switch (filter) {
+      case 'daily': return 'daily_study_minutes';
+      case 'weekly': return 'weekly_study_minutes';
+      case 'monthly': return 'monthly_study_minutes';
+      case 'yearly': return 'total_study_minutes';
+      default: return 'daily_study_minutes';
+    }
+  };
+
   const leaderboardQuery = useMemo(() => {
-    const sortField = timeFilter === 'daily' ? 'daily_study_minutes' : 'total_study_minutes';
+    const field = getSortField(timeFilter);
     return query(
       collection(firestore, 'users'),
-      orderBy(sortField, 'desc'),
+      orderBy(field, 'desc'),
       limit(100)
     );
   }, [firestore, timeFilter]);
 
-  const { data: allRankings, loading } = useCollection(leaderboardQuery);
+  const { data: allRankings, loading } = useCollection<any>(leaderboardQuery);
 
   // Apply filters client-side
   const rankings = useMemo(() => {
@@ -101,14 +112,13 @@ export default function LeaderboardPage() {
         <Header />
         <main className="p-4 md:p-8 max-w-5xl mx-auto space-y-8">
           
-          {/* Header & Filtering Section */}
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-1 text-center md:text-left">
                 <h1 className="text-3xl md:text-4xl font-black tracking-tighter flex items-center justify-center md:justify-start gap-2">
                     <Trophy className="h-8 w-8 text-primary" />
                     Hustle Leaderboard
                 </h1>
-                <p className="text-muted-foreground text-sm font-medium">Ranked by actual study hours. No points, just focus.</p>
+                <p className="text-muted-foreground text-sm font-medium">Ranked by actual study hours. Synchronized with your insights.</p>
             </div>
             
             <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
@@ -165,7 +175,7 @@ export default function LeaderboardPage() {
           ) : rankings && rankings.length > 0 ? (
             <div className="space-y-10">
               
-              {/* Top 3 Podium */}
+              {/* Podium */}
               <div className="grid grid-cols-3 items-end gap-2 md:gap-8 px-0 md:px-10 pt-12 md:pt-16">
                 {/* 2nd Place */}
                 <div className="flex flex-col items-center gap-2 md:gap-4 pb-2 md:pb-4 order-1">
@@ -183,13 +193,8 @@ export default function LeaderboardPage() {
                         </Link>
                         <div className="text-center px-1">
                             <p className="font-black text-[10px] md:text-base truncate max-w-[80px] md:max-w-[120px]">{top3[1].displayName}</p>
-                            {top3[1].groupId && groupMap[top3[1].groupId] && (
-                                <p className="text-[8px] md:text-[9px] font-black text-muted-foreground uppercase flex items-center justify-center gap-1">
-                                    <Users2 className="h-2 w-2" /> {groupMap[top3[1].groupId]}
-                                </p>
-                            )}
                             <p className="text-primary font-black text-[10px] md:text-xs uppercase">
-                                {formatTime(timeFilter === 'daily' ? top3[1].daily_study_minutes : top3[1].total_study_minutes)}
+                                {formatTime(top3[1][getSortField(timeFilter)])}
                             </p>
                         </div>
                     </>
@@ -209,19 +214,11 @@ export default function LeaderboardPage() {
                             <div className="absolute -top-6 md:-top-10 left-1/2 -translate-x-1/2">
                                 <Crown className="h-8 w-8 md:h-12 md:w-12 text-yellow-500 fill-yellow-500 drop-shadow-lg" />
                             </div>
-                            <div className="absolute -bottom-2 -right-2 bg-yellow-400 rounded-full p-2 md:p-3 border-2 border-yellow-600 shadow-lg">
-                                <Trophy className="h-5 w-5 md:h-7 md:w-7 text-white" />
-                            </div>
                         </Link>
                         <div className="text-center px-1">
                             <p className="font-black text-xs md:text-xl truncate max-w-[100px] md:max-w-[150px]">{top3[0].displayName}</p>
-                            {top3[0].groupId && groupMap[top3[0].groupId] && (
-                                <p className="text-[9px] md:text-xs font-black text-muted-foreground uppercase flex items-center justify-center gap-1 mb-1">
-                                    <Users2 className="h-3 w-3" /> {groupMap[top3[0].groupId]}
-                                </p>
-                            )}
                             <Badge className="font-black text-[10px] md:text-sm uppercase bg-yellow-500 hover:bg-yellow-600 px-2 md:px-4 py-0 md:py-1">
-                                {formatTime(timeFilter === 'daily' ? top3[0].daily_study_minutes : top3[0].total_study_minutes)}
+                                {formatTime(top3[0][getSortField(timeFilter)])}
                             </Badge>
                         </div>
                     </>
@@ -244,13 +241,8 @@ export default function LeaderboardPage() {
                         </Link>
                         <div className="text-center px-1">
                             <p className="font-black text-[10px] md:text-base truncate max-w-[80px] md:max-w-[120px]">{top3[2].displayName}</p>
-                            {top3[2].groupId && groupMap[top3[2].groupId] && (
-                                <p className="text-[8px] md:text-[9px] font-black text-muted-foreground uppercase flex items-center justify-center gap-1">
-                                    <Users2 className="h-2 w-2" /> {groupMap[top3[2].groupId]}
-                                </p>
-                            )}
                             <p className="text-primary font-black text-[10px] md:text-xs uppercase">
-                                {formatTime(timeFilter === 'daily' ? top3[2].daily_study_minutes : top3[2].total_study_minutes)}
+                                {formatTime(top3[2][getSortField(timeFilter)])}
                             </p>
                         </div>
                     </>
@@ -263,13 +255,14 @@ export default function LeaderboardPage() {
                 <div className="p-4 md:p-6 bg-secondary/30 border-b flex justify-between items-center">
                     <h3 className="font-black text-[10px] md:text-sm uppercase tracking-widest text-muted-foreground">The Contenders</h3>
                     <div className="text-[9px] md:text-[10px] font-bold text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3" /> Updated Live
+                        <Clock className="h-3 w-3" /> 12AM Sync Active
                     </div>
                 </div>
                 <ScrollArea className="h-[400px] md:h-[600px]">
                     <div className="divide-y">
                         {rankings.map((contender: any, idx) => {
-                            const currentMinutes = timeFilter === 'daily' ? contender.daily_study_minutes : contender.total_study_minutes;
+                            const sortField = getSortField(timeFilter);
+                            const currentMinutes = contender[sortField] || 0;
                             const userGuildName = contender.groupId ? groupMap[contender.groupId] : null;
 
                             return (
@@ -285,17 +278,10 @@ export default function LeaderboardPage() {
                                         <div className="w-6 md:w-10 text-center font-black text-sm md:text-xl text-muted-foreground/60 italic">
                                             {idx + 1}
                                         </div>
-                                        <div className="relative">
-                                            <Avatar className="h-10 w-10 md:h-14 md:w-14 border-2 border-background shadow-sm">
-                                                <AvatarImage src={contender.photoURL || undefined} />
-                                                <AvatarFallback>{getInitials(contender.displayName)}</AvatarFallback>
-                                            </Avatar>
-                                            {idx < 10 && (
-                                                <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-md">
-                                                    <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                                                </div>
-                                            )}
-                                        </div>
+                                        <Avatar className="h-10 w-10 md:h-14 md:w-14 border-2 border-background shadow-sm">
+                                            <AvatarImage src={contender.photoURL || undefined} />
+                                            <AvatarFallback>{getInitials(contender.displayName)}</AvatarFallback>
+                                        </Avatar>
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2">
                                                 <p className="font-bold text-sm md:text-lg truncate group-hover:text-primary transition-colors">{contender.displayName}</p>
@@ -320,7 +306,7 @@ export default function LeaderboardPage() {
                                             <p className="font-black text-sm md:text-2xl tracking-tighter text-primary">
                                                 {formatTime(currentMinutes)}
                                             </p>
-                                            <p className="text-[8px] md:text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Studied</p>
+                                            <p className="text-[8px] md:text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{timeFilter === 'yearly' ? 'Lifetime' : timeFilter} Hustle</p>
                                         </div>
                                         <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
                                     </div>
@@ -330,28 +316,12 @@ export default function LeaderboardPage() {
                     </div>
                 </ScrollArea>
               </div>
-
-              {/* Motivation Banner */}
-              <Card className="bg-primary/5 border-primary/20 rounded-[2rem] overflow-hidden">
-                <CardContent className="p-6 md:p-10 flex flex-col md:flex-row items-center gap-6">
-                    <div className="p-4 bg-primary/10 rounded-full shrink-0">
-                        <Trophy className="h-10 w-10 text-primary" />
-                    </div>
-                    <div className="text-center md:text-left space-y-2">
-                        <h4 className="text-xl md:text-2xl font-black tracking-tight">Focus on the Hustle</h4>
-                        <p className="text-muted-foreground font-medium max-w-2xl">
-                            যখন আপনি দেখবেন আপনার ব্যাচের অন্য কেউ আপনার চেয়ে ২ ঘণ্টা বেশি পড়ছে, তখন আপনার নিজের মধ্যে আরও পড়ার আগ্রহ তৈরি হবে। এটাই আসল সাফল্য।
-                        </p>
-                    </div>
-                </CardContent>
-              </Card>
-
             </div>
           ) : (
             <div className="text-center py-24 bg-secondary/20 rounded-[2rem] border-2 border-dashed">
                 <Clock className="mx-auto h-16 w-16 text-muted-foreground/30 mb-4" />
-                <h3 className="text-2xl font-black">No hustle recorded yet</h3>
-                <p className="text-muted-foreground max-w-md mx-auto mt-2">Start your first study session to climb the global rankings!</p>
+                <h3 className="text-2xl font-black">Waiting for the hustle...</h3>
+                <p className="text-muted-foreground max-w-md mx-auto mt-2">No rankings recorded for this category yet. Be the first to claim the top spot!</p>
             </div>
           )}
         </main>
