@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useFirestore, useCollection, useUser } from '@/firebase';
 import { AdminRoute } from '@/components/auth/AdminRoute';
 import { Header } from '@/components/dashboard/Header';
@@ -38,11 +39,13 @@ import {
   ShieldCheck, 
   Search,
   ExternalLink,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { deleteGroup, type StudyGroup } from '@/firebase/firestore/groups';
+import { deleteUserProfile, SUPER_ADMIN_UID } from '@/firebase/firestore/users';
 
 export default function AdminDashboardPage() {
   const firestore = useFirestore();
@@ -69,12 +72,31 @@ export default function AdminDashboardPage() {
   }, [users, groups]);
 
   const handleDeleteGroup = async (groupId: string, members: string[]) => {
-    if (!confirm('Are you sure you want to disband this guild? This action is permanent.')) return;
+    if (!confirm('Are you sure you want to disband this guild? All members will be removed.')) return;
     
     setLoadingAction(groupId);
     try {
       await deleteGroup(firestore, groupId, members);
       toast({ title: 'Guild Disbanded', description: 'The study guild has been removed from the platform.' });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Error', description: e.message });
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (userId === SUPER_ADMIN_UID) {
+      toast({ variant: 'destructive', title: 'Action Denied', description: 'The Super Admin cannot be deleted.' });
+      return;
+    }
+    
+    if (!confirm(`Are you sure you want to delete ${userName}? This will remove their Firestore profile and guild membership.`)) return;
+
+    setLoadingAction(userId);
+    try {
+      await deleteUserProfile(firestore, userId);
+      toast({ title: 'Student Removed', description: 'The user profile has been successfully deleted.' });
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Error', description: e.message });
     } finally {
@@ -97,14 +119,14 @@ export default function AdminDashboardPage() {
             <div>
               <h1 className="text-3xl font-black tracking-tighter flex items-center gap-2">
                 <ShieldCheck className="h-8 w-8 text-primary" />
-                Admin Command Center
+                Command Center
               </h1>
               <p className="text-muted-foreground font-medium">Global platform oversight and management.</p>
             </div>
             <div className="relative w-full md:w-64">
                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                <Input 
-                 placeholder="Search users..." 
+                 placeholder="Search students..." 
                  className="pl-9 h-10 rounded-xl"
                  value={searchTerm}
                  onChange={(e) => setSearch(e.target.value)}
@@ -168,11 +190,12 @@ export default function AdminDashboardPage() {
                         <TableHead className="font-black text-[10px] uppercase">Academic Info</TableHead>
                         <TableHead className="font-black text-[10px] uppercase text-right">Total Hustle</TableHead>
                         <TableHead className="font-black text-[10px] uppercase">Joined</TableHead>
+                        <TableHead className="font-black text-[10px] uppercase text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {usersLoading ? (
-                        <TableRow><TableCell colSpan={4} className="text-center py-10"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+                        <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
                       ) : filteredUsers?.map((user: any) => (
                         <TableRow key={user.uid} className="hover:bg-secondary/10 transition-colors">
                           <TableCell>
@@ -199,6 +222,17 @@ export default function AdminDashboardPage() {
                           </TableCell>
                           <TableCell className="text-muted-foreground text-xs font-medium">
                             {user.createdAt ? new Date(user.createdAt.toDate()).toLocaleDateString() : 'Unknown'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                             <Button 
+                               variant="ghost" 
+                               size="icon" 
+                               className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-full"
+                               onClick={() => handleDeleteUser(user.uid, user.displayName)}
+                               disabled={loadingAction === user.uid || user.uid === SUPER_ADMIN_UID}
+                             >
+                                {loadingAction === user.uid ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                             </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -255,7 +289,7 @@ export default function AdminDashboardPage() {
                  </div>
                  <h3 className="text-2xl font-black tracking-tighter">Advanced Analytics Engine</h3>
                  <p className="text-muted-foreground max-w-md mx-auto font-medium">
-                    This section will provide deep insights into retention rates, batch-wise performance, and peak study hours as the platform scales.
+                    Deep insights into retention rates, batch-wise performance, and peak study hours as the platform scales.
                  </p>
                  <Button variant="outline" className="rounded-full font-bold px-8">Coming Soon</Button>
               </Card>

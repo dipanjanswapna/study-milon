@@ -4,7 +4,10 @@ import {
   setDoc,
   getDoc,
   updateDoc,
+  deleteDoc,
   serverTimestamp,
+  writeBatch,
+  increment,
   type Firestore,
 } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
@@ -105,4 +108,36 @@ export async function updateUserProfile(
 ) {
   const userRef = doc(db, 'users', uid);
   await updateDoc(userRef, data);
+}
+
+/**
+ * Deletes a user profile and cleans up group memberships if applicable.
+ */
+export async function deleteUserProfile(db: Firestore, userId: string) {
+  const userRef = doc(db, 'users', userId);
+  const userSnap = await getDoc(userRef);
+  
+  if (!userSnap.exists()) return;
+
+  const userData = userSnap.data() as UserProfile;
+  const batch = writeBatch(db);
+
+  // If user is in a group, remove them from it
+  if (userData.groupId) {
+    const groupRef = doc(db, 'groups', userData.groupId);
+    const groupSnap = await getDoc(groupRef);
+    if (groupSnap.exists()) {
+      const groupData = groupSnap.data();
+      const updatedMembers = (groupData.members || []).filter((m: string) => m !== userId);
+      batch.update(groupRef, {
+        members: updatedMembers,
+        memberCount: increment(-1)
+      });
+    }
+  }
+
+  // Delete profile document
+  batch.delete(userRef);
+  
+  await batch.commit();
 }
