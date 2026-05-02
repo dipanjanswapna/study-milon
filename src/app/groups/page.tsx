@@ -44,7 +44,13 @@ import {
   CheckCircle2,
   XCircle
 } from 'lucide-react';
-import { createGroup, sendJoinRequest, cancelJoinRequest, type StudyGroup } from '@/firebase/firestore/groups';
+import { 
+  createGroup, 
+  sendJoinRequest, 
+  cancelJoinRequest, 
+  cleanupExpiredRequests,
+  type StudyGroup 
+} from '@/firebase/firestore/groups';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -77,16 +83,19 @@ export default function GroupsPage() {
     }
   }, [profile?.groupId, router]);
 
-  // Fetch existing requests for this user on load
+  // Fetch existing requests for this user on load and perform cleanup
   useEffect(() => {
     if (!user) return;
     
-    const fetchRequests = async () => {
+    const fetchRequestsAndCleanup = async () => {
       try {
         const groupsSnap = await getDocs(collection(firestore, 'groups'));
         const pendingIds = new Set<string>();
         
         for (const gDoc of groupsSnap.docs) {
+          // Trigger cleanup for this group to handle auto-withdrawals
+          await cleanupExpiredRequests(firestore, gDoc.id);
+
           const reqSnap = await getDocs(query(
             collection(firestore, 'groups', gDoc.id, 'requests'),
             where('userId', '==', user.uid),
@@ -102,7 +111,7 @@ export default function GroupsPage() {
       }
     };
     
-    fetchRequests();
+    fetchRequestsAndCleanup();
   }, [user, firestore]);
 
   // Fetch all groups

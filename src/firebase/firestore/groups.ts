@@ -15,6 +15,7 @@ import {
   increment,
   type Firestore,
 } from 'firebase/firestore';
+import { subDays } from 'date-fns';
 
 export type StudyGroup = {
   id: string;
@@ -38,6 +39,33 @@ export type GroupAnnouncement = {
   content: string;
   createdAt: any;
 };
+
+/**
+ * Cleans up pending requests older than 2 days.
+ */
+export async function cleanupExpiredRequests(db: Firestore, groupId: string) {
+  try {
+    const twoDaysAgo = subDays(new Date(), 2);
+    const requestsRef = collection(db, 'groups', groupId, 'requests');
+    const q = query(
+      requestsRef, 
+      where('status', '==', 'pending'),
+      where('createdAt', '<', twoDaysAgo)
+    );
+    
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      const batch = writeBatch(db);
+      snap.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+      return snap.size;
+    }
+    return 0;
+  } catch (e) {
+    console.error("Error cleaning up expired requests:", e);
+    return 0;
+  }
+}
 
 export async function createGroup(
   db: Firestore,

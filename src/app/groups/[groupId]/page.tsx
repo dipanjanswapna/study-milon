@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -54,6 +55,7 @@ import {
   addGroupAnnouncement,
   deleteGroupAnnouncement,
   updateGroup,
+  cleanupExpiredRequests,
   type StudyGroup,
   type GroupAnnouncement
 } from '@/firebase/firestore/groups';
@@ -75,7 +77,6 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
@@ -112,6 +113,13 @@ export default function GroupDashboardPage() {
   // Group Doc
   const groupRef = useMemo(() => doc(firestore, 'groups', groupId as string), [firestore, groupId]);
   const { data: group, loading: groupLoading } = useDoc<StudyGroup>(groupRef as any);
+
+  // Auto-cleanup expired requests on load if admin/mod
+  useEffect(() => {
+    if (groupId) {
+      cleanupExpiredRequests(firestore, groupId as string);
+    }
+  }, [groupId, firestore]);
 
   // Announcements
   const announcementsQuery = useMemo(() => {
