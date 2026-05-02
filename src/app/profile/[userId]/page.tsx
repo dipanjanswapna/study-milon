@@ -21,9 +21,10 @@ import {
   Calendar as CalendarIcon, 
   BarChart,
   PieChart,
-  Target
+  Target,
+  Wifi
 } from 'lucide-react';
-import { format, startOfDay, isAfter, subDays, getISOWeek } from 'date-fns';
+import { format, startOfDay, isAfter, subDays, getISOWeek, subSeconds } from 'date-fns';
 import { StudyActivityChart } from '@/components/dashboard/StudyActivityChart';
 import { SubjectDistributionChart } from '@/components/dashboard/SubjectDistributionChart';
 
@@ -35,6 +36,18 @@ export default function PublicProfilePage() {
   // Fetch Target User Profile
   const userRef = useMemo(() => doc(firestore, 'users', userId as string), [firestore, userId]);
   const { data: profile, loading: profileLoading } = useDoc<any>(userRef as any);
+
+  // Live status logic
+  const isLive = useMemo(() => {
+    if (!profile) return false;
+    let currentlyStudying = profile.isStudying === true;
+    if (profile.last_active_date) {
+        const lastActive = profile.last_active_date.toDate();
+        const twoMinsAgo = subSeconds(new Date(), 120);
+        currentlyStudying = currentlyStudying && isAfter(lastActive, twoMinsAgo);
+    }
+    return currentlyStudying;
+  }, [profile]);
 
   // Fetch Guild Info if exists
   const guildRef = useMemo(() => profile?.groupId ? doc(firestore, 'groups', profile.groupId) : null, [firestore, profile?.groupId]);
@@ -152,10 +165,17 @@ export default function PublicProfilePage() {
             </div>
             <CardContent className="p-8 md:p-12 relative">
               <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
-                <Avatar className="h-24 w-24 md:h-32 md:w-32 ring-4 ring-primary/20 shadow-2xl">
-                  <AvatarImage src={profile.photoURL || undefined} />
-                  <AvatarFallback className="text-3xl font-black bg-white/10">{profile.displayName?.[0]}</AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className="h-24 w-24 md:h-32 md:w-32 ring-4 ring-primary/20 shadow-2xl">
+                    <AvatarImage src={profile.photoURL || undefined} />
+                    <AvatarFallback className="text-3xl font-black bg-white/10">{profile.displayName?.[0]}</AvatarFallback>
+                  </Avatar>
+                  {isLive && (
+                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-success text-white text-[10px] font-black px-3 py-1 rounded-full animate-pulse flex items-center gap-1.5 shadow-xl border-2 border-[#1A1C3D]">
+                      <Wifi className="h-3 w-3" /> LIVE
+                    </div>
+                  )}
+                </div>
                 
                 <div className="flex-1 text-center md:text-left space-y-4">
                   <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
@@ -165,6 +185,11 @@ export default function PublicProfilePage() {
                     {guild && (
                       <Badge variant="outline" className="border-white/20 text-white font-black text-[10px] uppercase px-3 flex items-center gap-1.5">
                         <Users2 className="h-3 w-3" /> {guild.name}
+                      </Badge>
+                    )}
+                    {isLive && (
+                      <Badge className="bg-success/20 text-success border-none font-black text-[10px] uppercase px-3">
+                        Studying Now
                       </Badge>
                     )}
                   </div>

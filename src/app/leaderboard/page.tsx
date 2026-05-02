@@ -24,12 +24,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Trophy, Medal, Crown, Clock, Users2, ArrowRight } from 'lucide-react';
+import { Trophy, Medal, Crown, Clock, Users2, ArrowRight, Wifi } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { format, getISOWeek } from 'date-fns';
+import { format, getISOWeek, isAfter, subSeconds } from 'date-fns';
 import Link from 'next/link';
 
 type TimeFilter = 'daily' | 'weekly' | 'monthly' | 'yearly';
@@ -102,7 +102,16 @@ export default function LeaderboardPage() {
       if (timeFilter === 'weekly' && u.last_study_week !== thisWeekStr) currentVal = 0;
       if (timeFilter === 'monthly' && u.last_study_month !== thisMonthStr) currentVal = 0;
 
-      return { ...u, displayMinutes: currentVal };
+      // Real-time "Live" Status check
+      // User is LIVE if isStudying is true AND last_active_date was within last 2 minutes
+      let isLive = u.isStudying === true;
+      if (u.last_active_date) {
+         const lastActive = u.last_active_date.toDate();
+         const twoMinsAgo = subSeconds(new Date(), 120);
+         isLive = isLive && isAfter(lastActive, twoMinsAgo);
+      }
+
+      return { ...u, displayMinutes: currentVal, isLive };
     })
     .sort((a, b) => b.displayMinutes - a.displayMinutes)
     .slice(0, 50);
@@ -134,7 +143,7 @@ export default function LeaderboardPage() {
                     <Trophy className="h-8 w-8 text-primary" />
                     Hustle Leaderboard
                 </h1>
-                <p className="text-muted-foreground text-sm font-medium">Ranked by actual study hours. Synchronized with your insights.</p>
+                <p className="text-muted-foreground text-sm font-medium">Ranked by actual study hours. Live updates active.</p>
             </div>
             
             <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
@@ -206,6 +215,9 @@ export default function LeaderboardPage() {
                             <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 bg-slate-200 rounded-full p-1.5 md:p-2 border-2 border-slate-400 shadow-lg">
                                 <Medal className="h-4 w-4 md:h-5 md:w-5 text-slate-500" />
                             </div>
+                            {top3[1].isLive && (
+                              <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-success text-white text-[8px] font-black px-1.5 py-0.5 rounded-full animate-bounce shadow-lg">LIVE</div>
+                            )}
                         </Link>
                         <div className="text-center px-1">
                             <p className="font-black text-[10px] md:text-base truncate max-w-[80px] md:max-w-[120px]">{top3[1].displayName}</p>
@@ -230,6 +242,9 @@ export default function LeaderboardPage() {
                             <div className="absolute -top-6 md:-top-10 left-1/2 -translate-x-1/2">
                                 <Crown className="h-8 w-8 md:h-12 md:w-12 text-yellow-500 fill-yellow-500 drop-shadow-lg" />
                             </div>
+                            {top3[0].isLive && (
+                              <div className="absolute top-0 right-0 bg-success text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-lg z-20">LIVE</div>
+                            )}
                         </Link>
                         <div className="text-center px-1">
                             <p className="font-black text-xs md:text-xl truncate max-w-[100px] md:max-w-[150px]">{top3[0].displayName}</p>
@@ -254,6 +269,9 @@ export default function LeaderboardPage() {
                             <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 bg-amber-500 rounded-full p-1.5 md:p-2 border-2 border-amber-700 shadow-lg">
                                 <Medal className="h-4 w-4 md:h-5 md:w-5 text-amber-900" />
                             </div>
+                            {top3[2].isLive && (
+                              <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-success text-white text-[8px] font-black px-1.5 py-0.5 rounded-full animate-bounce shadow-lg">LIVE</div>
+                            )}
                         </Link>
                         <div className="text-center px-1">
                             <p className="font-black text-[10px] md:text-base truncate max-w-[80px] md:max-w-[120px]">{top3[2].displayName}</p>
@@ -271,7 +289,7 @@ export default function LeaderboardPage() {
                 <div className="p-4 md:p-6 bg-secondary/30 border-b flex justify-between items-center">
                     <h3 className="font-black text-[10px] md:text-sm uppercase tracking-widest text-muted-foreground">The Contenders</h3>
                     <div className="text-[9px] md:text-[10px] font-bold text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3" /> 12AM Sync Active
+                        <Wifi className="h-3 w-3 text-success animate-pulse" /> Live Hustle Tracker Active
                     </div>
                 </div>
                 <ScrollArea className="h-[400px] md:h-[600px]">
@@ -293,15 +311,25 @@ export default function LeaderboardPage() {
                                         <div className="w-6 md:w-10 text-center font-black text-sm md:text-xl text-muted-foreground/60 italic">
                                             {idx + 1}
                                         </div>
-                                        <Avatar className="h-10 w-10 md:h-14 md:w-14 border-2 border-background shadow-sm">
-                                            <AvatarImage src={contender.photoURL || undefined} />
-                                            <AvatarFallback>{getInitials(contender.displayName)}</AvatarFallback>
-                                        </Avatar>
+                                        <div className="relative">
+                                            <Avatar className="h-10 w-10 md:h-14 md:w-14 border-2 border-background shadow-sm">
+                                                <AvatarImage src={contender.photoURL || undefined} />
+                                                <AvatarFallback>{getInitials(contender.displayName)}</AvatarFallback>
+                                            </Avatar>
+                                            {contender.isLive && (
+                                                <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-success rounded-full border-2 border-background flex items-center justify-center">
+                                                    <div className="h-1.5 w-1.5 bg-white rounded-full animate-ping" />
+                                                </div>
+                                            )}
+                                        </div>
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2">
                                                 <p className="font-bold text-sm md:text-lg truncate group-hover:text-primary transition-colors">{contender.displayName}</p>
                                                 {contender.uid === user?.uid && (
                                                     <Badge variant="outline" className="text-[8px] md:text-[9px] h-4 font-black bg-primary/10 text-primary border-primary/20 px-1.5">YOU</Badge>
+                                                )}
+                                                {contender.isLive && (
+                                                    <span className="text-[7px] md:text-[8px] font-black text-success uppercase tracking-widest bg-success/10 px-1.5 py-0.5 rounded border border-success/20">Studying</span>
                                                 )}
                                             </div>
                                             <div className="flex flex-wrap items-center gap-2">

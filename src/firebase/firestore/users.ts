@@ -55,6 +55,7 @@ export type UserProfile = {
   focusSettings?: FocusSettings;
   focusPoints?: number;
   pinnedExamId?: string | null;
+  isStudying?: boolean;
 };
 
 export async function createUserProfile(
@@ -94,6 +95,7 @@ export async function createUserProfile(
         phoneNumber: '',
         focusPoints: 0,
         pinnedExamId: null,
+        isStudying: false,
         focusSettings: {
           blockFbReels: false,
           blockInstaReels: false,

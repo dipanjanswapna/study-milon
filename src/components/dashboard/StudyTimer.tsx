@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { logStudyTime } from '@/firebase/firestore/hierarchy';
+import { updateUserProfile } from '@/firebase/firestore/users';
 import { useToast } from '@/hooks/use-toast';
 import {
   Card,
@@ -14,7 +15,7 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RotateCcw, Coffee, BookOpenCheck, Settings2, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Play, Pause, RotateCcw, Coffee, BookOpenCheck, Settings2, ShieldCheck, ShieldAlert, Wifi } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -100,42 +101,54 @@ export function StudyTimer() {
     }
   }, [searchParams, toast]);
 
-  const handleStart = () => {
-    if (!isActive) {
+  const handleStart = async () => {
+    if (!isActive && user) {
       startTimeRef.current = Date.now();
       baseSecondsRef.current = timeLeft;
       lastLoggedMinuteRef.current = 0;
       setIsActive(true);
+      if (!isBreak) {
+        updateUserProfile(firestore, user.uid, { isStudying: true });
+      }
     }
   };
 
   const handlePause = () => {
-    setIsActive(false);
-    startTimeRef.current = null;
+    if (user) {
+      setIsActive(false);
+      startTimeRef.current = null;
+      updateUserProfile(firestore, user.uid, { isStudying: false });
+    }
   };
 
   const reset = useCallback(() => {
-    setIsActive(false);
-    setIsBreak(false);
-    startTimeRef.current = null;
-    const initialSeconds = workDuration * 60;
-    setTimeLeft(initialSeconds);
-    baseSecondsRef.current = initialSeconds;
-  }, [workDuration]);
+    if (user) {
+      setIsActive(false);
+      setIsBreak(false);
+      startTimeRef.current = null;
+      const initialSeconds = workDuration * 60;
+      setTimeLeft(initialSeconds);
+      baseSecondsRef.current = initialSeconds;
+      updateUserProfile(firestore, user.uid, { isStudying: false });
+    }
+  }, [workDuration, user, firestore]);
 
   const startBreak = useCallback(() => {
-    setIsBreak(true);
-    const breakSeconds = BREAK_MINUTES * 60;
-    setTimeLeft(breakSeconds);
-    baseSecondsRef.current = breakSeconds;
-    startTimeRef.current = Date.now();
-    lastLoggedMinuteRef.current = 0;
-    setIsActive(true);
-    toast({
-        title: "Time for a break!",
-        description: `Take 5 minutes to recharge.`
-    })
-  }, [toast]);
+    if (user) {
+      setIsBreak(true);
+      const breakSeconds = BREAK_MINUTES * 60;
+      setTimeLeft(breakSeconds);
+      baseSecondsRef.current = breakSeconds;
+      startTimeRef.current = Date.now();
+      lastLoggedMinuteRef.current = 0;
+      setIsActive(true);
+      updateUserProfile(firestore, user.uid, { isStudying: false });
+      toast({
+          title: "Time for a break!",
+          description: `Take 5 minutes to recharge.`
+      })
+    }
+  }, [toast, user, firestore]);
 
   const handleMinuteLog = useCallback(async () => {
     if (!user || !selectedSubject || !selectedChapter) return;
@@ -210,12 +223,20 @@ export function StudyTimer() {
           {isBreak ? <Coffee className="text-orange-400" /> : <BookOpenCheck className="text-primary" />}
           <span>{isBreak ? 'Break' : 'Focus Session'}</span>
         </CardTitle>
-        {isFocusModeEnabled && !isBreak && (
-          <div className="flex items-center gap-1.5 bg-success/10 px-2 py-1 rounded-full border border-success/20 animate-pulse">
-             <ShieldCheck className="h-3.5 w-3.5 text-success" />
-             <span className="text-[10px] font-black uppercase text-success tracking-tighter">Protected</span>
-          </div>
-        )}
+        <div className="flex gap-2 items-center">
+            {isActive && !isBreak && (
+              <div className="flex items-center gap-1 bg-primary/20 px-2 py-1 rounded-full border border-primary/20 animate-pulse">
+                <Wifi className="h-3 w-3 text-primary" />
+                <span className="text-[9px] font-black uppercase text-primary tracking-tighter">Live Syncing</span>
+              </div>
+            )}
+            {isFocusModeEnabled && !isBreak && (
+              <div className="flex items-center gap-1.5 bg-success/10 px-2 py-1 rounded-full border border-success/20">
+                 <ShieldCheck className="h-3.5 w-3.5 text-success" />
+                 <span className="text-[10px] font-black uppercase text-success tracking-tighter">Protected</span>
+              </div>
+            )}
+        </div>
       </CardHeader>
       
       <CardContent className="flex flex-col items-center justify-center gap-8 py-10">
