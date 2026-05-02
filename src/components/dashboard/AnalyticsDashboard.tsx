@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -9,7 +10,7 @@ import { SubjectDistributionChart } from './SubjectDistributionChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, PieChart, BarChart, Trophy, Zap, TrendingUp, Calendar, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { subDays, format, isAfter, startOfMonth, eachDayOfInterval, endOfMonth, startOfWeek, endOfWeek, getISOWeek, isSameMonth, parseISO, isSameDay } from 'date-fns';
+import { subDays, format, isAfter, startOfMonth, eachDayOfInterval, isSameMonth } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 
@@ -34,51 +35,61 @@ export function AnalyticsDashboard() {
   const { data: sessions, loading: sessionsLoading } = useCollection<any>(sessionsQuery);
 
   const stats = useMemo(() => {
-    if (!sessions) return { chartData: [], subjectData: [], hustleScore: 0, currentPeriodMins: 0 };
+    if (!sessions) return { chartData: [], subjectData: [], hustleScore: 0, currentPeriodMins: 0, activeSubjects: [] };
 
     const now = new Date();
     let chartData: any[] = [];
     let filteredSessions: any[] = [];
+    const activeSubjectsSet = new Set<string>();
 
     if (filter === 'daily') {
       const todayStr = format(now, 'yyyy-MM-dd');
       const todaySessions = sessions.filter(s => s.date === todayStr);
       filteredSessions = todaySessions;
 
-      const hourlyMins: Record<string, number> = {};
+      // Initialize 24 hour buckets
+      const hourlyData: Record<string, any> = {};
+      for (let i = 0; i < 24; i++) {
+        const displayLabel = i === 0 ? '12 AM' : i < 12 ? `${i} AM` : i === 12 ? '12 PM' : `${i - 12} PM`;
+        hourlyData[i] = { date: displayLabel, hour: i };
+      }
+
       for (const session of todaySessions) {
+        const subName = session.subject || 'Other';
+        activeSubjectsSet.add(subName);
         if (session.hourlyBreakdown) {
           Object.entries(session.hourlyBreakdown).forEach(([hr, mins]) => {
-            hourlyMins[hr] = (hourlyMins[hr] || 0) + (mins as number);
+            const h = parseInt(hr);
+            hourlyData[h][subName] = (hourlyData[h][subName] || 0) + (mins as number);
           });
         }
       }
-
-      // 24-hour breakdown for precision
-      chartData = Array.from({ length: 24 }).map((_, i) => {
-        const h = i.toString();
-        const displayLabel = i === 0 ? '12 AM' : i < 12 ? `${i} AM` : i === 12 ? '12 PM' : `${i - 12} PM`;
-        return { date: displayLabel, minutes: hourlyMins[h] || 0 };
-      });
+      chartData = Object.values(hourlyData);
     } 
     else if (filter === 'weekly') {
       const sevenDaysAgo = subDays(now, 6);
       const interval = eachDayOfInterval({ start: sevenDaysAgo, end: now });
       
-      const dailyAgg: Record<string, number> = {};
-      sessions.forEach(s => {
-        if (s.date) dailyAgg[s.date] = (dailyAgg[s.date] || 0) + s.duration;
+      const dailyAgg: Record<string, any> = {};
+      interval.forEach(day => {
+        const key = format(day, 'yyyy-MM-dd');
+        dailyAgg[key] = { date: format(day, 'EEE'), key };
       });
 
-      chartData = interval.map(day => {
-        const key = format(day, 'yyyy-MM-dd');
-        return { date: format(day, 'EEE'), minutes: dailyAgg[key] || 0 };
-      });
       filteredSessions = sessions.filter(s => s.date && isAfter(new Date(s.date), subDays(now, 7)));
+      
+      filteredSessions.forEach(s => {
+        if (dailyAgg[s.date]) {
+          const subName = s.subject || 'Other';
+          activeSubjectsSet.add(subName);
+          dailyAgg[s.date][subName] = (dailyAgg[s.date][subName] || 0) + s.duration;
+        }
+      });
+
+      chartData = Object.values(dailyAgg);
     }
     else if (filter === 'monthly') {
       const startOfCurrentMonth = startOfMonth(now);
-      
       const dailyAgg: Record<string, number> = {};
       sessions.forEach(s => {
         if (s.date && isSameMonth(new Date(s.date), now)) {
@@ -117,7 +128,7 @@ export function AnalyticsDashboard() {
       filteredSessions = sessions;
     }
 
-    const currentPeriodMins = chartData.reduce((acc, curr) => acc + curr.minutes, 0);
+    const currentPeriodMins = filteredSessions.reduce((acc, curr) => acc + curr.duration, 0);
 
     const subjectMinutes: Record<string, number> = {};
     for (const session of filteredSessions) {
@@ -126,16 +137,20 @@ export function AnalyticsDashboard() {
     }
     const subjectData = Object.entries(subjectMinutes).map(([name, value]) => ({ name, value }));
 
-    // Hustle Score Logic: Consistency * Goal Achievement
-    const last7Days = sessions.filter(s => s.date && isAfter(new Date(s.date), subDays(now, 7)));
-    const uniqueDays = new Set(last7Days.map(s => s.date)).size;
-    const consistencyFactor = (uniqueDays / 7);
-    const todayMins = profile?.daily_study_minutes || 0;
+    // Hustle Score
+    const uniqueDays = new Set(filteredSessions.map(s => s.date)).size;
+    const consistencyFactor = (uniqueDays / Math.max(1, chartData.length));
     const goalMins = profile?.daily_goal_minutes || 360;
-    const volumeFactor = Math.min(1.2, todayMins / goalMins);
+    const volumeFactor = Math.min(1.2, (profile?.daily_study_minutes || 0) / goalMins);
     const hustleScore = Math.round(consistencyFactor * volumeFactor * 100);
 
-    return { chartData, subjectData, hustleScore, currentPeriodMins };
+    return { 
+      chartData, 
+      subjectData, 
+      hustleScore, 
+      currentPeriodMins, 
+      activeSubjects: Array.from(activeSubjectsSet) 
+    };
   }, [sessions, filter, profile]);
 
   const formatStudyTime = (minutes: number) => {
@@ -148,16 +163,8 @@ export function AnalyticsDashboard() {
   if (profileLoading || sessionsLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-           <Skeleton className="h-10 w-48 rounded-xl" />
-           <Skeleton className="h-10 w-32 rounded-xl" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-          <Skeleton className="md:col-span-3 h-48 rounded-[2rem]" />
-          <Skeleton className="md:col-span-3 h-48 rounded-[2rem]" />
-          <Skeleton className="md:col-span-4 h-[400px] rounded-[2rem]" />
-          <Skeleton className="md:col-span-2 h-[400px] rounded-[2rem]" />
-        </div>
+        <Skeleton className="h-[200px] rounded-[2rem]" />
+        <Skeleton className="h-[400px] rounded-[2rem]" />
       </div>
     );
   }
@@ -169,7 +176,7 @@ export function AnalyticsDashboard() {
           <div className="p-2 bg-primary/10 rounded-xl">
             <TrendingUp className="h-5 w-5 text-primary" />
           </div>
-          <h2 className="text-2xl font-black tracking-tight text-foreground font-headline uppercase">Hustle Insights</h2>
+          <h2 className="text-2xl font-black tracking-tight font-headline uppercase">Hustle Insights</h2>
         </div>
         <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)} className="w-full sm:w-auto">
           <TabsList className="grid w-full grid-cols-4 bg-secondary/50 p-1 rounded-xl h-11">
@@ -182,7 +189,7 @@ export function AnalyticsDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-        {/* Total Period Status */}
+        {/* Status Card */}
         <Card className="md:col-span-3 rounded-[2rem] border-none shadow-xl bg-primary text-primary-foreground overflow-hidden group relative">
           <div className="absolute top-0 right-0 p-8 opacity-10">
             <Zap className="h-24 w-24" />
@@ -204,12 +211,11 @@ export function AnalyticsDashboard() {
                  <span>{stats.hustleScore}%</span>
               </div>
               <Progress value={stats.hustleScore} className="h-2 bg-white/20" />
-              <p className="text-[9px] font-bold text-primary-foreground/50 mt-2 uppercase">Based on consistency & goal performance</p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Global Progress */}
+        {/* Quest Card */}
         <Card className="md:col-span-3 rounded-[2rem] border-none shadow-xl bg-card overflow-hidden border">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">
@@ -218,14 +224,14 @@ export function AnalyticsDashboard() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-baseline gap-2">
-              <h3 className="text-4xl font-black tracking-tighter text-foreground">
+              <h3 className="text-4xl font-black tracking-tighter">
                 {(profile?.total_study_minutes || 0).toLocaleString()}
               </h3>
               <span className="text-[10px] font-black text-muted-foreground uppercase">Minutes</span>
             </div>
             <div className="pt-2">
               <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-1.5 text-primary">
-                 <span>Global Rank Progress</span>
+                 <span>Quest Progress</span>
                  <span>{((profile?.total_study_minutes || 0) / 1000000 * 100).toFixed(4)}%</span>
               </div>
               <Progress value={((profile?.total_study_minutes || 0) / 1000000 * 100)} className="h-2 bg-secondary" />
@@ -233,36 +239,36 @@ export function AnalyticsDashboard() {
           </CardContent>
         </Card>
 
-        {/* Consistency Bar Chart (Scrollable) */}
+        {/* Main Chart */}
         <Card className="md:col-span-4 rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle className="text-lg font-black flex items-center gap-2">
                 <BarChart className="h-5 w-5 text-primary" /> Consistency Tracker
               </CardTitle>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Study time distribution</p>
             </div>
             <div className="flex items-center gap-2 bg-secondary/50 px-3 py-1 rounded-full border border-border/50">
-               <span className="text-[8px] font-black uppercase text-muted-foreground">Scroll to view more</span>
                <ChevronRight className="h-2.5 w-2.5 text-muted-foreground animate-pulse" />
+               <span className="text-[8px] font-black uppercase text-muted-foreground">Scroll to explore</span>
             </div>
           </CardHeader>
           <CardContent className="p-4 pt-0">
             <StudyActivityChart 
               data={stats.chartData} 
-              showTargetLine={filter === 'weekly'} 
-              targetValue={profile?.daily_goal_minutes || 360} 
+              showTargetLine={filter === 'daily' || filter === 'weekly'} 
+              targetValue={profile?.daily_goal_minutes || 360}
+              isHourly={filter === 'daily'}
+              subjects={stats.activeSubjects}
             />
           </CardContent>
         </Card>
 
-        {/* Subject Distribution Doughnut */}
+        {/* Distribution Chart */}
         <Card className="md:col-span-2 rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg font-black flex items-center gap-2">
               <PieChart className="h-5 w-5 text-primary" /> Focus Areas
             </CardTitle>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">{filter} Subject Breakdown</p>
           </CardHeader>
           <CardContent className="p-2">
             <SubjectDistributionChart data={stats.subjectData} />
