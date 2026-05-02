@@ -96,13 +96,15 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-secondary">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader className="text-center">
-          <Image 
-            src="/Screenshot 2026-05-02 103540.png" 
-            alt="Logo" 
-            width={48} 
-            height={48} 
-            className="mx-auto rounded-lg shadow-sm"
-          />
+          <Link href="/" className="mx-auto transition-transform hover:scale-105">
+            <Image 
+              src="/Screenshot 2026-05-02 103540.png" 
+              alt="Logo" 
+              width={48} 
+              height={48} 
+              className="rounded-lg shadow-sm"
+            />
+          </Link>
           <CardTitle className="text-2xl mt-4">Welcome Back</CardTitle>
           <CardDescription>
             Log in to your FocusFlow account to continue.
