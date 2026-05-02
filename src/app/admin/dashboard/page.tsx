@@ -47,7 +47,7 @@ import { deleteGroup, type StudyGroup } from '@/firebase/firestore/groups';
 export default function AdminDashboardPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [searchTerm, setSearch) = useState('');
+  const [searchTerm, setSearch] = useState('');
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
   // Fetch Users
