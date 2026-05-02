@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RotateCcw, Coffee, BookOpenCheck, Wifi, Zap, Clock, ArrowRight, ListTodo } from 'lucide-react';
+import { Play, Pause, RotateCcw, Coffee, BookOpenCheck, Wifi, Zap, Clock, ArrowRight, ListTodo, CheckCircle2 } from 'lucide-react';
 import { collection, query, where, doc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -124,6 +124,14 @@ export function StudyTimer() {
         "currentSession.status": "paused",
         "currentSession.startTime": null
       });
+    }
+  };
+
+  const markTaskDone = async () => {
+    if (user && activeTask) {
+       await updateTaskStatus(firestore, user.uid, activeTask.id, true);
+       toast({ title: "Objective Secured!", description: `${activeTask.chapterName} is complete.` });
+       handleReset();
     }
   };
 
@@ -323,18 +331,30 @@ export function StudyTimer() {
           </div>
         </div>
         
-        <div className="flex items-center gap-4 w-full max-w-xs justify-center">
-          <Button 
-            onClick={isActive ? handlePause : handleStart} 
-            size="lg" 
-            className="flex-1 h-14 text-base font-black rounded-2xl shadow-xl shadow-red-600/10 active:scale-95 bg-red-600 hover:bg-red-700" 
-          >
-            {isActive ? <Pause className="mr-2 h-5 w-5" /> : <Play className="mr-2 h-5 w-5 fill-current" />}
-            {isActive ? 'Pause' : 'Engage'}
-          </Button>
-          <Button onClick={handleReset} variant="ghost" size="icon" className="h-14 w-14 rounded-2xl bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all">
-            <RotateCcw className="h-6 w-6" />
-          </Button>
+        <div className="flex flex-col gap-4 w-full max-w-xs">
+          <div className="flex items-center gap-4">
+            <Button 
+              onClick={isActive ? handlePause : handleStart} 
+              size="lg" 
+              className="flex-1 h-14 text-base font-black rounded-2xl shadow-xl shadow-red-600/10 active:scale-95 bg-red-600 hover:bg-red-700" 
+            >
+              {isActive ? <Pause className="mr-2 h-5 w-5" /> : <Play className="mr-2 h-5 w-5 fill-current" />}
+              {isActive ? 'Pause' : 'Engage'}
+            </Button>
+            <Button onClick={handleReset} variant="ghost" size="icon" className="h-14 w-14 rounded-2xl bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all">
+              <RotateCcw className="h-6 w-6" />
+            </Button>
+          </div>
+          
+          {!isBreak && activeTask && (
+            <Button 
+              variant="outline" 
+              className="h-12 rounded-xl font-bold border-primary/20 text-primary hover:bg-primary/10"
+              onClick={markTaskDone}
+            >
+              <CheckCircle2 className="mr-2 h-4 w-4" /> Mark Objective Done
+            </Button>
+          )}
         </div>
       </CardContent>
 
