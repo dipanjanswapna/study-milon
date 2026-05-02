@@ -29,7 +29,7 @@ import { cn } from '@/lib/utils';
 
 const BREAK_MINUTES = 5;
 
-// 1 second of silent audio to keep the browser process alive on mobile
+// 1 second of silent audio to keep the browser process alive on mobile devices
 const SILENT_AUDIO_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
 
 export function StudyTimer() {
@@ -38,27 +38,27 @@ export function StudyTimer() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
 
-  // Profile data for session recovery
+  // Profile data for session recovery from cloud
   const userRef = useMemo(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: profile } = useDoc<any>(userRef as any);
 
-  const [workDuration, setWorkDuration] = useState(25);
+  const [workDuration, setWorkDuration] = useState(25); // in minutes
   const [timeLeft, setTimeLeft] = useState(workDuration * 60);
   const [isActive, setIsActive] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<string | null>(null);
 
-  // Separate inputs for H:M
+  // Input states for Hours:Minutes selection
   const [inputHours, setInputHours] = useState('0');
   const [inputMinutes, setInputMinutes] = useState('25');
 
-  // Background Audio Ref
+  // Background Persistence Refs
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastLoggedMinuteRef = useRef<number>(0);
   const initializedFromCloud = useRef(false);
 
-  // Fetch subjects for dropdowns
+  // Fetch subjects for selection
   const subjectsQuery = useMemo(() => {
     if (!user) return null;
     return query(collection(firestore, 'users', user.uid, 'subjects'), orderBy('createdAt', 'asc'));
@@ -71,24 +71,26 @@ export function StudyTimer() {
   }, [user, firestore, selectedSubject]);
   const { data: chapters, loading: chaptersLoading } = useCollection(chaptersQuery);
 
-  // SETUP MEDIA SESSION & AUDIO
+  // INITIALIZE BACKGROUND SERVICE
   useEffect(() => {
+    // Setup silent audio for background persistence
     audioRef.current = new Audio(SILENT_AUDIO_URI);
     audioRef.current.loop = true;
 
+    // Media Session API - keeps the notification visible and process alive on mobile
     if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: 'Focus Session Active',
         artist: 'Study Milon',
-        album: 'Academic Hustle',
+        album: 'The Million Minute Quest',
         artwork: [
-          { src: '/Screenshot 2026-05-02 103540.png', sizes: '512x512', type: 'image/png' }
+          { src: 'https://picsum.photos/seed/focus/512/512', sizes: '512x512', type: 'image/png' }
         ]
       });
     }
   }, []);
 
-  // 1. Session Recovery
+  // 1. SESSION RECOVERY (THE UNSTOPPABLE LOGIC)
   useEffect(() => {
     if (profile?.currentSession && !initializedFromCloud.current) {
       const { startTime, duration, status, subjectId, chapterId, isBreak: cloudIsBreak } = profile.currentSession;
@@ -100,6 +102,7 @@ export function StudyTimer() {
         const calculatedTimeLeft = Math.max(0, totalSessionSeconds - elapsedSeconds);
 
         if (calculatedTimeLeft > 0) {
+          // Resume active session
           setTimeLeft(calculatedTimeLeft);
           setWorkDuration(duration);
           setInputHours(Math.floor(duration / 60).toString());
@@ -113,24 +116,25 @@ export function StudyTimer() {
           audioRef.current?.play().catch(() => {});
           
           toast({ 
-            title: "Hustle Resumed!", 
-            description: "Your session was restored from the cloud timestamp." 
+            title: "Hustle Recovered", 
+            description: "Synchronized with your global study clock." 
           });
         } else {
+          // Session expired while user was away
           handleReset();
         }
-      } else {
-        const d = duration || 25;
-        setWorkDuration(d);
-        setTimeLeft(d * 60);
-        setInputHours(Math.floor(d / 60).toString());
-        setInputMinutes((d % 60).toString());
+      } else if (duration) {
+        // Just restore preference
+        setWorkDuration(duration);
+        setTimeLeft(duration * 60);
+        setInputHours(Math.floor(duration / 60).toString());
+        setInputMinutes((duration % 60).toString());
       }
       initializedFromCloud.current = true;
     }
-  }, [profile?.currentSession, toast]);
+  }, [profile?.currentSession]);
 
-  // 2. Search Params Handling
+  // 2. SEARCH PARAM HANDLING (FROM PLANNER)
   useEffect(() => {
     const subId = searchParams.get('subjectId');
     const chapId = searchParams.get('chapterId');
@@ -155,6 +159,7 @@ export function StudyTimer() {
       setIsActive(true);
       lastLoggedMinuteRef.current = 0;
       
+      // Keep mobile browser awake
       audioRef.current?.play().catch(() => {});
       
       const newSession: CurrentSession = {
@@ -166,6 +171,7 @@ export function StudyTimer() {
         isBreak: false
       };
       
+      // Atomic cloud update
       await updateUserProfile(firestore, user.uid, { 
         currentSession: newSession as any, 
         isStudying: true,
@@ -231,7 +237,7 @@ export function StudyTimer() {
         } as any
       });
       
-      toast({ title: "Rest Mode Active", description: `Take 5 minutes to recharge your focus.` });
+      toast({ title: "Rest Cycle Started", description: "Take 5 minutes to recharge." });
     }
   }, [user, workDuration, selectedSubject, selectedChapter, firestore, toast]);
 
@@ -240,11 +246,11 @@ export function StudyTimer() {
     try {
         await logStudyTime(firestore, user.uid, selectedSubject, selectedChapter, 1);
     } catch (error) {
-        // Silent catch for offline capability
+        // Offline capability ensures this syncs when back online
     }
   }, [user, firestore, selectedSubject, selectedChapter, isBreak]);
 
-  // 3. THE UNSTOPPABLE ENGINE
+  // 3. THE UNSTOPPABLE CLOCK ENGINE
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
@@ -258,6 +264,7 @@ export function StudyTimer() {
         
         setTimeLeft(newTimeLeft);
 
+        // Atomic 1-minute logger
         if (!isBreak) {
           const currentElapsedMinutes = Math.floor(elapsedSeconds / 60);
           if (currentElapsedMinutes > lastLoggedMinuteRef.current) {
@@ -266,6 +273,7 @@ export function StudyTimer() {
           }
         }
 
+        // Live status heartbeat
         if (elapsedSeconds % 30 === 0 && !isBreak) {
           updateUserProfile(firestore, user!.uid, { last_active_date: serverTimestamp() });
         }
@@ -308,22 +316,22 @@ export function StudyTimer() {
   const canStart = !!selectedSubject && !!selectedChapter;
 
   return (
-    <Card className="w-full shadow-2xl bg-slate-900 text-white border-none overflow-hidden relative">
+    <Card className="w-full shadow-2xl bg-[#0F1117] text-white border-none overflow-hidden relative">
       {isActive && (
         <div className={cn(
-          "absolute inset-0 opacity-10 animate-pulse pointer-events-none",
+          "absolute inset-0 opacity-5 animate-pulse pointer-events-none",
           isBreak ? "bg-orange-500" : "bg-primary"
         )} />
       )}
 
-      <CardHeader className="bg-slate-800/50 pb-4 flex flex-row items-center justify-between relative z-10">
+      <CardHeader className="bg-white/5 pb-4 flex flex-row items-center justify-between relative z-10">
         <CardTitle className="flex items-center gap-2 text-xl font-headline">
           {isBreak ? <Coffee className="text-orange-400" /> : <BookOpenCheck className="text-primary" />}
-          <span className="tracking-tight">{isBreak ? 'Break Time' : 'Focus Session'}</span>
+          <span className="tracking-tight">{isBreak ? 'Rest Cycle' : 'Focus Session'}</span>
         </CardTitle>
         <div className="flex gap-2 items-center">
             {isActive && !isBreak && (
-              <div className="flex items-center gap-1.5 bg-primary/20 px-3 py-1 rounded-full border border-primary/20 animate-pulse shadow-lg shadow-primary/10">
+              <div className="flex items-center gap-1.5 bg-primary/20 px-3 py-1 rounded-full border border-primary/20 animate-pulse shadow-lg">
                 <Wifi className="h-3 w-3 text-primary" />
                 <span className="text-[9px] font-black uppercase text-primary tracking-widest">LIVE SYNCING</span>
               </div>
@@ -331,28 +339,22 @@ export function StudyTimer() {
             {isBreak && (
                <div className="flex items-center gap-1.5 bg-orange-500/20 px-3 py-1 rounded-full border border-orange-500/20 shadow-lg">
                   <Zap className="h-3 w-3 text-orange-400" />
-                  <span className="text-[9px] font-black uppercase text-orange-400 tracking-widest">RESTING</span>
+                  <span className="text-[9px] font-black uppercase text-orange-400 tracking-widest">BREAK ACTIVE</span>
                </div>
             )}
         </div>
       </CardHeader>
       
       <CardContent className="flex flex-col items-center justify-center gap-8 py-10 relative z-10">
-        <div className="relative h-60 w-60 md:h-72 md:w-72">
+        {/* Circular Progress Engine */}
+        <div className="relative h-64 w-64 md:h-80 md:w-80">
           <svg className="h-full w-full" viewBox="0 0 100 100">
-            <defs>
-              <linearGradient id="timerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="hsl(var(--primary))" />
-                <stop offset="100%" stopColor="#6366f1" />
-              </linearGradient>
-            </defs>
-            <circle className="stroke-current text-slate-800" strokeWidth="6" cx="50" cy="50" r="44" fill="transparent"/>
+            <circle className="stroke-current text-white/5" strokeWidth="6" cx="50" cy="50" r="44" fill="transparent"/>
             <circle
               className={cn(
                 "stroke-current transition-all duration-1000 ease-linear",
-                isBreak ? "text-orange-400" : ""
+                isBreak ? "text-orange-400" : "text-primary"
               )}
-              style={!isBreak ? { stroke: 'url(#timerGradient)' } : {}}
               strokeWidth="6" cx="50" cy="50" r="44" fill="transparent"
               strokeDasharray="276.46"
               strokeDashoffset={`${276.46 - (276.46 * progress) / 100}`}
@@ -361,11 +363,11 @@ export function StudyTimer() {
           </svg>
           
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-6xl md:text-7xl font-black font-mono tracking-tighter tabular-nums drop-shadow-xl">
+            <span className="text-6xl md:text-8xl font-black font-mono tracking-tighter tabular-nums drop-shadow-2xl">
               {String(minutesDisplay).padStart(2, '0')}:{String(secondsDisplay).padStart(2, '0')}
             </span>
             {isActive && !isBreak && (
-              <span className="text-[10px] font-black uppercase text-primary mt-4 flex items-center gap-2 tracking-[0.2em] bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+              <span className="text-[10px] font-black uppercase text-primary mt-4 flex items-center gap-2 tracking-[0.3em] bg-primary/10 px-4 py-1 rounded-full border border-primary/20">
                 <ShieldCheck className="h-3 w-3" /> UNSTOPPABLE
               </span>
             )}
@@ -376,41 +378,42 @@ export function StudyTimer() {
           <Button 
             onClick={isActive ? handlePause : handleStart} 
             size="lg" 
-            className="w-44 h-14 text-xl font-black rounded-2xl shadow-2xl shadow-primary/20 transition-all active:scale-95" 
+            className="w-48 h-16 text-xl font-black rounded-3xl shadow-2xl shadow-primary/20 transition-all active:scale-95" 
             disabled={!canStart && !isActive}
           >
-            {isActive ? <Pause className="mr-2 h-6 w-6" /> : <Play className="mr-2 h-6 w-6 fill-current" />}
-            {isActive ? 'Pause' : 'Start Focus'}
+            {isActive ? <Pause className="mr-2 h-7 w-7" /> : <Play className="mr-2 h-7 w-7 fill-current" />}
+            {isActive ? 'PAUSE' : 'START FOCUS'}
           </Button>
-          <Button onClick={handleReset} variant="ghost" size="icon" className="h-14 w-14 rounded-2xl bg-white/5 hover:bg-slate-800 text-white/40 hover:text-white transition-all">
-            <RotateCcw className="h-7 w-7" />
+          <Button onClick={handleReset} variant="ghost" size="icon" className="h-16 w-16 rounded-3xl bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all">
+            <RotateCcw className="h-8 w-8" />
           </Button>
         </div>
       </CardContent>
 
-      <CardFooter className="flex-col items-start gap-6 p-6 md:p-10 bg-slate-800/40 border-t border-slate-700/50 relative z-10">
+      <CardFooter className="flex-col items-start gap-6 p-6 md:p-10 bg-white/[0.02] border-t border-white/5 relative z-10">
+        {/* Academic Context Selection */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
             <div className="space-y-2">
-                <Label className="text-slate-400 text-[10px] font-black uppercase tracking-widest px-1">Subject</Label>
+                <Label className="text-white/40 text-[10px] font-black uppercase tracking-widest px-1">Active Subject</Label>
                 <Select value={selectedSubject || ''} onValueChange={(value) => {setSelectedSubject(value); setSelectedChapter(null);}} disabled={isActive}>
-                    <SelectTrigger className="bg-slate-800/80 border-slate-700 text-white h-12 rounded-xl focus:ring-primary/50">
-                        <SelectValue placeholder="Choose Subject" />
+                    <SelectTrigger className="bg-white/5 border-white/10 text-white h-14 rounded-2xl focus:ring-primary/50">
+                        <SelectValue placeholder="Select Subject" />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-700 text-white rounded-xl">
-                        {subjectsLoading ? <SelectItem value="loading" disabled>Loading...</SelectItem> : 
+                    <SelectContent className="bg-[#1A1C23] border-white/10 text-white rounded-2xl">
+                        {subjectsLoading ? <SelectItem value="loading" disabled>Syncing Roadmap...</SelectItem> : 
                             subjects?.map(subject => <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>)
                         }
                     </SelectContent>
                 </Select>
             </div>
             <div className="space-y-2">
-                <Label className="text-slate-400 text-[10px] font-black uppercase tracking-widest px-1">Chapter</Label>
+                <Label className="text-white/40 text-[10px] font-black uppercase tracking-widest px-1">Specific Chapter</Label>
                  <Select onValueChange={setSelectedChapter} value={selectedChapter || ''} disabled={!selectedSubject || isActive || chaptersLoading}>
-                    <SelectTrigger className="bg-slate-800/80 border-slate-700 text-white h-12 rounded-xl focus:ring-primary/50">
-                        <SelectValue placeholder="Choose Chapter" />
+                    <SelectTrigger className="bg-white/5 border-white/10 text-white h-14 rounded-2xl focus:ring-primary/50">
+                        <SelectValue placeholder="Select Chapter" />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-700 text-white rounded-xl">
-                        {chaptersLoading ? <SelectItem value="loading" disabled>Loading...</SelectItem> :
+                    <SelectContent className="bg-[#1A1C23] border-white/10 text-white rounded-2xl">
+                        {chaptersLoading ? <SelectItem value="loading" disabled>Loading Syllabus...</SelectItem> :
                             chapters?.map(chapter => <SelectItem key={chapter.id} value={chapter.id}>{chapter.name}</SelectItem>)
                         }
                     </SelectContent>
@@ -418,14 +421,18 @@ export function StudyTimer() {
             </div>
         </div>
 
-        <div className="space-y-4 w-full pt-2">
+        {/* Custom Duration Inputs */}
+        <div className="space-y-4 w-full pt-4">
           <div className="flex items-center justify-between px-1">
-            <Label className="text-slate-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+            <Label className="text-white/40 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
               <Settings2 className="h-4 w-4 text-primary" /> Session Duration
             </Label>
-            <span className="text-xs font-black font-mono text-primary bg-primary/10 px-2 py-0.5 rounded">
-              {Math.floor(workDuration / 60)}h {workDuration % 60}m
-            </span>
+            <div className="flex items-center gap-2 bg-primary/10 px-3 py-1 rounded-full border border-primary/10">
+               <Clock className="h-3 w-3 text-primary" />
+               <span className="text-xs font-black font-mono text-primary">
+                 {Math.floor(workDuration / 60)}h {workDuration % 60}m
+               </span>
+            </div>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
@@ -438,9 +445,9 @@ export function StudyTimer() {
                   value={inputHours} 
                   onChange={(e) => handleDurationChange(e.target.value, inputMinutes)}
                   disabled={isActive}
-                  className="bg-slate-800/80 border-slate-700 text-white h-11 rounded-xl pr-10"
+                  className="bg-white/5 border-white/10 text-white h-14 rounded-2xl pr-12 text-lg font-bold"
                 />
-                <span className="absolute right-3 top-3 text-[10px] font-black text-slate-500 uppercase">Hours</span>
+                <span className="absolute right-4 top-4.5 text-[9px] font-black text-white/20 uppercase">HRS</span>
               </div>
             </div>
             <div className="space-y-1.5">
@@ -452,23 +459,24 @@ export function StudyTimer() {
                   value={inputMinutes} 
                   onChange={(e) => handleDurationChange(inputHours, e.target.value)}
                   disabled={isActive}
-                  className="bg-slate-800/80 border-slate-700 text-white h-11 rounded-xl pr-10"
+                  className="bg-white/5 border-white/10 text-white h-14 rounded-2xl pr-12 text-lg font-bold"
                 />
-                <span className="absolute right-3 top-3 text-[10px] font-black text-slate-500 uppercase">Mins</span>
+                <span className="absolute right-4 top-4.5 text-[9px] font-black text-white/20 uppercase">MIN</span>
               </div>
             </div>
           </div>
-          <p className="text-[10px] text-slate-500 font-medium px-1 flex items-center gap-1">
-            <Clock className="h-3 w-3" /> Total study session: {workDuration} minutes
+          <p className="text-[10px] text-white/20 font-bold px-1 text-center italic">
+            "You manually reset the session, but the cloud remembers your hustle."
           </p>
         </div>
       </CardFooter>
 
-      <div className="p-3 bg-primary/5 border-t border-white/5 text-center">
-         <p className="text-[8px] font-bold text-white/30 uppercase tracking-[0.3em]">
-            Root-Level Architecture • Unix Timestamp Verified • Study Milon
+      <div className="p-4 bg-white/[0.01] border-t border-white/5 text-center">
+         <p className="text-[7px] font-black text-white/10 uppercase tracking-[0.4em]">
+            ROOT SYSTEM ACTIVE • ENCRYPTED CLOCK • STUDY MILON PROTOCOL
          </p>
       </div>
     </Card>
   );
 }
+
