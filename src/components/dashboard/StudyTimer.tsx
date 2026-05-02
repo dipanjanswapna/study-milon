@@ -16,7 +16,6 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Play, Pause, RotateCcw, Clock, ArrowRight, ListTodo, CheckCircle2, Target, Zap, Wifi } from 'lucide-react';
 import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
@@ -24,6 +23,7 @@ import { format } from 'date-fns';
 
 const BREAK_MINUTES = 5;
 const SILENT_AUDIO_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
+const ALARM_AUDIO_PATH = "/WhatsApp Audio 2026-05-02 at 4.38.00 PM";
 
 export function StudyTimer() {
   const { user } = useUser();
@@ -60,6 +60,7 @@ export function StudyTimer() {
   const [isBreak, setIsBreak] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const alarmRef = useRef<HTMLAudioElement | null>(null);
   const lastLoggedMinuteRef = useRef<number>(0);
   const initializedFromCloud = useRef(false);
 
@@ -78,7 +79,6 @@ export function StudyTimer() {
     return ((totalSeconds - timeLeft) / totalSeconds) * 100;
   }, [timeLeft, totalSeconds]);
 
-  // Dynamic Daily Goal Progress Logic
   const dailyStudyProgress = useMemo(() => {
     if (!profile) return 0;
     const current = profile.daily_study_minutes || 0;
@@ -109,6 +109,13 @@ export function StudyTimer() {
       });
     }
   }, [activeTask, user, firestore]);
+
+  const playAlarm = useCallback(() => {
+    if (alarmRef.current) {
+      alarmRef.current.currentTime = 0;
+      alarmRef.current.play().catch(e => console.error("Alarm play error:", e));
+    }
+  }, []);
 
   const handleStart = async () => {
     if (!isActive && user && activeTask) {
@@ -156,6 +163,7 @@ export function StudyTimer() {
 
   const startBreak = useCallback(async () => {
     if (user && activeTask) {
+      playAlarm();
       await updateTaskStatus(firestore, user.uid, activeTask.id, true);
       toast({ title: "Objective Secured!", description: `${activeTask.chapterName} is complete.` });
 
@@ -178,7 +186,7 @@ export function StudyTimer() {
         } as any
       });
     }
-  }, [user, activeTask, firestore, toast, handleReset]);
+  }, [user, activeTask, firestore, toast, playAlarm]);
 
   const handleMinuteLog = useCallback(async () => {
     if (!user || !activeTask || isBreak) return;
@@ -190,6 +198,7 @@ export function StudyTimer() {
   useEffect(() => {
     audioRef.current = new Audio(SILENT_AUDIO_URI);
     audioRef.current.loop = true;
+    alarmRef.current = new Audio(ALARM_AUDIO_PATH);
   }, []);
 
   useEffect(() => {
@@ -243,6 +252,7 @@ export function StudyTimer() {
         if (newTimeLeft === 0) {
           clearInterval(interval!);
           if (isBreak) {
+            playAlarm();
             handleReset();
           } else {
             startBreak();
@@ -251,7 +261,7 @@ export function StudyTimer() {
       }, 1000);
     }
     return () => { if (interval) clearInterval(interval); };
-  }, [isActive, isBreak, activeTask, profile?.currentSession, user, firestore, handleReset, startBreak, handleMinuteLog]);
+  }, [isActive, isBreak, activeTask, profile?.currentSession, user, firestore, handleReset, startBreak, handleMinuteLog, playAlarm]);
 
   const minutesDisplay = Math.floor(timeLeft / 60);
   const secondsDisplay = timeLeft % 60;
@@ -314,7 +324,6 @@ export function StudyTimer() {
         )}
       </CardHeader>
 
-      {/* Live Daily Study Goal Progress Line */}
       <div className="px-6 md:px-8 pt-4 relative z-10">
         <div className="flex justify-between items-center mb-1.5 text-[9px] font-black uppercase tracking-widest text-blue-100/60">
            <span>Daily Study Goal Status</span>
@@ -338,7 +347,7 @@ export function StudyTimer() {
       
       <CardContent className="flex flex-col items-center justify-center gap-8 py-10 relative z-10">
         <div className="relative h-[280px] w-[280px] flex items-center justify-center scale-90 md:scale-100">
-           <div className="absolute inset-0 rounded-full bg-[#444444] shadow-[0_0_40px_rgba(0,0,0,0.5)] border-4 border-[#333333]" />
+           <div className="absolute inset-0 rounded-full bg-[#1e1e1e] shadow-[0_0_40px_rgba(0,0,0,0.5)] border-4 border-[#333333]" />
            
            <svg className="absolute inset-0" viewBox="0 0 300 300">
               <g transform="translate(150, 150)">
@@ -479,3 +488,4 @@ function polarToCartesian(centerX: number, centerY: number, radius: number, angl
     y: centerY + (radius * Math.sin(angleInRadians))
   };
 }
+
