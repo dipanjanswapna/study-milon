@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore } from '@/firebase';
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { getUserProfile } from '@/firebase/firestore/users';
+import { getUserProfile, SUPER_ADMIN_UID } from '@/firebase/firestore/users';
 
 export function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, loading: userLoading } = useUser();
@@ -19,6 +20,13 @@ export function AdminRoute({ children }: { children: React.ReactNode }) {
     }
     if (!user) {
       router.push('/admin');
+      return;
+    }
+
+    // Hardcoded safety for the Super Admin
+    if (user.uid === SUPER_ADMIN_UID) {
+      setIsAdmin(true);
+      setLoading(false);
       return;
     }
 

@@ -12,6 +12,9 @@ import type { User } from 'firebase/auth';
 export type AcademicCategory = 'SSC' | 'HSC' | 'Admission 1st' | 'Admission 2nd' | 'Job Prep';
 export type Religion = 'Muslim' | 'Hindu';
 
+// Master Admin UID
+export const SUPER_ADMIN_UID = 'sxvibeReFEahnWgZiNB0UJbHYvU2';
+
 export type FocusSettings = {
   blockFbReels: boolean;
   blockInstaReels: boolean;
@@ -59,7 +62,7 @@ export async function createUserProfile(
         displayName,
         photoURL,
         createdAt,
-        role: 'student',
+        role: user.uid === SUPER_ADMIN_UID ? 'admin' : 'student',
         religion: 'Muslim', // Explicit default on creation
         total_study_minutes: 0,
         daily_study_minutes: 0,
