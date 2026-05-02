@@ -1,10 +1,11 @@
 {
   "name": "Study Million",
-  "short_name": "StudyM",
+  "short_name": "StudyMillion",
   "description": "Track your hustle to the first million minutes.",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#1A1C3D",
+  "orientation": "portrait",
+  "background_color": "#F3F4F6",
   "theme_color": "#3B82F6",
   "icons": [
     {
@@ -14,10 +15,23 @@
       "purpose": "any maskable"
     },
     {
-      "src": "https://placehold.co/512x512/3B82F6/white?text=SM",
+      "src": "https://placehold.co/512x512/3B82F6/white?text=Study+Million",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Study Planner",
+      "url": "/todo",
+      "description": "Plan your academic day",
+      "icons": [{ "src": "https://placehold.co/96x96/3B82F6/white?text=P", "sizes": "96x96" }]
+    },
+    {
+      "name": "Leaderboard",
+      "url": "/leaderboard",
+      "description": "Check global rankings",
+      "icons": [{ "src": "https://placehold.co/96x96/3B82F6/white?text=L", "sizes": "96x96" }]
     }
   ]
 }
