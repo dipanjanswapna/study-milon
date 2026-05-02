@@ -65,6 +65,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function AdminDashboardPage() {
   const firestore = useFirestore();
@@ -422,40 +423,44 @@ export default function AdminDashboardPage() {
                    <DialogTrigger asChild>
                      <Button className="rounded-xl font-bold" onClick={openAddExam}><Plus className="h-4 w-4 mr-2" /> Add Exam</Button>
                    </DialogTrigger>
-                   <DialogContent className="max-w-md rounded-[2rem]">
-                     <DialogHeader>
+                   <DialogContent className="max-w-md w-[95vw] sm:w-full max-h-[90vh] overflow-hidden flex flex-col p-0 border-none shadow-2xl rounded-[2.5rem]">
+                     <DialogHeader className="p-6 pb-2 shrink-0">
                        <DialogTitle className="text-2xl font-black">{editingExamId ? 'Update' : 'Post'} Exam Schedule</DialogTitle>
                      </DialogHeader>
-                     <div className="space-y-4 py-4">
-                       <div className="space-y-1.5">
-                         <Label className="text-[10px] font-black uppercase">Exam Title</Label>
-                         <Input placeholder="e.g. HSC 2026 Board Final" value={examTitle} onChange={e => setExamTitle(e.target.value)} />
-                       </div>
-                       <div className="space-y-1.5">
-                         <Label className="text-[10px] font-black uppercase">Exam Date & Time</Label>
-                         <Input type="datetime-local" value={examDate} onChange={e => setExamDate(e.target.value)} />
-                       </div>
-                       <div className="space-y-1.5">
-                         <Label className="text-[10px] font-black uppercase">Category</Label>
-                         <Select value={examCategory} onValueChange={setExamCategory}>
-                           <SelectTrigger>
-                             <SelectValue />
-                           </SelectTrigger>
-                           <SelectContent>
-                             <SelectItem value="SSC">SSC</SelectItem>
-                             <SelectItem value="HSC">HSC</SelectItem>
-                             <SelectItem value="Admission">Admission</SelectItem>
-                             <SelectItem value="Job Prep">Job Prep</SelectItem>
-                           </SelectContent>
-                         </Select>
-                       </div>
-                       <div className="space-y-1.5">
-                         <Label className="text-[10px] font-black uppercase">Description</Label>
-                         <Textarea placeholder="Short details about the exam..." value={examDesc} onChange={e => setExamDesc(e.target.value)} />
-                       </div>
-                     </div>
-                     <DialogFooter>
-                       <Button className="w-full h-12 font-black rounded-xl" onClick={handleSaveExam} disabled={loadingAction === 'exam' || !examTitle || !examDate}>
+                     
+                     <ScrollArea className="flex-1 px-6 pb-6 overflow-y-auto">
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Exam Title</Label>
+                            <Input placeholder="e.g. HSC 2026 Board Final" className="h-11 rounded-xl" value={examTitle} onChange={e => setExamTitle(e.target.value)} />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Exam Date & Time</Label>
+                            <Input type="datetime-local" className="h-11 rounded-xl" value={examDate} onChange={e => setExamDate(e.target.value)} />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Category</Label>
+                            <Select value={examCategory} onValueChange={setExamCategory}>
+                              <SelectTrigger className="h-11 rounded-xl">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="SSC">SSC</SelectItem>
+                                <SelectItem value="HSC">HSC</SelectItem>
+                                <SelectItem value="Admission">Admission</SelectItem>
+                                <SelectItem value="Job Prep">Job Prep</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Description</Label>
+                            <Textarea placeholder="Short details about the exam..." className="min-h-[100px] rounded-xl resize-none" value={examDesc} onChange={e => setExamDesc(e.target.value)} />
+                          </div>
+                        </div>
+                     </ScrollArea>
+                     
+                     <DialogFooter className="p-6 pt-2 shrink-0 border-t bg-secondary/10">
+                       <Button className="w-full h-12 font-black rounded-xl shadow-lg shadow-primary/20" onClick={handleSaveExam} disabled={loadingAction === 'exam' || !examTitle || !examDate}>
                          {loadingAction === 'exam' ? <Loader2 className="h-4 w-4 animate-spin" /> : editingExamId ? 'Update Countdown' : 'Launch Countdown'}
                        </Button>
                      </DialogFooter>
