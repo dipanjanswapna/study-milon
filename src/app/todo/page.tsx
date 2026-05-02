@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { format, isSameDay, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth } from 'date-fns';
-import { collection, query, where, orderBy, doc } from 'firebase/firestore';
-import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
-import { addStudyTask, updateTaskStatus, deleteTask, type StudyTask } from '@/firebase/firestore/todo';
+import { collection, query, where, orderBy } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { addStudyTask, updateTaskStatus, deleteTask, updateTasksOrder, type StudyTask } from '@/firebase/firestore/todo';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { ProfileSetupGate } from '@/components/dashboard/ProfileSetupGate';
 import { Header } from '@/components/dashboard/Header';
@@ -43,11 +43,31 @@ import {
   ChevronLeft, 
   ChevronRight,
   Clock,
-  Notebook
+  Notebook,
+  GripVertical
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
+// DnD Imports
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 export default function TodoPage() {
   const { user } = useUser();
@@ -60,6 +80,18 @@ export default function TodoPage() {
   const [loading, setLoading] = useState(false);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
+
+  // Sensors for DnD
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Avoid accidental drags when clicking handles
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Month tasks query
   const monthStart = startOfMonth(currentMonth);
@@ -85,13 +117,14 @@ export default function TodoPage() {
 
   const { data: rawTasks, loading: tasksLoading } = useCollection<StudyTask>(tasksQuery);
 
-  const tasks = useMemo(() => {
-    if (!rawTasks) return null;
-    return [...rawTasks].sort((a, b) => {
-      const timeA = a.createdAt?.seconds || 0;
-      const timeB = b.createdAt?.seconds || 0;
-      return timeA - timeB;
-    });
+  // Local state for DnD sorting
+  const [localTasks, setLocalTasks] = useState<StudyTask[]>([]);
+
+  useEffect(() => {
+    if (rawTasks) {
+      const sorted = [...rawTasks].sort((a, b) => (a.order || 0) - (b.order || 0));
+      setLocalTasks(sorted);
+    }
   }, [rawTasks]);
 
   // Form State
@@ -131,6 +164,7 @@ export default function TodoPage() {
 
     setLoading(true);
     try {
+      const nextOrder = localTasks.length > 0 ? Math.max(...localTasks.map(t => t.order || 0)) + 1 : 0;
       await addStudyTask(firestore, user.uid, {
         subjectId: selectedSubject,
         chapterId: selectedChapter,
@@ -139,7 +173,8 @@ export default function TodoPage() {
         note: taskNote.trim(),
         date: dateStr,
         duration: totalMinutes,
-      });
+      }, nextOrder);
+      
       setIsDialogOpen(false);
       setSelectedSubject(null);
       setSelectedChapter(null);
@@ -152,6 +187,25 @@ export default function TodoPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!user || !over || active.id === over.id) return;
+
+    setLocalTasks((items) => {
+      const oldIndex = items.findIndex((i) => i.id === active.id);
+      const newIndex = items.findIndex((i) => i.id === over.id);
+      const newArray = arrayMove(items, oldIndex, newIndex);
+      
+      // Update order in background
+      const updates = newArray.map((t, idx) => ({ id: t.id, order: idx }));
+      updateTasksOrder(firestore, user.uid, updates).catch(() => {
+        toast({ variant: 'destructive', title: 'Failed to sync task order' });
+      });
+
+      return newArray;
+    });
   };
 
   const handleToggle = async (taskId: string, currentStatus: boolean) => {
@@ -302,7 +356,7 @@ export default function TodoPage() {
                     <h2 className="text-xl md:text-2xl font-black tracking-tight font-headline">
                       {format(selectedDate, 'EEEE, MMM do')}
                     </h2>
-                    <p className="text-muted-foreground text-sm">{tasks?.length || 0} tasks planned</p>
+                    <p className="text-muted-foreground text-sm">{localTasks.length} tasks planned</p>
                   </div>
                   
                   <div className="flex gap-2 w-full sm:w-auto">
@@ -405,8 +459,8 @@ export default function TodoPage() {
                           <div>
                               <p className="text-primary-foreground/70 text-[10px] font-bold uppercase tracking-widest">Today's Target</p>
                               <h3 className="text-3xl font-black">
-                                  {tasks && tasks.length > 0 
-                                      ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100) 
+                                  {localTasks.length > 0 
+                                      ? Math.round((localTasks.filter(t => t.completed).length / localTasks.length) * 100) 
                                       : 0}%
                               </h3>
                           </div>
@@ -415,65 +469,41 @@ export default function TodoPage() {
                   </CardContent>
                 </Card>
 
-                {/* Task List */}
-                <div className="space-y-3">
-                  {tasksLoading ? (
-                    Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-20 bg-muted animate-pulse rounded-xl" />)
-                  ) : tasks && tasks.length > 0 ? (
-                    tasks.map((task) => (
-                      <Card key={task.id} className={cn(
-                        "transition-all border-none shadow-sm",
-                        task.completed ? "bg-success/5" : "bg-card"
-                      )}>
-                        <CardContent className="p-4 flex items-center gap-3">
-                          <Checkbox 
-                            checked={task.completed} 
-                            onCheckedChange={() => handleToggle(task.id, task.completed)}
-                            className="h-5 w-5 rounded-full border-primary"
+                {/* Sortable Task List */}
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={localTasks.map(t => t.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-3">
+                      {tasksLoading ? (
+                        Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-20 bg-muted animate-pulse rounded-xl" />)
+                      ) : localTasks.length > 0 ? (
+                        localTasks.map((task) => (
+                          <SortableTaskItem 
+                            key={task.id} 
+                            task={task} 
+                            onToggle={handleToggle}
+                            onDelete={handleDelete}
+                            formatDuration={formatDurationDisplay}
                           />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="text-[9px] font-black text-primary uppercase tracking-widest truncate">{task.subjectName}</p>
-                              <div className="flex items-center gap-1 text-muted-foreground">
-                                  <Clock className="h-2.5 w-2.5" />
-                                  <span className="text-[9px] font-bold">{formatDurationDisplay(task.duration)}</span>
-                              </div>
-                            </div>
-                            <h4 className={cn(
-                              "text-base font-bold truncate",
-                              task.completed ? "line-through text-muted-foreground" : "text-foreground"
-                            )}>
-                              {task.chapterName}
-                            </h4>
-                            {task.note && (
-                              <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5 italic">
-                                "{task.note}"
-                              </p>
-                            )}
+                        ))
+                      ) : (
+                        <div className="text-center py-12 md:py-16 bg-secondary/20 rounded-3xl border-2 border-dashed border-muted">
+                          <div className="mx-auto w-10 h-10 bg-secondary rounded-full flex items-center justify-center mb-4">
+                              <Plus className="text-muted-foreground h-5 w-5" />
                           </div>
-                          <div className="flex items-center gap-1">
-                              <Button variant="ghost" size="icon" asChild className="text-primary hover:text-primary hover:bg-primary/10 h-9 w-9">
-                                  <Link href={`/dashboard?subjectId=${task.subjectId}&chapterId=${task.chapterId}&duration=${task.duration}`}>
-                                      <Play className="h-4 w-4 fill-current" />
-                                  </Link>
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDelete(task.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10 h-9 w-9">
-                                  <Trash2 className="h-4 w-4" />
-                              </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  ) : (
-                    <div className="text-center py-12 md:py-16 bg-secondary/20 rounded-3xl border-2 border-dashed border-muted">
-                      <div className="mx-auto w-10 h-10 bg-secondary rounded-full flex items-center justify-center mb-4">
-                          <Plus className="text-muted-foreground h-5 w-5" />
-                      </div>
-                      <h3 className="text-base font-bold">Empty Schedule</h3>
-                      <p className="text-muted-foreground text-xs px-4">Select a subject to manually add to your schedule.</p>
+                          <h3 className="text-base font-bold">Empty Schedule</h3>
+                          <p className="text-muted-foreground text-xs px-4">Select a subject to manually add to your schedule.</p>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </SortableContext>
+                </DndContext>
               </div>
             </div>
           </ProfileSetupGate>
@@ -483,15 +513,82 @@ export default function TodoPage() {
   );
 }
 
-function Badge({ children, variant = 'default', className }: { children: React.ReactNode, variant?: 'default' | 'secondary' | 'outline', className?: string }) {
-  const styles = {
-    default: 'bg-primary text-primary-foreground',
-    secondary: 'bg-secondary text-secondary-foreground',
-    outline: 'border border-primary text-primary'
+function SortableTaskItem({ task, onToggle, onDelete, formatDuration }: { 
+  task: StudyTask; 
+  onToggle: (id: string, status: boolean) => void;
+  onDelete: (id: string) => void;
+  formatDuration: (mins: number) => string;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.5 : 1,
   };
+
   return (
-    <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold", styles[variant], className)}>
-      {children}
-    </span>
+    <Card ref={setNodeRef} style={style} className={cn(
+      "transition-all border-none shadow-sm relative group",
+      task.completed ? "bg-success/5" : "bg-card",
+      isDragging && "shadow-2xl scale-[1.02]"
+    )}>
+      <CardContent className="p-4 flex items-center gap-3">
+        {/* Drag Handle */}
+        <div 
+          {...attributes} 
+          {...listeners} 
+          className="cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-primary transition-colors"
+        >
+          <GripVertical className="h-5 w-5" />
+        </div>
+
+        <Checkbox 
+          checked={task.completed} 
+          onCheckedChange={() => onToggle(task.id, task.completed)}
+          className="h-5 w-5 rounded-full border-primary shrink-0"
+        />
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-[9px] font-black text-primary uppercase tracking-widest truncate">{task.subjectName}</p>
+            <div className="flex items-center gap-1 text-muted-foreground">
+                <Clock className="h-2.5 w-2.5" />
+                <span className="text-[9px] font-bold">{formatDuration(task.duration)}</span>
+            </div>
+          </div>
+          <h4 className={cn(
+            "text-base font-bold truncate",
+            task.completed ? "line-through text-muted-foreground" : "text-foreground"
+          )}>
+            {task.chapterName}
+          </h4>
+          {task.note && (
+            <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5 italic">
+              "{task.note}"
+            </p>
+          )}
+        </div>
+        
+        <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" asChild className="text-primary hover:text-primary hover:bg-primary/10 h-9 w-9">
+                <Link href={`/dashboard?subjectId=${task.subjectId}&chapterId=${task.chapterId}&duration=${task.duration}`}>
+                    <Play className="h-4 w-4 fill-current" />
+                </Link>
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => onDelete(task.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10 h-9 w-9">
+                <Trash2 className="h-4 w-4" />
+            </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
