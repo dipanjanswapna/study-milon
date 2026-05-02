@@ -1,10 +1,10 @@
 {
   "name": "Study Million",
-  "short_name": "StudyMillion",
+  "short_name": "StudyM",
   "description": "Track your hustle to the first million minutes.",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#0F172A",
+  "background_color": "#1A1C3D",
   "theme_color": "#3B82F6",
   "icons": [
     {
@@ -17,7 +17,7 @@
       "src": "https://placehold.co/512x512/3B82F6/white?text=SM",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }

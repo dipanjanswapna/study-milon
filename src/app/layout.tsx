@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black-translucent',
     title: 'Study Million',
   },
   formatDetection: {
@@ -47,6 +47,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
         <link rel="apple-touch-icon" href="https://placehold.co/192x192/3B82F6/white?text=SM" />
+        <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className="font-body antialiased overflow-hidden">
         <FirebaseClientProvider>

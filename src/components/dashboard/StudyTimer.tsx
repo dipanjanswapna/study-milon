@@ -38,9 +38,9 @@ export function StudyTimer() {
   const [isActive, setIsActive] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
   
-  // Refs to track time exactly even if app goes to background
+  // High-accuracy background-safe refs
   const startTimeRef = useRef<number | null>(null);
-  const initialTimeRef = useRef<number>(workDuration * 60);
+  const baseSecondsRef = useRef<number>(workDuration * 60);
   const lastLoggedMinuteRef = useRef<number>(0);
 
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
@@ -72,7 +72,10 @@ export function StudyTimer() {
       const d = parseInt(durationParam, 10);
       if (!isNaN(d) && d > 0) {
         setWorkDuration(d);
-        if (!isActive) setTimeLeft(d * 60);
+        if (!isActive) {
+          setTimeLeft(d * 60);
+          baseSecondsRef.current = d * 60;
+        }
         
         if (!initializedFromParams.current && subId && chapId) {
             handleStart();
@@ -89,7 +92,7 @@ export function StudyTimer() {
   const handleStart = () => {
     if (!isActive) {
       startTimeRef.current = Date.now();
-      initialTimeRef.current = timeLeft;
+      baseSecondsRef.current = timeLeft;
       lastLoggedMinuteRef.current = 0;
       setIsActive(true);
     }
@@ -106,14 +109,15 @@ export function StudyTimer() {
     startTimeRef.current = null;
     const initialSeconds = workDuration * 60;
     setTimeLeft(initialSeconds);
+    baseSecondsRef.current = initialSeconds;
   }, [workDuration]);
 
   const startBreak = useCallback(() => {
     setIsBreak(true);
     const breakSeconds = BREAK_MINUTES * 60;
     setTimeLeft(breakSeconds);
+    baseSecondsRef.current = breakSeconds;
     startTimeRef.current = Date.now();
-    initialTimeRef.current = breakSeconds;
     lastLoggedMinuteRef.current = 0;
     setIsActive(true);
     toast({
@@ -127,7 +131,7 @@ export function StudyTimer() {
     try {
         await logStudyTime(firestore, user.uid, selectedSubject, selectedChapter, 1);
     } catch (error) {
-        // Silent catch
+        // Silent catch for offline sync
     }
   }, [user, firestore, selectedSubject, selectedChapter]);
 
@@ -138,16 +142,15 @@ export function StudyTimer() {
       interval = setInterval(() => {
         if (!startTimeRef.current) return;
         
+        // Calculate EXACT elapsed time based on system clock (immune to background throttling)
         const elapsedSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        const newTimeLeft = Math.max(0, initialTimeRef.current - elapsedSeconds);
+        const newTimeLeft = Math.max(0, baseSecondsRef.current - elapsedSeconds);
         
         setTimeLeft(newTimeLeft);
 
-        // Logging logic using elapsed time to ensure accuracy
+        // Logging logic - check if a new whole minute has passed since start
         if (!isBreak) {
-          const totalElapsedSessionSeconds = (initialTimeRef.current - newTimeLeft);
-          const currentElapsedMinutes = Math.floor(totalElapsedSessionSeconds / 60);
-          
+          const currentElapsedMinutes = Math.floor(elapsedSeconds / 60);
           if (currentElapsedMinutes > lastLoggedMinuteRef.current) {
             handleMinuteLog();
             lastLoggedMinuteRef.current = currentElapsedMinutes;
@@ -158,10 +161,14 @@ export function StudyTimer() {
           clearInterval(interval!);
           setIsActive(false);
           if (isBreak) {
-            if (Notification.permission === "granted") new Notification("Break's over! Time to get back.");
+            if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
+              new Notification("Break's over!", { body: "Time to get back to the hustle." });
+            }
             reset();
           } else {
-            if (Notification.permission === "granted") new Notification("Study session complete!");
+            if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
+              new Notification("Study session complete!", { body: "Take a well-deserved break." });
+            }
             startBreak();
           }
         }
@@ -179,10 +186,10 @@ export function StudyTimer() {
     }
   }, []);
 
-  const minutes = Math.floor(timeLeft / 60);
-  const seconds = timeLeft % 60;
-  const totalSeconds = (isBreak ? BREAK_MINUTES : workDuration) * 60;
-  const progress = 100 - (timeLeft / totalSeconds) * 100;
+  const minutesDisplay = Math.floor(timeLeft / 60);
+  const secondsDisplay = timeLeft % 60;
+  const totalSecondsForMode = (isBreak ? BREAK_MINUTES : workDuration) * 60;
+  const progress = 100 - (timeLeft / totalSecondsForMode) * 100;
   
   const canStart = !!selectedSubject && !!selectedChapter;
 
@@ -203,13 +210,13 @@ export function StudyTimer() {
               className="stroke-current text-primary transition-all duration-1000 ease-linear"
               strokeWidth="6" cx="50" cy="50" r="44" fill="transparent"
               strokeDasharray="276.46"
-              strokeDashoffset={`calc(276.46 - (276.46 * ${progress}) / 100)`}
+              strokeDashoffset={`${276.46 - (276.46 * progress) / 100}`}
               strokeLinecap="round" transform="rotate(-90 50 50)"
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="text-5xl md:text-6xl font-bold font-mono tracking-tighter">
-              {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+              {String(minutesDisplay).padStart(2, '0')}:{String(secondsDisplay).padStart(2, '0')}
             </span>
           </div>
         </div>
@@ -273,7 +280,10 @@ export function StudyTimer() {
               const val = parseInt(e.target.value, 10);
               if (val > 0) {
                 setWorkDuration(val);
-                if (!isActive) setTimeLeft(val * 60);
+                if (!isActive) {
+                  setTimeLeft(val * 60);
+                  baseSecondsRef.current = val * 60;
+                }
               }
             }}
             disabled={isActive} min="1"
