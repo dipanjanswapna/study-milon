@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -8,7 +9,7 @@ import type { UserProfile } from '@/firebase/firestore/users';
 import { StudyActivityChart } from './StudyActivityChart';
 import { SubjectDistributionChart } from './SubjectDistributionChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, PieChart, BarChart, Trophy, Filter, Target } from 'lucide-center';
+import { Clock, PieChart, BarChart, Trophy, Target } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { subDays, format, isAfter, startOfDay, getISOWeek } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -26,7 +27,8 @@ export function AnalyticsDashboard() {
 
   const dailyGoalMinutes = profile?.daily_goal_minutes || 360;
 
-  // Real-time synchronization buckets with "Virtual Reset" for immediate 12AM UI updates
+  // VIRTUAL RESET: 
+  // Displays 0m if the database record is from a previous period, ensuring 12AM visual reset.
   const summaryMinutes = useMemo(() => {
     if (!profile) return 0;
     
@@ -111,15 +113,7 @@ export function AnalyticsDashboard() {
 
     const subjectData = Object.entries(subjectMinutes).map(([name, value]) => ({ name, value }));
 
-    const subjectList = Object.entries(subjectMinutes)
-      .map(([name, minutes]) => ({
-        name,
-        minutes,
-        percentage: filterTotalMinutes > 0 ? (minutes / filterTotalMinutes) * 100 : 0,
-      }))
-      .sort((a, b) => b.minutes - a.minutes);
-
-    return { chartData, subjectData, subjectList };
+    return { chartData, subjectData };
   }, [sessions, filter]);
 
   const formatStudyTime = (minutes: number) => {

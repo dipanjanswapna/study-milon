@@ -1,3 +1,4 @@
+
 'use client';
 import {
   collection,
@@ -130,6 +131,7 @@ export async function updateChapterStatus(
 }
 
 // Atomic Auto-saving timer logic with 12AM reset sync
+// "Gora theke" - From the roots, this function handles bucket resets atomically.
 export async function logStudyTime(
     db: Firestore,
     userId: string,
@@ -147,6 +149,7 @@ export async function logStudyTime(
     const weekStr = `${now.getFullYear()}-W${getISOWeek(now)}`;
     const monthStr = format(now, 'yyyy-MM');
 
+    // Consistent session ID for charts
     const sessionDocId = `${dateStr}_${subjectId}`;
     const sessionRef = doc(db, 'users', userId, 'studySessions', sessionDocId);
 
@@ -167,7 +170,8 @@ export async function logStudyTime(
         const lastStudyWeek = userData.last_study_week;
         const lastStudyMonth = userData.last_study_month;
         
-        // Reset logic: If the period has changed, the update value is just the current minutes.
+        // RESET LOGIC: 
+        // If the period has changed (e.g., it's after 12AM), we start a fresh bucket.
         // Otherwise, we increment the existing bucket value.
         const dailyUpdate = lastStudyDay === dateStr ? increment(minutes) : minutes;
         const weeklyUpdate = lastStudyWeek === weekStr ? increment(minutes) : minutes;
@@ -197,7 +201,7 @@ export async function logStudyTime(
           subject: subjectName,
           subjectId: subjectId,
           createdAt: serverTimestamp(),
-          date: dateStr // This ensures the point lands on the correct local date in the chart
+          date: dateStr // Crucial for chart alignment
         }, { merge: true });
 
         await batch.commit();

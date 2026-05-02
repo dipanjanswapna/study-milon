@@ -11,6 +11,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
+import { format, getISOWeek } from 'date-fns';
 
 export type AcademicCategory = 'SSC' | 'HSC' | 'Admission 1st' | 'Admission 2nd' | 'Job Prep' | 'University';
 export type Religion = 'Muslim' | 'Hindu';
@@ -67,7 +68,10 @@ export async function createUserProfile(
     const { uid, email, displayName, photoURL } = user;
     const createdAt = serverTimestamp();
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = format(today, 'yyyy-MM-dd');
+    const weekStr = `${today.getFullYear()}-W${getISOWeek(today)}`;
+    const monthStr = format(today, 'yyyy-MM');
+
     try {
       await setDoc(userRef, {
         uid,
@@ -84,6 +88,8 @@ export async function createUserProfile(
         daily_goal_minutes: 360, 
         last_active_date: serverTimestamp(),
         last_study_day: todayStr,
+        last_study_week: weekStr,
+        last_study_month: monthStr,
         institution: '',
         phoneNumber: '',
         focusPoints: 0,

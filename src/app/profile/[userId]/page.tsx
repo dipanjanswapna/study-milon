@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -6,11 +7,10 @@ import { doc, collection, query, orderBy } from 'firebase/firestore';
 import { useFirestore, useDoc, useCollection } from '@/firebase';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Header } from '@/components/dashboard/Header';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Trophy, 
@@ -23,10 +23,9 @@ import {
   PieChart,
   Target
 } from 'lucide-react';
-import { format, startOfDay, isAfter, subDays, startOfMonth, startOfYear, isSameDay } from 'date-fns';
+import { format, startOfDay, isAfter, subDays, getISOWeek } from 'date-fns';
 import { StudyActivityChart } from '@/components/dashboard/StudyActivityChart';
 import { SubjectDistributionChart } from '@/components/dashboard/SubjectDistributionChart';
-import { cn } from '@/lib/utils';
 
 export default function PublicProfilePage() {
   const { userId } = useParams();
@@ -51,9 +50,13 @@ export default function PublicProfilePage() {
   const { data: sessions, loading: sessionsLoading } = useCollection<any>(sessionsQuery);
 
   const stats = useMemo(() => {
-    if (!sessions) return { chartData: [], subjectData: [], totalMinutes: 0 };
+    if (!sessions) return { chartData: [], subjectData: [], totalMinutes: 0, currentPeriodMins: 0 };
 
     const now = new Date();
+    const todayStr = format(now, 'yyyy-MM-dd');
+    const thisWeekStr = `${now.getFullYear()}-W${getISOWeek(now)}`;
+    const thisMonthStr = format(now, 'yyyy-MM');
+
     let filteredSessions = sessions;
     let chartDays = 7;
 
@@ -72,17 +75,25 @@ export default function PublicProfilePage() {
     } else if (filter === 'yearly') {
       const yearAgo = startOfDay(subDays(now, 364));
       filteredSessions = sessions.filter(s => s.createdAt && isAfter(s.createdAt.toDate(), yearAgo));
-      chartDays = 14; // Show last 14 active points for readability
+      chartDays = 14; 
     }
 
     const totalMinutes = sessions.reduce((acc: number, s: any) => acc + (s.duration || 0), 0);
 
-    // Activity Chart Data
+    // Calculate display minutes with Virtual Reset for consistency
+    let currentPeriodMins = 0;
+    if (profile) {
+      if (filter === 'daily') currentPeriodMins = profile.last_study_day === todayStr ? (profile.daily_study_minutes || 0) : 0;
+      else if (filter === 'weekly') currentPeriodMins = profile.last_study_week === thisWeekStr ? (profile.weekly_study_minutes || 0) : 0;
+      else if (filter === 'monthly') currentPeriodMins = profile.last_study_month === thisMonthStr ? (profile.monthly_study_minutes || 0) : 0;
+      else currentPeriodMins = profile.total_study_minutes || 0;
+    }
+
+    // Activity Chart Data (Synced with local keys)
     const dailyMinutes: Record<string, number> = {};
-    for (const session of filteredSessions) {
-      if (!session.createdAt) continue;
-      const day = format(session.createdAt.toDate(), 'yyyy-MM-dd');
-      dailyMinutes[day] = (dailyMinutes[day] || 0) + session.duration;
+    for (const session of sessions) {
+      if (!session.date) continue;
+      dailyMinutes[session.date] = (dailyMinutes[session.date] || 0) + session.duration;
     }
 
     const chartData = Array.from({ length: chartDays })
@@ -105,8 +116,8 @@ export default function PublicProfilePage() {
 
     const subjectData = Object.entries(subjectMinutes).map(([name, value]) => ({ name, value }));
 
-    return { chartData, subjectData, totalMinutes };
-  }, [sessions, filter]);
+    return { chartData, subjectData, totalMinutes, currentPeriodMins };
+  }, [sessions, filter, profile]);
 
   const formatTime = (minutes: number = 0) => {
     const h = Math.floor(minutes / 60);
@@ -242,9 +253,9 @@ export default function PublicProfilePage() {
                     </div>
                   </Card>
                   <Card className="rounded-[2rem] border-none shadow-lg bg-orange-500/5 p-6 space-y-2">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-orange-500">Today's Study</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-orange-500">{filter} Hustle</p>
                     <div className="flex items-center justify-between">
-                      <h4 className="text-2xl font-black">{formatTime(profile.daily_study_minutes)}</h4>
+                      <h4 className="text-2xl font-black">{formatTime(stats.currentPeriodMins)}</h4>
                       <Clock className="h-8 w-8 text-orange-500/20" />
                     </div>
                   </Card>

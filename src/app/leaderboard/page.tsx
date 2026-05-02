@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -9,7 +10,6 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import {
   Tabs,
@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Trophy, Medal, Crown, Star, Filter, Clock, Users2, ArrowRight } from 'lucide-react';
+import { Trophy, Medal, Crown, Clock, Users2, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -81,7 +81,7 @@ export default function LeaderboardPage() {
 
   const { data: allRankings, loading } = useCollection<any>(leaderboardQuery);
 
-  // Apply filters and "Virtual Reset" logic for 12AM UI consistency
+  // VIRTUAL RESET: Ensure visual reset at 12AM local time even if DB hasn't been updated yet.
   const rankings = useMemo(() => {
     if (!allRankings) return [];
     
@@ -95,9 +95,9 @@ export default function LeaderboardPage() {
       const matchBatch = batchFilter === 'All' || u.batch === batchFilter;
       return matchCategory && matchBatch;
     }).map(u => {
-      // Apply the same reset logic used in the Analytics Dashboard
       let currentVal = u[getSortField(timeFilter)] || 0;
       
+      // Virtual reset logic: if record is from a previous period, treat as 0.
       if (timeFilter === 'daily' && u.last_study_day !== todayStr) currentVal = 0;
       if (timeFilter === 'weekly' && u.last_study_week !== thisWeekStr) currentVal = 0;
       if (timeFilter === 'monthly' && u.last_study_month !== thisMonthStr) currentVal = 0;
