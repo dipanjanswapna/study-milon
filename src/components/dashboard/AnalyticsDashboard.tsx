@@ -8,9 +8,9 @@ import type { UserProfile } from '@/firebase/firestore/users';
 import { StudyActivityChart } from './StudyActivityChart';
 import { SubjectDistributionChart } from './SubjectDistributionChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, PieChart, BarChart, Trophy, Zap, TrendingUp, ChevronRight } from 'lucide-react';
+import { Clock, PieChart, BarChart, Trophy, Zap, TrendingUp, ChevronRight, Activity } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { subDays, format, isAfter, startOfMonth, eachDayOfInterval, isSameMonth } from 'date-fns';
+import { subDays, format, isAfter, startOfMonth, eachDayOfInterval, isSameMonth, startOfDay } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 
@@ -26,7 +26,6 @@ export function AnalyticsDashboard() {
 
   const sessionsQuery = useMemo(() => {
     if (!user) return null;
-    // Real-time listener for sessions
     return query(
       collection(firestore, 'users', user.uid, 'studySessions'),
       orderBy('createdAt', 'desc')
@@ -48,13 +47,15 @@ export function AnalyticsDashboard() {
       const todaySessions = sessions.filter(s => s.date === todayStr);
       filteredSessions = todaySessions;
 
-      // Initialize 24 hour buckets for a full day view
-      const hourlyData: Record<string, any> = {};
+      // Initialize 24 slots for each hour of the day
+      const hourlyData: Record<number, any> = {};
       for (let i = 0; i < 24; i++) {
         const dateObj = new Date();
         dateObj.setHours(i, 0, 0, 0);
-        const label = format(dateObj, 'h a');
-        hourlyData[i] = { date: label, hour: i };
+        hourlyData[i] = { 
+          date: format(dateObj, 'h a'), 
+          hour: i 
+        };
       }
 
       for (const session of todaySessions) {
@@ -72,7 +73,7 @@ export function AnalyticsDashboard() {
       chartData = Object.values(hourlyData);
     } 
     else if (filter === 'weekly') {
-      const sevenDaysAgo = subDays(now, 6);
+      const sevenDaysAgo = startOfDay(subDays(now, 6));
       const interval = eachDayOfInterval({ start: sevenDaysAgo, end: now });
       
       const dailyAgg: Record<string, any> = {};
@@ -242,7 +243,7 @@ export function AnalyticsDashboard() {
           </CardContent>
         </Card>
 
-        {/* Dynamic Charts Section - Stacked for Desktop as requested */}
+        {/* Desktop Layout: Consistency Tracker (Scrollable) followed by Focus Areas */}
         <div className="md:col-span-6 space-y-8">
            {/* Consistency Tracker */}
           <Card className="rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
@@ -251,12 +252,16 @@ export function AnalyticsDashboard() {
                 <CardTitle className="text-xl font-black flex items-center gap-2">
                   <BarChart className="h-6 w-6 text-primary" /> Consistency Tracker
                 </CardTitle>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">Live Hourly Session Mapping</p>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">
+                  {filter === 'daily' ? 'Live Hourly Session Mapping' : `Activity Overview for ${filter}`}
+                </p>
               </div>
-              <div className="flex items-center gap-2 bg-secondary/50 px-3 py-1.5 rounded-full border border-border/50">
-                 <ChevronRight className="h-3 w-3 text-muted-foreground animate-pulse" />
-                 <span className="text-[8px] font-black uppercase text-muted-foreground">Scroll to explore</span>
-              </div>
+              {filter === 'daily' && (
+                <div className="flex items-center gap-2 bg-red-600/10 px-3 py-1.5 rounded-full border border-red-600/20 animate-pulse">
+                   <Activity className="h-3 w-3 text-red-600" />
+                   <span className="text-[8px] font-black uppercase text-red-600 tracking-widest">Live Sync</span>
+                </div>
+              )}
             </CardHeader>
             <CardContent className="p-4 pt-4">
               <StudyActivityChart 
@@ -269,7 +274,7 @@ export function AnalyticsDashboard() {
             </CardContent>
           </Card>
 
-          {/* Focus Areas Distribution - Now below the main chart */}
+          {/* Focus Areas Distribution - Stacked below */}
           <Card className="rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
             <CardHeader>
               <CardTitle className="text-xl font-black flex items-center gap-2">

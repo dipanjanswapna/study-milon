@@ -1,3 +1,4 @@
+
 'use client';
 import {
   collection,
@@ -188,7 +189,7 @@ export async function logStudyTime(
 
         const subjectName = subjectSnap.exists() ? subjectSnap.data().name : 'Unknown';
         
-        // Track overall duration AND hourly breakdown within the daily-subject doc
+        // Stacked hourly breakdown logic
         batch.set(sessionRef, {
           duration: increment(minutes),
           [`hourlyBreakdown.${hour}`]: increment(minutes),

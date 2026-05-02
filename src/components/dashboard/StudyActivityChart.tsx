@@ -17,14 +17,14 @@ interface StudyActivityChartProps {
 
 export function StudyActivityChart({ data, showTargetLine, targetValue = 360, isHourly, subjects = [] }: StudyActivityChartProps) {
   const barCount = data.length;
-  // Professional width for scrollability: 60px per bar for hourly, 80px for others
+  // Responsive width calculation: 60px per bar for hourly view to allow clean labels
   const minWidth = isHourly ? 1440 : barCount > 7 ? barCount * 80 : 0;
 
   const chartConfig: ChartConfig = {
     minutes: { label: 'Minutes', color: 'hsl(var(--primary))' }
   };
 
-  // Map theme chart colors to subjects
+  // Map theme chart colors to subjects for stacking
   subjects.forEach((sub, i) => {
     chartConfig[sub] = {
       label: sub,
@@ -39,7 +39,7 @@ export function StudyActivityChart({ data, showTargetLine, targetValue = 360, is
         <div className="bg-background/95 backdrop-blur-xl border-2 border-primary/10 rounded-2xl p-4 shadow-2xl">
           <div className="flex flex-col mb-3">
              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Session Log</p>
-             <p className="text-sm font-black text-primary">{isHourly ? `${label} - ${parseInt(label) + 1} PM` : label}</p>
+             <p className="text-sm font-black text-primary">{isHourly ? `${label} Slot` : label}</p>
           </div>
           <div className="space-y-2">
             {payload.map((entry: any, index: number) => (
@@ -92,13 +92,20 @@ export function StudyActivityChart({ data, showTargetLine, targetValue = 360, is
                   width={40}
                 />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--muted)/0.15)' }} />
+                
                 {showTargetLine && (
                   <ReferenceLine 
                     y={isHourly ? targetValue / 24 : targetValue} 
                     stroke="hsl(var(--success))" 
                     strokeDasharray="6 6"
                     strokeWidth={2}
-                    label={{ value: 'Daily Target', position: 'right', fill: 'hsl(var(--success))', fontSize: 10, fontWeight: 900 }}
+                    label={{ 
+                      value: isHourly ? 'Hourly Avg' : 'Daily Target', 
+                      position: 'right', 
+                      fill: 'hsl(var(--success))', 
+                      fontSize: 10, 
+                      fontWeight: 900 
+                    }}
                   />
                 )}
                 
@@ -111,8 +118,7 @@ export function StudyActivityChart({ data, showTargetLine, targetValue = 360, is
                       fill={`hsl(var(--chart-${(i % 5) + 1}))`}
                       radius={i === subjects.length - 1 ? [6, 6, 0, 0] : [0, 0, 0, 0]}
                       barSize={isHourly ? 32 : 40}
-                      animationDuration={1500}
-                      animationEasing="ease-out"
+                      animationDuration={500}
                     />
                   ))
                 ) : (
@@ -121,7 +127,7 @@ export function StudyActivityChart({ data, showTargetLine, targetValue = 360, is
                     fill="var(--color-minutes)" 
                     radius={[8, 8, 0, 0]} 
                     barSize={40}
-                    animationDuration={1500}
+                    animationDuration={500}
                   />
                 )}
               </BarChart>
