@@ -71,6 +71,107 @@ export function StudyTimer() {
   }, [user, firestore, selectedSubject]);
   const { data: chapters, loading: chaptersLoading } = useCollection(chaptersQuery);
 
+  // --- Handlers Defined First to avoid ReferenceErrors in Effects ---
+
+  const handleReset = useCallback(async () => {
+    if (user) {
+      setIsActive(false);
+      setIsBreak(false);
+      audioRef.current?.pause();
+      const initialSeconds = workDuration * 60;
+      setTimeLeft(initialSeconds);
+      lastLoggedMinuteRef.current = 0;
+      
+      updateUserProfile(firestore, user.uid, { 
+        isStudying: false,
+        currentSession: {
+          startTime: null,
+          duration: workDuration,
+          status: 'idle',
+          subjectId: selectedSubject,
+          chapterId: selectedChapter,
+          isBreak: false
+        } as any
+      });
+    }
+  }, [workDuration, user, firestore, selectedSubject, selectedChapter]);
+
+  const handleStart = async () => {
+    if (!isActive && user && selectedSubject && selectedChapter) {
+      const startTime = Date.now();
+      setIsActive(true);
+      lastLoggedMinuteRef.current = 0;
+      
+      // Keep mobile browser awake
+      audioRef.current?.play().catch(() => {});
+      
+      const newSession: CurrentSession = {
+        startTime,
+        duration: workDuration,
+        status: 'active',
+        subjectId: selectedSubject,
+        chapterId: selectedChapter,
+        isBreak: false
+      };
+      
+      // Atomic cloud update
+      updateUserProfile(firestore, user.uid, { 
+        currentSession: newSession as any, 
+        isStudying: true,
+        last_active_date: serverTimestamp()
+      });
+    }
+  };
+
+  const handlePause = async () => {
+    if (user) {
+      setIsActive(false);
+      audioRef.current?.pause();
+      
+      updateUserProfile(firestore, user.uid, { 
+        isStudying: false,
+        "currentSession.status": "paused",
+        "currentSession.startTime": null
+      });
+    }
+  };
+
+  const startBreak = useCallback(async () => {
+    if (user) {
+      setIsBreak(true);
+      const breakSeconds = BREAK_MINUTES * 60;
+      const startTime = Date.now();
+      setTimeLeft(breakSeconds);
+      setIsActive(true);
+      lastLoggedMinuteRef.current = 0;
+      
+      updateUserProfile(firestore, user.uid, {
+        isStudying: false,
+        currentSession: {
+          startTime,
+          duration: workDuration,
+          status: 'active',
+          subjectId: selectedSubject,
+          chapterId: selectedChapter,
+          isBreak: true
+        } as any
+      });
+      
+      toast({ title: "Rest Cycle Started", description: "Take 5 minutes to recharge." });
+    }
+  }, [user, workDuration, selectedSubject, selectedChapter, firestore, toast]);
+
+  const handleMinuteLog = useCallback(async () => {
+    if (!user || !selectedSubject || !selectedChapter || isBreak) return;
+    try {
+        await logStudyTime(firestore, user.uid, selectedSubject, selectedChapter, 1);
+    } catch (error) {
+        // Offline capability ensures this syncs when back online
+    }
+  }, [user, firestore, selectedSubject, selectedChapter, isBreak]);
+
+  // --- Effects ---
+
   // INITIALIZE BACKGROUND SERVICE
   useEffect(() => {
     // Setup silent audio for background persistence
@@ -90,7 +191,7 @@ export function StudyTimer() {
     }
   }, []);
 
-  // 1. SESSION RECOVERY (THE UNSTOPPABLE LOGIC)
+  // 1. SESSION RECOVERY
   useEffect(() => {
     if (profile?.currentSession && !initializedFromCloud.current) {
       const { startTime, duration, status, subjectId, chapterId, isBreak: cloudIsBreak } = profile.currentSession;
@@ -152,103 +253,6 @@ export function StudyTimer() {
       }
     }
   }, [searchParams, isActive]);
-
-  const handleStart = async () => {
-    if (!isActive && user && selectedSubject && selectedChapter) {
-      const startTime = Date.now();
-      setIsActive(true);
-      lastLoggedMinuteRef.current = 0;
-      
-      // Keep mobile browser awake
-      audioRef.current?.play().catch(() => {});
-      
-      const newSession: CurrentSession = {
-        startTime,
-        duration: workDuration,
-        status: 'active',
-        subjectId: selectedSubject,
-        chapterId: selectedChapter,
-        isBreak: false
-      };
-      
-      // Atomic cloud update
-      await updateUserProfile(firestore, user.uid, { 
-        currentSession: newSession as any, 
-        isStudying: true,
-        last_active_date: serverTimestamp()
-      });
-    }
-  };
-
-  const handlePause = async () => {
-    if (user) {
-      setIsActive(false);
-      audioRef.current?.pause();
-      
-      await updateUserProfile(firestore, user.uid, { 
-        isStudying: false,
-        "currentSession.status": "paused",
-        "currentSession.startTime": null
-      });
-    }
-  };
-
-  const handleReset = useCallback(async () => {
-    if (user) {
-      setIsActive(false);
-      setIsBreak(false);
-      audioRef.current?.pause();
-      const initialSeconds = workDuration * 60;
-      setTimeLeft(initialSeconds);
-      lastLoggedMinuteRef.current = 0;
-      
-      await updateUserProfile(firestore, user.uid, { 
-        isStudying: false,
-        currentSession: {
-          startTime: null,
-          duration: workDuration,
-          status: 'idle',
-          subjectId: selectedSubject,
-          chapterId: selectedChapter,
-          isBreak: false
-        } as any
-      });
-    }
-  }, [workDuration, user, firestore, selectedSubject, selectedChapter]);
-
-  const startBreak = useCallback(async () => {
-    if (user) {
-      setIsBreak(true);
-      const breakSeconds = BREAK_MINUTES * 60;
-      const startTime = Date.now();
-      setTimeLeft(breakSeconds);
-      setIsActive(true);
-      lastLoggedMinuteRef.current = 0;
-      
-      await updateUserProfile(firestore, user.uid, {
-        isStudying: false,
-        currentSession: {
-          startTime,
-          duration: workDuration,
-          status: 'active',
-          subjectId: selectedSubject,
-          chapterId: selectedChapter,
-          isBreak: true
-        } as any
-      });
-      
-      toast({ title: "Rest Cycle Started", description: "Take 5 minutes to recharge." });
-    }
-  }, [user, workDuration, selectedSubject, selectedChapter, firestore, toast]);
-
-  const handleMinuteLog = useCallback(async () => {
-    if (!user || !selectedSubject || !selectedChapter || isBreak) return;
-    try {
-        await logStudyTime(firestore, user.uid, selectedSubject, selectedChapter, 1);
-    } catch (error) {
-        // Offline capability ensures this syncs when back online
-    }
-  }, [user, firestore, selectedSubject, selectedChapter, isBreak]);
 
   // 3. THE UNSTOPPABLE CLOCK ENGINE
   useEffect(() => {
@@ -438,28 +442,28 @@ export function StudyTimer() {
           <div className="grid grid-cols-2 gap-3 md:gap-4">
             <div className="space-y-1.5">
               <div className="relative">
-                <Input 
+                <input 
                   type="number" 
                   min="0" 
                   max="12" 
                   value={inputHours} 
                   onChange={(e) => handleDurationChange(e.target.value, inputMinutes)}
                   disabled={isActive}
-                  className="bg-white/5 border-white/10 text-white h-12 md:h-14 rounded-2xl pr-10 text-base md:text-lg font-bold"
+                  className="flex h-12 md:h-14 w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-lg font-bold pr-10"
                 />
                 <span className="absolute right-3 top-3.5 md:top-4.5 text-[8px] font-black text-white/20 uppercase">HRS</span>
               </div>
             </div>
             <div className="space-y-1.5">
               <div className="relative">
-                <Input 
+                <input 
                   type="number" 
                   min="0" 
                   max="59" 
                   value={inputMinutes} 
                   onChange={(e) => handleDurationChange(inputHours, e.target.value)}
                   disabled={isActive}
-                  className="bg-white/5 border-white/10 text-white h-12 md:h-14 rounded-2xl pr-10 text-base md:text-lg font-bold"
+                  className="flex h-12 md:h-14 w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-lg font-bold pr-10"
                 />
                 <span className="absolute right-3 top-3.5 md:top-4.5 text-[8px] font-black text-white/20 uppercase">MIN</span>
               </div>
