@@ -10,7 +10,6 @@ import {
   writeBatch,
   getDoc,
   increment,
-  Timestamp,
 } from 'firebase/firestore';
 import { format, getISOWeek } from 'date-fns';
 

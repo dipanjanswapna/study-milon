@@ -23,11 +23,12 @@ const chartConfig = {
 
 export function StudyActivityChart({ data, showTargetLine, targetValue = 360 }: StudyActivityChartProps) {
   // Determine dynamic width based on data length to enable horizontal scrolling
-  const minWidth = data.length > 7 ? data.length * 60 : 0;
+  // For daily view (24 bars) we want at least 800px width for clarity
+  const minWidth = data.length > 7 ? data.length * 50 : 0;
 
   return (
     <div className="w-full">
-      <ScrollArea className="w-full whitespace-nowrap">
+      <ScrollArea className="w-full whitespace-nowrap rounded-xl">
         <div style={{ minWidth: minWidth || '100%' }} className="h-[300px]">
           <ChartContainer config={chartConfig} className="w-full h-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -66,7 +67,7 @@ export function StudyActivityChart({ data, showTargetLine, targetValue = 360 }: 
                   dataKey="minutes" 
                   fill="var(--color-minutes)" 
                   radius={[4, 4, 0, 0]} 
-                  barSize={data.length > 12 ? 20 : 32} 
+                  barSize={data.length > 12 ? 16 : 32} 
                 />
               </BarChart>
             </ResponsiveContainer>

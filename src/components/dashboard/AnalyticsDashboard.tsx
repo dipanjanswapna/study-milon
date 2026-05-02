@@ -7,9 +7,9 @@ import type { UserProfile } from '@/firebase/firestore/users';
 import { StudyActivityChart } from './StudyActivityChart';
 import { SubjectDistributionChart } from './SubjectDistributionChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, PieChart, BarChart, Trophy, Target, Zap, TrendingUp } from 'lucide-react';
+import { Clock, PieChart, BarChart, Trophy, Zap, TrendingUp } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { subDays, format, isAfter, startOfDay, getISOWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getWeek } from 'date-fns';
+import { subDays, format, isAfter, startOfMonth, eachDayOfInterval } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 
@@ -23,8 +23,6 @@ export function AnalyticsDashboard() {
   const userRef = useMemo(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: profile, loading: profileLoading } = useDoc<UserProfile>(userRef as any);
 
-  const dailyGoalMinutes = profile?.daily_goal_minutes || 360;
-
   const sessionsQuery = useMemo(() => {
     if (!user) return null;
     return query(
@@ -36,7 +34,7 @@ export function AnalyticsDashboard() {
   const { data: sessions, loading: sessionsLoading } = useCollection<any>(sessionsQuery);
 
   const stats = useMemo(() => {
-    if (!sessions) return { chartData: [], subjectData: [], hustleScore: 0, totalMinutes: 0 };
+    if (!sessions) return { chartData: [], subjectData: [], hustleScore: 0, currentPeriodMins: 0 };
 
     const now = new Date();
     let chartData: any[] = [];
@@ -47,7 +45,6 @@ export function AnalyticsDashboard() {
       const todaySessions = sessions.filter(s => s.date === todayStr);
       filteredSessions = todaySessions;
 
-      // Aggregate hourly breakdown across all subjects for today
       const hourlyMins: Record<string, number> = {};
       for (const session of todaySessions) {
         if (session.hourlyBreakdown) {
@@ -79,7 +76,6 @@ export function AnalyticsDashboard() {
       filteredSessions = sessions.filter(s => s.date && isAfter(new Date(s.date), subDays(now, 7)));
     }
     else if (filter === 'monthly') {
-      // Show Weeks 1-4 for current month
       const monthStart = startOfMonth(now);
       const dailyAgg: Record<string, number> = {};
       sessions.forEach(s => {
@@ -117,7 +113,8 @@ export function AnalyticsDashboard() {
       filteredSessions = sessions;
     }
 
-    // Subject Breakdown (Doughnut)
+    const currentPeriodMins = chartData.reduce((acc, curr) => acc + curr.minutes, 0);
+
     const subjectMinutes: Record<string, number> = {};
     for (const session of filteredSessions) {
       const sub = session.subject || 'Other';
@@ -125,8 +122,6 @@ export function AnalyticsDashboard() {
     }
     const subjectData = Object.entries(subjectMinutes).map(([name, value]) => ({ name, value }));
 
-    // Hustle Score Calculation (Consistency based)
-    // Formula: (StudiedDaysInLast7Days / 7) * (MinutesToday / GoalToday)
     const last7Days = sessions.filter(s => s.date && isAfter(new Date(s.date), subDays(now, 7)));
     const uniqueDays = new Set(last7Days.map(s => s.date)).size;
     const todayMins = profile?.daily_study_minutes || 0;
@@ -134,7 +129,7 @@ export function AnalyticsDashboard() {
     const volumeFactor = Math.min(1.2, todayMins / (profile?.daily_goal_minutes || 360));
     const hustleScore = Math.round(consistencyFactor * volumeFactor * 100);
 
-    return { chartData, subjectData, hustleScore, totalMinutes: profile?.total_study_minutes || 0 };
+    return { chartData, subjectData, hustleScore, currentPeriodMins };
   }, [sessions, filter, profile]);
 
   const formatStudyTime = (minutes: number) => {
@@ -175,7 +170,6 @@ export function AnalyticsDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-        {/* Dynamic Summary Card */}
         <Card className="md:col-span-3 rounded-[2rem] border-none shadow-xl bg-primary text-primary-foreground overflow-hidden group relative">
           <div className="absolute top-0 right-0 p-8 opacity-10">
             <Zap className="h-24 w-24" />
@@ -188,7 +182,7 @@ export function AnalyticsDashboard() {
           <CardContent className="space-y-4">
             <div className="flex items-baseline gap-2">
               <h3 className="text-5xl font-black tracking-tighter">
-                {formatStudyTime(stats.chartData.reduce((acc, curr) => acc + curr.minutes, 0))}
+                {formatStudyTime(stats.currentPeriodMins)}
               </h3>
               <span className="text-sm font-bold text-primary-foreground/60">{filter} total</span>
             </div>
@@ -202,7 +196,6 @@ export function AnalyticsDashboard() {
           </CardContent>
         </Card>
 
-        {/* Million Minute Quest */}
         <Card className="md:col-span-3 rounded-[2rem] border-none shadow-xl bg-card overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">
@@ -212,33 +205,31 @@ export function AnalyticsDashboard() {
           <CardContent className="space-y-4">
             <div className="flex items-baseline gap-2">
               <h3 className="text-4xl font-black tracking-tighter text-foreground">
-                {stats.totalMinutes.toLocaleString()}
+                {(profile?.total_study_minutes || 0).toLocaleString()}
               </h3>
               <span className="text-xs font-bold text-muted-foreground">Minutes</span>
             </div>
             <div className="pt-2">
               <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-1.5 text-primary">
                  <span>Progress</span>
-                 <span>{(stats.totalMinutes / 1000000 * 100).toFixed(4)}%</span>
+                 <span>{((profile?.total_study_minutes || 0) / 1000000 * 100).toFixed(4)}%</span>
               </div>
-              <Progress value={(stats.totalMinutes / 1000000 * 100)} className="h-2 bg-secondary" />
+              <Progress value={((profile?.total_study_minutes || 0) / 1000000 * 100)} className="h-2 bg-secondary" />
             </div>
           </CardContent>
         </Card>
 
-        {/* Consistency Tracker (Scrollable) */}
         <Card className="md:col-span-4 rounded-[2rem] border-none shadow-xl bg-card overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle className="text-lg font-black flex items-center gap-2">
               <Clock className="h-5 w-5 text-primary" /> Consistency Tracker
             </CardTitle>
           </CardHeader>
           <CardContent className="px-2">
-            <StudyActivityChart data={stats.chartData} showTargetLine={filter === 'weekly'} targetValue={dailyGoalMinutes} />
+            <StudyActivityChart data={stats.chartData} showTargetLine={filter === 'weekly'} targetValue={profile?.daily_goal_minutes || 360} />
           </CardContent>
         </Card>
 
-        {/* Subject Distribution */}
         <Card className="md:col-span-2 rounded-[2rem] border-none shadow-xl bg-card overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg font-black flex items-center gap-2">
