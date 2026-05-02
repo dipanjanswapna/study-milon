@@ -1,4 +1,3 @@
-
 'use client';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, ReferenceLine, Tooltip } from 'recharts';
 import {
@@ -17,7 +16,7 @@ interface StudyActivityChartProps {
 
 export function StudyActivityChart({ data, showTargetLine, targetValue = 360, isHourly, subjects = [] }: StudyActivityChartProps) {
   const barCount = data.length;
-  // Responsive width calculation: 60px per bar for hourly view to allow clean labels
+  // Responsive width calculation: ensuring bars have enough breathing room for labels
   const minWidth = isHourly ? 1440 : barCount > 7 ? barCount * 80 : 0;
 
   const chartConfig: ChartConfig = {

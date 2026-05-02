@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -8,7 +7,7 @@ import type { UserProfile } from '@/firebase/firestore/users';
 import { StudyActivityChart } from './StudyActivityChart';
 import { SubjectDistributionChart } from './SubjectDistributionChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, PieChart, BarChart, Trophy, Zap, TrendingUp, ChevronRight, Activity } from 'lucide-react';
+import { Clock, PieChart, BarChart, Trophy, Zap, TrendingUp, Activity } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { subDays, format, isAfter, startOfMonth, eachDayOfInterval, isSameMonth, startOfDay } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -47,7 +46,7 @@ export function AnalyticsDashboard() {
       const todaySessions = sessions.filter(s => s.date === todayStr);
       filteredSessions = todaySessions;
 
-      // Initialize 24 slots for each hour of the day
+      // Initialize 24 slots for each hour of the day (12 AM to 11 PM)
       const hourlyData: Record<number, any> = {};
       for (let i = 0; i < 24; i++) {
         const dateObj = new Date();
@@ -58,6 +57,7 @@ export function AnalyticsDashboard() {
         };
       }
 
+      // Aggregate all subjects into their respective hourly buckets
       for (const session of todaySessions) {
         const subName = session.subject || 'Other';
         activeSubjectsSet.add(subName);
@@ -142,7 +142,7 @@ export function AnalyticsDashboard() {
     }
     const subjectData = Object.entries(subjectMinutes).map(([name, value]) => ({ name, value }));
 
-    // Hustle Score Calculation
+    // Hustle Score Calculation: Consistency (days active) * volume (daily goal %)
     const uniqueDays = new Set(filteredSessions.map(s => s.date)).size;
     const consistencyFactor = (uniqueDays / Math.max(1, chartData.length));
     const goalMins = profile?.daily_goal_minutes || 360;
@@ -243,7 +243,7 @@ export function AnalyticsDashboard() {
           </CardContent>
         </Card>
 
-        {/* Desktop Layout: Consistency Tracker (Scrollable) followed by Focus Areas */}
+        {/* Desktop Layout: Consistency Tracker followed by Focus Areas Stacked */}
         <div className="md:col-span-6 space-y-8">
            {/* Consistency Tracker */}
           <Card className="rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
@@ -274,7 +274,7 @@ export function AnalyticsDashboard() {
             </CardContent>
           </Card>
 
-          {/* Focus Areas Distribution - Stacked below */}
+          {/* Focus Areas Distribution - Stacked below on Desktop as requested */}
           <Card className="rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
             <CardHeader>
               <CardTitle className="text-xl font-black flex items-center gap-2">
