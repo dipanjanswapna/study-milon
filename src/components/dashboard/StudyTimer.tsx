@@ -132,7 +132,7 @@ export function StudyTimer() {
       }
       initializedFromCloud.current = true;
     }
-  }, [profile?.currentSession]);
+  }, [profile?.currentSession, handleReset, toast]);
 
   // 2. SEARCH PARAM HANDLING (FROM PLANNER)
   useEffect(() => {
@@ -324,30 +324,30 @@ export function StudyTimer() {
         )} />
       )}
 
-      <CardHeader className="bg-white/5 pb-4 flex flex-row items-center justify-between relative z-10">
-        <CardTitle className="flex items-center gap-2 text-xl font-headline">
-          {isBreak ? <Coffee className="text-orange-400" /> : <BookOpenCheck className="text-red-600" />}
+      <CardHeader className="bg-white/5 p-4 md:p-6 flex flex-row items-center justify-between relative z-10">
+        <CardTitle className="flex items-center gap-2 text-lg md:text-xl font-headline">
+          {isBreak ? <Coffee className="h-5 w-5 text-orange-400" /> : <BookOpenCheck className="h-5 w-5 text-red-600" />}
           <span className="tracking-tight">{isBreak ? 'Rest Cycle' : 'Focus Session'}</span>
         </CardTitle>
         <div className="flex gap-2 items-center">
             {isActive && !isBreak && (
-              <div className="flex items-center gap-1.5 bg-red-600/20 px-3 py-1 rounded-full border border-red-600/20 animate-pulse shadow-lg">
-                <Wifi className="h-3 w-3 text-red-600" />
-                <span className="text-[9px] font-black uppercase text-red-600 tracking-widest">LIVE SYNCING</span>
+              <div className="flex items-center gap-1.5 bg-red-600/20 px-2 md:px-3 py-1 rounded-full border border-red-600/20 animate-pulse shadow-lg">
+                <Wifi className="h-2.5 w-2.5 md:h-3 md:w-3 text-red-600" />
+                <span className="text-[7px] md:text-[9px] font-black uppercase text-red-600 tracking-widest">LIVE SYNC</span>
               </div>
             )}
             {isBreak && (
-               <div className="flex items-center gap-1.5 bg-orange-500/20 px-3 py-1 rounded-full border border-orange-500/20 shadow-lg">
-                  <Zap className="h-3 w-3 text-orange-400" />
-                  <span className="text-[9px] font-black uppercase text-orange-400 tracking-widest">BREAK ACTIVE</span>
+               <div className="flex items-center gap-1.5 bg-orange-500/20 px-2 md:px-3 py-1 rounded-full border border-orange-500/20 shadow-lg">
+                  <Zap className="h-2.5 w-2.5 md:h-3 md:w-3 text-orange-400" />
+                  <span className="text-[7px] md:text-[9px] font-black uppercase text-orange-400 tracking-widest">BREAK</span>
                </div>
             )}
         </div>
       </CardHeader>
       
-      <CardContent className="flex flex-col items-center justify-center gap-8 py-10 relative z-10">
-        {/* Circular Progress Engine */}
-        <div className="relative h-64 w-64 md:h-80 md:w-80">
+      <CardContent className="flex flex-col items-center justify-center gap-6 md:gap-8 py-8 md:py-12 relative z-10">
+        {/* Responsive Circular Progress Engine */}
+        <div className="relative h-56 w-56 sm:h-64 sm:w-64 md:h-72 md:w-72 lg:h-80 lg:w-80">
           <svg className="h-full w-full" viewBox="0 0 100 100">
             <circle className="stroke-current text-white/5" strokeWidth="6" cx="50" cy="50" r="44" fill="transparent"/>
             <circle
@@ -363,40 +363,40 @@ export function StudyTimer() {
           </svg>
           
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-6xl md:text-8xl font-black font-mono tracking-tighter tabular-nums drop-shadow-2xl">
+            <span className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black font-mono tracking-tighter tabular-nums drop-shadow-2xl">
               {String(minutesDisplay).padStart(2, '0')}:{String(secondsDisplay).padStart(2, '0')}
             </span>
             {isActive && !isBreak && (
-              <span className="text-[10px] font-black uppercase text-red-600 mt-4 flex items-center gap-2 tracking-[0.3em] bg-red-600/10 px-4 py-1 rounded-full border border-red-600/20">
-                <ShieldCheck className="h-3 w-3" /> UNSTOPPABLE
+              <span className="text-[8px] md:text-[10px] font-black uppercase text-red-600 mt-2 md:mt-4 flex items-center gap-2 tracking-[0.3em] bg-red-600/10 px-3 md:px-4 py-1 rounded-full border border-red-600/20">
+                <ShieldCheck className="h-2.5 w-2.5 md:h-3 md:w-3" /> UNSTOPPABLE
               </span>
             )}
           </div>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-3 md:gap-4 w-full max-w-xs sm:max-w-none justify-center">
           <Button 
             onClick={isActive ? handlePause : handleStart} 
             size="lg" 
-            className="w-40 h-12 text-sm font-bold rounded-xl shadow-lg shadow-red-600/10 transition-all active:scale-95 bg-red-600 hover:bg-red-700" 
+            className="w-full sm:w-40 h-11 md:h-12 text-sm font-bold rounded-xl shadow-lg shadow-red-600/10 transition-all active:scale-95 bg-red-600 hover:bg-red-700" 
             disabled={!canStart && !isActive}
           >
             {isActive ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4 fill-current" />}
             {isActive ? 'Pause' : 'Start Focus'}
           </Button>
-          <Button onClick={handleReset} variant="ghost" size="icon" className="h-12 w-12 rounded-xl bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all">
+          <Button onClick={handleReset} variant="ghost" size="icon" className="h-11 w-11 md:h-12 md:w-12 rounded-xl bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all">
             <RotateCcw className="h-5 w-5" />
           </Button>
         </div>
       </CardContent>
 
-      <CardFooter className="flex-col items-start gap-6 p-6 md:p-10 bg-white/[0.02] border-t border-white/5 relative z-10">
-        {/* Academic Context Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
+      <CardFooter className="flex-col items-start gap-6 p-5 md:p-8 lg:p-10 bg-white/[0.02] border-t border-white/5 relative z-10">
+        {/* Academic Context Selection - Responsive Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 w-full">
             <div className="space-y-2">
-                <Label className="text-white/40 text-[10px] font-black uppercase tracking-widest px-1">Active Subject</Label>
+                <Label className="text-white/40 text-[9px] md:text-[10px] font-black uppercase tracking-widest px-1">Active Subject</Label>
                 <Select value={selectedSubject || ''} onValueChange={(value) => {setSelectedSubject(value); setSelectedChapter(null);}} disabled={isActive}>
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white h-14 rounded-2xl focus:ring-red-600/50">
+                    <SelectTrigger className="bg-white/5 border-white/10 text-white h-12 md:h-14 rounded-2xl focus:ring-red-600/50 text-sm">
                         <SelectValue placeholder="Select Subject" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#1A1C23] border-white/10 text-white rounded-2xl">
@@ -407,9 +407,9 @@ export function StudyTimer() {
                 </Select>
             </div>
             <div className="space-y-2">
-                <Label className="text-white/40 text-[10px] font-black uppercase tracking-widest px-1">Specific Chapter</Label>
+                <Label className="text-white/40 text-[9px] md:text-[10px] font-black uppercase tracking-widest px-1">Specific Chapter</Label>
                  <Select onValueChange={setSelectedChapter} value={selectedChapter || ''} disabled={!selectedSubject || isActive || chaptersLoading}>
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white h-14 rounded-2xl focus:ring-red-600/50">
+                    <SelectTrigger className="bg-white/5 border-white/10 text-white h-12 md:h-14 rounded-2xl focus:ring-red-600/50 text-sm">
                         <SelectValue placeholder="Select Chapter" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#1A1C23] border-white/10 text-white rounded-2xl">
@@ -421,21 +421,21 @@ export function StudyTimer() {
             </div>
         </div>
 
-        {/* Custom Duration Inputs */}
-        <div className="space-y-4 w-full pt-4">
-          <div className="flex items-center justify-between px-1">
-            <Label className="text-white/40 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-              <Settings2 className="h-4 w-4 text-red-600" /> Session Duration
+        {/* Custom Duration Inputs - Responsive Grid */}
+        <div className="space-y-4 w-full pt-2 md:pt-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-1">
+            <Label className="text-white/40 text-[9px] md:text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+              <Settings2 className="h-3.5 w-3.5 md:h-4 md:w-4 text-red-600" /> Session Duration
             </Label>
-            <div className="flex items-center gap-2 bg-red-600/10 px-3 py-1 rounded-full border border-red-600/10">
-               <Clock className="h-3 w-3 text-red-600" />
-               <span className="text-xs font-black font-mono text-red-600">
+            <div className="flex items-center gap-2 bg-red-600/10 px-2 md:px-3 py-1 rounded-full border border-red-600/10">
+               <Clock className="h-2.5 w-2.5 md:h-3 md:w-3 text-red-600" />
+               <span className="text-[10px] md:text-xs font-black font-mono text-red-600">
                  {Math.floor(workDuration / 60)}h {workDuration % 60}m
                </span>
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3 md:gap-4">
             <div className="space-y-1.5">
               <div className="relative">
                 <Input 
@@ -445,9 +445,9 @@ export function StudyTimer() {
                   value={inputHours} 
                   onChange={(e) => handleDurationChange(e.target.value, inputMinutes)}
                   disabled={isActive}
-                  className="bg-white/5 border-white/10 text-white h-14 rounded-2xl pr-12 text-lg font-bold"
+                  className="bg-white/5 border-white/10 text-white h-12 md:h-14 rounded-2xl pr-10 text-base md:text-lg font-bold"
                 />
-                <span className="absolute right-4 top-4.5 text-[9px] font-black text-white/20 uppercase">HRS</span>
+                <span className="absolute right-3 top-3.5 md:top-4.5 text-[8px] font-black text-white/20 uppercase">HRS</span>
               </div>
             </div>
             <div className="space-y-1.5">
@@ -459,20 +459,20 @@ export function StudyTimer() {
                   value={inputMinutes} 
                   onChange={(e) => handleDurationChange(inputHours, e.target.value)}
                   disabled={isActive}
-                  className="bg-white/5 border-white/10 text-white h-14 rounded-2xl pr-12 text-lg font-bold"
+                  className="bg-white/5 border-white/10 text-white h-12 md:h-14 rounded-2xl pr-10 text-base md:text-lg font-bold"
                 />
-                <span className="absolute right-4 top-4.5 text-[9px] font-black text-white/20 uppercase">MIN</span>
+                <span className="absolute right-3 top-3.5 md:top-4.5 text-[8px] font-black text-white/20 uppercase">MIN</span>
               </div>
             </div>
           </div>
-          <p className="text-[10px] text-white/20 font-bold px-1 text-center italic">
+          <p className="text-[8px] md:text-[10px] text-white/20 font-bold px-1 text-center italic">
             "You manually reset the session, but the cloud remembers your hustle."
           </p>
         </div>
       </CardFooter>
 
-      <div className="p-4 bg-white/[0.01] border-t border-white/5 text-center">
-         <p className="text-[7px] font-black text-white/10 uppercase tracking-[0.4em]">
+      <div className="p-3 md:p-4 bg-white/[0.01] border-t border-white/5 text-center">
+         <p className="text-[6px] md:text-[7px] font-black text-white/10 uppercase tracking-[0.4em]">
             ROOT SYSTEM ACTIVE • ENCRYPTED CLOCK • STUDY MILON PROTOCOL
          </p>
       </div>

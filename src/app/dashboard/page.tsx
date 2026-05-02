@@ -15,7 +15,7 @@ export default function DashboardPage() {
     <ProtectedRoute>
       <div className="min-h-screen bg-background text-foreground">
         <Header />
-        <main className="p-4 md:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <main className="p-3 sm:p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 max-w-7xl mx-auto">
           <ProfileSetupGate>
             <WelcomeBanner />
             
