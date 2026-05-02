@@ -11,15 +11,15 @@ export function Footer() {
             <Link href="/" className="flex items-center gap-2">
               <Image 
                 src="/Screenshot 2026-05-02 103540.png" 
-                alt="Study Million Logo" 
+                alt="Study Milon Logo" 
                 width={32} 
                 height={32} 
                 className="rounded-md"
               />
-              <span className="font-bold text-lg font-headline">Study Million</span>
+              <span className="font-bold text-lg font-headline">Study Milon</span>
             </Link>
             <p className="text-sm text-muted-foreground">
-              Track your hustle to the first million minutes.
+              Track your hustle to success with Study Milon.
             </p>
           </div>
           <div>
@@ -89,7 +89,7 @@ export function Footer() {
         </div>
         <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
           <p>
-            &copy; {new Date().getFullYear()} Study Million. All rights
+            &copy; {new Date().getFullYear()} Study Milon. All rights
             reserved.
           </p>
         </div>

@@ -7,27 +7,27 @@ import { AppSidebar } from '@/components/navigation/AppSidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
 
 export const metadata: Metadata = {
-  title: 'Study Million | Track Your Academic Hustle',
-  description: 'Join the elite community of students tracking their way to a million study minutes. Set goals, join guilds, and conquer the leaderboard.',
-  keywords: ['study tracking', 'student productivity', 'academic goals', 'study guilds', 'million minutes', 'study timer'],
+  title: 'Study Milon | Track Your Academic Hustle',
+  description: 'Join the elite community of students tracking their way to success. Set goals, join guilds, and conquer the leaderboard with Study Milon.',
+  keywords: ['study tracking', 'student productivity', 'academic goals', 'study guilds', 'study milon', 'study timer', 'hustle tracking'],
   manifest: '/manifest.json',
-  metadataBase: new URL('https://study-million.vercel.app'),
+  metadataBase: new URL('https://study-milon.vercel.app'),
   openGraph: {
-    title: 'Study Million | The Ultimate Study Tracker',
-    description: 'Track your hustle to the first million minutes. Join study guilds and rank globally.',
+    title: 'Study Milon | The Ultimate Study Tracker',
+    description: 'Track your hustle to success. Join study guilds and rank globally.',
     images: ['/Screenshot 2026-05-02 103540.png'],
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Study Million | Track Your Hustle',
+    title: 'Study Milon | Track Your Hustle',
     description: 'Transform your study habits and join elite student guilds.',
     images: ['/Screenshot 2026-05-02 103540.png'],
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Study Million',
+    title: 'Study Milon',
   },
   icons: {
     icon: '/Screenshot 2026-05-02 103540.png',

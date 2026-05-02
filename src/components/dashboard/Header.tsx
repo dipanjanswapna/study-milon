@@ -50,12 +50,12 @@ export function Header() {
         <Link href="/dashboard" className="flex items-center gap-2 md:hidden">
           <Image 
             src="/Screenshot 2026-05-02 103540.png" 
-            alt="Study Million Logo" 
+            alt="Study Milon Logo" 
             width={24} 
             height={24} 
             className="rounded-sm"
           />
-          <h1 className="text-xl font-bold tracking-tight text-foreground font-headline">Study Million</h1>
+          <h1 className="text-xl font-bold tracking-tight text-foreground font-headline">Study Milon</h1>
         </Link>
       </div>
       

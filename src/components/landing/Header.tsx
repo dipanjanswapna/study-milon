@@ -14,12 +14,12 @@ export function Header() {
         <Link href="/" className="flex items-center gap-2 mr-6">
           <Image 
             src="/Screenshot 2026-05-02 103540.png" 
-            alt="Study Million Logo" 
+            alt="Study Milon Logo" 
             width={24} 
             height={24} 
             className="rounded-sm"
           />
-          <span className="font-bold text-base font-headline">Study Million</span>
+          <span className="font-bold text-base font-headline">Study Milon</span>
         </Link>
         <div className="flex flex-1 items-center justify-end space-x-4">
           <nav className="flex items-center space-x-2">

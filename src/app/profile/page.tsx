@@ -166,7 +166,7 @@ export default function ProfilePage() {
   const showAppleInstructions = () => {
     toast({
       title: "iOS Installation",
-      description: "Tap the 'Share' icon (square with arrow) and select 'Add to Home Screen' to install Study Million.",
+      description: "Tap the 'Share' icon (square with arrow) and select 'Add to Home Screen' to install Study Milon.",
     });
   };
 
@@ -414,7 +414,7 @@ export default function ProfilePage() {
                       <div className="mt-4 flex items-center gap-2 p-3 bg-secondary/50 rounded-xl">
                          <Info className="h-4 w-4 text-primary shrink-0" />
                          <p className="text-[10px] font-medium leading-tight text-muted-foreground">
-                            Study Million supports PWA installation. After installing, the app will work offline and the timer will run more accurately.
+                            Study Milon supports PWA installation. After installing, the app will work offline and the timer will run more accurately.
                          </p>
                       </div>
                     </div>

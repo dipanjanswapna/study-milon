@@ -80,7 +80,7 @@ export function AppSidebar() {
           />
           {state === 'expanded' && (
             <span className="font-bold text-lg font-headline tracking-tight whitespace-nowrap">
-              Study Million
+              Study Milon
             </span>
           )}
         </Link>
