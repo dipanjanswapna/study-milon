@@ -64,6 +64,7 @@ export function StudyTimer() {
   
   const lastSyncTimestampRef = useRef<number>(0);
   const initializedFromCloud = useRef(false);
+  const todayStrRef = useRef<string>(format(new Date(), 'yyyy-MM-dd'));
 
   // Sync timeLeft with activeTask ONLY if idle
   useEffect(() => {
@@ -191,7 +192,6 @@ export function StudyTimer() {
     if (!user) return;
     
     if (isBreak) {
-      // Skip Break: Go back to idle/next task
       setIsActive(false);
       setIsBreak(false);
       updateUserProfile(firestore, user.uid, { 
@@ -230,7 +230,6 @@ export function StudyTimer() {
     }
   };
 
-  // MISSION RECONCILER
   useEffect(() => {
     if (profile?.currentSession && !initializedFromCloud.current && user) {
       const { startTime, lastSyncTime, duration, status, isBreak: cloudIsBreak, subjectId, chapterId, taskId } = profile.currentSession;
@@ -262,12 +261,7 @@ export function StudyTimer() {
               logStudyTime(firestore, user.uid, subjectId, chapterId, totalRemainingToSync);
             }
             if (taskId) {
-              updateTaskStatus(firestore, user.uid, taskId, true).then(() => {
-                toast({ 
-                  title: "Background Mission Secured!", 
-                  description: `One objective was completed while you were away.` 
-                });
-              });
+              updateTaskStatus(firestore, user.uid, taskId, true);
             }
           }
           
@@ -302,13 +296,27 @@ export function StudyTimer() {
       interval = setInterval(() => {
         const startTime = profile.currentSession!.startTime!;
         const totalDuration = profile.currentSession!.duration;
-        const now = Date.now();
+        const now = new Date();
+        const nowTime = now.getTime();
         
-        const elapsedSinceStart = Math.floor((now - startTime) / 1000);
+        const elapsedSinceStart = Math.floor((nowTime - startTime) / 1000);
         const newTimeLeft = Math.max(0, totalDuration - elapsedSinceStart);
         setTimeLeft(newTimeLeft);
 
-        const elapsedSinceLastSync = Math.floor((now - lastSyncTimestampRef.current) / 1000);
+        // AUTO-RESET PROTECTION: Detect Midnight Transition
+        const currentDayStr = format(now, 'yyyy-MM-dd');
+        if (currentDayStr !== todayStrRef.current && !isBreak) {
+          // Boundary crossed! Force a sync for the time up to midnight
+          const elapsed = Math.floor((nowTime - lastSyncTimestampRef.current) / 1000);
+          if (elapsed > 0) {
+            performSync(elapsed);
+          }
+          todayStrRef.current = currentDayStr;
+          // Note: logStudyTime handles the reset of daily counters upon detecting new dayStr
+          return;
+        }
+
+        const elapsedSinceLastSync = Math.floor((nowTime - lastSyncTimestampRef.current) / 1000);
         if (elapsedSinceLastSync >= SYNC_INTERVAL_SECONDS && !isBreak) {
           performSync(elapsedSinceLastSync);
         }

@@ -129,11 +129,8 @@ export async function updateChapterStatus(
 }
 
 /**
- * Precision logging system with automated Daily/Weekly/Monthly/Yearly resets.
- * - Daily: Reset at 12:00 AM
- * - Weekly: Friday to Thursday cycle (Reset Friday 12:00 AM)
- * - Monthly: Reset at 1st Day 12:00 AM
- * - Yearly: Reset at Jan 1st 12:00 AM
+ * Precision logging system with Auto-Reset Protection.
+ * Handles midnight transitions and period boundaries (Friday start week, Monthly, Yearly).
  */
 export async function logStudyTime(
     db: Firestore,
@@ -171,6 +168,9 @@ export async function logStudyTime(
         const userSnap = await getDoc(userRef);
         if (!userSnap.exists()) return;
         
+        const userData = userSnap.data();
+        const currentPartialSeconds = userData.partial_study_seconds || 0;
+        
         let subjectName = 'Guild Task';
         if (!isGroupTask && subjectRef) {
           const subjectSnap = await getDoc(subjectRef);
@@ -178,50 +178,61 @@ export async function logStudyTime(
             subjectName = subjectSnap.data().name;
           }
         }
-        
-        const userData = userSnap.data();
-        const currentPartialSeconds = userData.partial_study_seconds || 0;
-        const totalSeconds = currentPartialSeconds + seconds;
-        
-        const minutesToAdd = Math.floor(totalSeconds / 60);
-        const remainingSeconds = totalSeconds % 60;
 
         const userUpdate: any = {
-            partial_study_seconds: remainingSeconds,
             last_active_date: serverTimestamp(),
             isStudying: true,
             "currentSession.lastSyncTime": Date.now() 
         };
 
-        // --- PHYSICAL RESET LOGIC ---
-        
-        // 1. Daily Reset (12:00 AM)
-        if (userData.last_study_day !== dateStr) {
+        // --- BOUNDARY DETECTION (Auto-Reset Protection) ---
+        const isNewDay = userData.last_study_day !== dateStr;
+        const isNewWeek = userData.last_study_week !== weekStr;
+        const isNewMonth = userData.last_study_month !== monthStr;
+        const isNewYear = userData.last_study_year !== yearStr;
+
+        let minutesToAdd = 0;
+        let finalPartialSeconds = 0;
+
+        if (isNewDay) {
+            // MIDNIGHT RESET: If day changed, we discard previous partial seconds for the new day's counter
+            // but we still count them for the overall 'total_study_minutes' if they reach a full minute.
+            // For the daily/weekly/etc counters, we start fresh with the 'seconds' provided in this sync call.
+            minutesToAdd = Math.floor(seconds / 60);
+            finalPartialSeconds = seconds % 60;
+            
             userUpdate.daily_study_minutes = minutesToAdd;
             userUpdate.last_study_day = dateStr;
-        } else if (minutesToAdd > 0) {
-            userUpdate.daily_study_minutes = increment(minutesToAdd);
+        } else {
+            const totalSeconds = currentPartialSeconds + seconds;
+            minutesToAdd = Math.floor(totalSeconds / 60);
+            finalPartialSeconds = totalSeconds % 60;
+            if (minutesToAdd > 0) {
+                userUpdate.daily_study_minutes = increment(minutesToAdd);
+            }
         }
 
-        // 2. Weekly Reset (Friday 12:00 AM)
-        if (userData.last_study_week !== weekStr) {
-            userUpdate.weekly_study_minutes = minutesToAdd;
+        userUpdate.partial_study_seconds = finalPartialSeconds;
+
+        // 2. Weekly Reset (Friday)
+        if (isNewWeek) {
+            userUpdate.weekly_study_minutes = Math.floor(seconds / 60);
             userUpdate.last_study_week = weekStr;
         } else if (minutesToAdd > 0) {
             userUpdate.weekly_study_minutes = increment(minutesToAdd);
         }
 
-        // 3. Monthly Reset (1st Day 12:00 AM)
-        if (userData.last_study_month !== monthStr) {
-            userUpdate.monthly_study_minutes = minutesToAdd;
+        // 3. Monthly Reset
+        if (isNewMonth) {
+            userUpdate.monthly_study_minutes = Math.floor(seconds / 60);
             userUpdate.last_study_month = monthStr;
         } else if (minutesToAdd > 0) {
             userUpdate.monthly_study_minutes = increment(minutesToAdd);
         }
 
-        // 4. Yearly Reset (Jan 1st 12:00 AM)
-        if (userData.last_study_year !== yearStr) {
-            userUpdate.yearly_study_minutes = minutesToAdd;
+        // 4. Yearly Reset
+        if (isNewYear) {
+            userUpdate.yearly_study_minutes = Math.floor(seconds / 60);
             userUpdate.last_study_year = yearStr;
         } else if (minutesToAdd > 0) {
             userUpdate.yearly_study_minutes = increment(minutesToAdd);
