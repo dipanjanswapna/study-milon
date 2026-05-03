@@ -63,7 +63,7 @@ export function StudyTimer() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const alarmRef = useRef<HTMLAudioElement | null>(null);
   
-  // Tracking refs for absolute precision
+  // Tracking refs for absolute precision heartbeat
   const lastSyncTimestampRef = useRef<number>(0);
   const initializedFromCloud = useRef(false);
 
@@ -96,7 +96,7 @@ export function StudyTimer() {
 
     const goalSeconds = (profile.daily_goal_minutes || 360) * 60;
     return Math.min(100, (currentSeconds / goalSeconds) * 100);
-  }, [profile, isActive, isBreak, timeLeft]); // Re-calculate when timeLeft (every sec) or profile updates
+  }, [profile, isActive, isBreak, timeLeft]); 
 
   const handleResetInternal = useCallback(async () => {
     if (user) {
@@ -279,7 +279,7 @@ export function StudyTimer() {
     }
   }, [profile?.currentSession, handleResetInternal]);
 
-  // HEARTBEAT TIMER EFFECT
+  // HEARTBEAT TIMER EFFECT: Absolute Precision
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
@@ -288,7 +288,7 @@ export function StudyTimer() {
         const totalDuration = profile.currentSession!.duration;
         const now = Date.now();
         
-        // 1. Calculate precise time left
+        // 1. Calculate precise time left based on absolute timestamp
         const elapsedSinceStart = Math.floor((now - startTime) / 1000);
         const newTimeLeft = Math.max(0, totalDuration - elapsedSinceStart);
         setTimeLeft(newTimeLeft);
@@ -300,12 +300,12 @@ export function StudyTimer() {
           lastSyncTimestampRef.current = now;
         }
 
-        // 3. Keep "Live" status updated
+        // 3. Keep "Live" status updated every 30s
         if (elapsedSinceStart % 30 === 0 && !isBreak) {
           updateUserProfile(firestore, user!.uid, { last_active_date: serverTimestamp() });
         }
 
-        // 4. Session completion
+        // 4. Session completion logic
         if (newTimeLeft === 0) {
           clearInterval(interval!);
           if (isBreak) {

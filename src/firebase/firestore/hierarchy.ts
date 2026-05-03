@@ -174,7 +174,7 @@ export async function logStudyTime(
         const minutesToAdd = Math.floor(totalSeconds / 60);
         const remainingSeconds = totalSeconds % 60;
 
-        // Basic precision update (always update partial seconds)
+        // Basic precision update (always update partial seconds to avoid loss)
         const userUpdate: any = {
             partial_study_seconds: remainingSeconds,
             last_active_date: serverTimestamp(),
