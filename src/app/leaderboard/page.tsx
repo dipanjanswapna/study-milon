@@ -48,7 +48,7 @@ export default function LeaderboardPage() {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    // Tick every 60 seconds to ensure resets at midnight or Friday midnight happen live
+    // Tick every 60 seconds to ensure resets at midnight happen live in the UI
     const timer = setInterval(() => setTick(t => t + 1), 60000);
     return () => clearInterval(timer);
   }, []);
@@ -92,7 +92,7 @@ export default function LeaderboardPage() {
     const now = new Date();
     const todayStr = format(now, 'yyyy-MM-dd');
     
-    // Friday start for Weekly
+    // Friday start for Weekly (weekStartsOn: 5 means Friday)
     const weekStart = startOfWeek(now, { weekStartsOn: 5 }); 
     const weekStr = `Friday_${format(weekStart, 'yyyy-MM-dd')}`;
     
@@ -107,6 +107,8 @@ export default function LeaderboardPage() {
       let currentVal = u[getSortField(timeFilter)] || 0;
       
       // --- VIRTUAL RESET LOGIC ---
+      // If the period has changed but the user hasn't studied yet (data in DB is old),
+      // we display 0 to ensure the leaderboard is live.
       if (timeFilter === 'daily' && u.last_study_day !== todayStr) currentVal = 0;
       if (timeFilter === 'weekly' && u.last_study_week !== weekStr) currentVal = 0;
       if (timeFilter === 'monthly' && u.last_study_month !== monthStr) currentVal = 0;
@@ -138,56 +140,56 @@ export default function LeaderboardPage() {
     <ProtectedRoute>
       <div className="min-h-screen bg-background text-foreground pb-24 md:pb-10">
         <Header />
-        <main className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-2">
+        <main className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-4">
           
-          {/* Hero Banner */}
-          <Card className="rounded-xl border-none shadow-2xl overflow-hidden bg-[#1A1C3D] text-white relative group">
+          {/* Hero Banner - Compact for Mobile */}
+          <Card className="rounded-xl border-none shadow-xl overflow-hidden bg-[#1A1C3D] text-white relative group">
             <div className="absolute top-0 right-0 p-8 opacity-5">
               <Trophy className="h-20 w-20 transition-transform group-hover:scale-110 duration-1000" />
             </div>
-            <CardContent className="p-5 md:p-8 relative z-10 space-y-1">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-2">
-                <div className="space-y-0.5 text-center md:text-left">
-                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-                    <div className="inline-flex items-center gap-1.5 bg-primary/20 backdrop-blur-lg px-2 py-0.5 rounded-full border border-primary/30 text-[8px] font-black text-primary-foreground uppercase tracking-widest">
-                       <Zap className="h-2 w-2 fill-current" />
-                       Million Minute Quest
-                    </div>
+            <CardContent className="p-4 md:p-6 relative z-10 space-y-1">
+              <div className="space-y-0.5 text-center md:text-left">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                  <div className="inline-flex items-center gap-1 bg-primary/20 backdrop-blur-lg px-2 py-0.5 rounded-full border border-white/10 text-[8px] font-black text-primary-foreground uppercase tracking-widest">
+                     <Zap className="h-2 w-2 fill-current" />
+                     Million Minute Quest
                   </div>
-                  <h1 className="text-lg md:text-xl font-black tracking-tighter leading-none">Hustle Standings</h1>
-                  <p className="text-white/60 font-medium max-w-xl text-[9px] md:text-xs">
-                    Real-time global rankings. Push your limits and claim the top spot.
-                  </p>
                 </div>
+                <h1 className="text-lg md:text-xl font-black tracking-tighter leading-none">Hustle Standings</h1>
+                <p className="text-white/60 font-medium max-w-xl text-[9px] md:text-xs">
+                  Real-time global rankings. Push your limits and claim the top spot.
+                </p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Podium Section */}
-          <div className="w-full flex justify-center pt-20 pb-2 overflow-visible relative z-20">
+          {/* Podium Section - Properly Spaced and Scaled */}
+          <div className="w-full flex justify-center pt-8 pb-4 overflow-visible relative z-20">
             {loading ? (
-              <div className="flex items-end justify-center gap-8 md:gap-20">
-                <Skeleton className="h-24 w-24 rounded-full" />
-                <Skeleton className="h-32 w-32 rounded-full" />
-                <Skeleton className="h-24 w-24 rounded-full" />
+              <div className="flex items-end justify-center gap-8">
+                <Skeleton className="h-20 w-20 rounded-full" />
+                <Skeleton className="h-28 w-28 rounded-full" />
+                <Skeleton className="h-20 w-20 rounded-full" />
               </div>
             ) : top3.length > 0 ? (
-              <div className="flex items-end justify-center gap-4 md:gap-16 lg:gap-24 px-4 w-full overflow-visible pb-0">
+              <div className="flex items-end justify-center gap-4 md:gap-16 lg:gap-24 px-4 w-full overflow-visible">
                 {top3[1] && <PodiumMember user={top3[1]} rank={2} time={formatTime(top3[1].displayMinutes)} />}
                 {top3[0] && <PodiumMember user={top3[0]} rank={1} time={formatTime(top3[0].displayMinutes)} />}
                 {top3[2] && <PodiumMember user={top3[2]} rank={3} time={formatTime(top3[2].displayMinutes)} />}
               </div>
-            ) : null}
+            ) : (
+              <div className="py-10 text-center text-muted-foreground italic text-xs">No active contenders for this period.</div>
+            )}
           </div>
 
-          {/* Filters */}
-          <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
+          {/* Filters - Side by Side on Mobile */}
+          <Card className="rounded-xl border-none shadow-sm bg-card overflow-hidden">
             <CardContent className="p-2 md:p-3 flex flex-col md:flex-row items-center justify-between gap-3">
-              <div className="flex flex-row items-center justify-center md:justify-start gap-2 w-full md:w-auto">
-                  <div className="bg-secondary/50 p-0.5 rounded-xl flex items-center flex-1 sm:flex-initial">
+              <div className="grid grid-cols-2 gap-2 w-full md:w-auto">
+                  <div className="bg-secondary/50 p-0.5 rounded-lg flex items-center">
                     <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as any)}>
-                        <SelectTrigger className="h-9 w-full sm:w-[150px] rounded-lg border-none bg-transparent font-bold text-[10px]">
-                            <Filter className="h-3 w-3 mr-1.5 text-primary" />
+                        <SelectTrigger className="h-8 w-full sm:w-[140px] rounded-md border-none bg-transparent font-bold text-[9px]">
+                            <Filter className="h-3 w-3 mr-1.5 text-primary shrink-0" />
                             <SelectValue placeholder="Category" />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl">
@@ -202,9 +204,9 @@ export default function LeaderboardPage() {
                     </Select>
                   </div>
 
-                  <div className="bg-secondary/50 p-0.5 rounded-xl flex items-center flex-1 sm:flex-initial">
+                  <div className="bg-secondary/50 p-0.5 rounded-lg flex items-center">
                     <Select value={batchFilter} onValueChange={setBatchFilter}>
-                        <SelectTrigger className="h-9 w-full sm:w-[100px] rounded-lg border-none bg-transparent font-bold text-[10px]">
+                        <SelectTrigger className="h-8 w-full sm:w-[90px] rounded-md border-none bg-transparent font-bold text-[9px]">
                             <SelectValue placeholder="Batch" />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl">
@@ -218,26 +220,26 @@ export default function LeaderboardPage() {
               </div>
 
               <Tabs value={timeFilter} onValueChange={(v) => setTimeFilter(v as any)} className="w-full md:w-auto">
-                <TabsList className="grid grid-cols-4 bg-secondary/50 p-1 rounded-xl h-10 w-full md:min-w-[320px]">
-                  <TabsTrigger value="daily" className="rounded-lg font-black text-[8px] md:text-[9px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Daily</TabsTrigger>
-                  <TabsTrigger value="weekly" className="rounded-lg font-black text-[8px] md:text-[9px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Weekly</TabsTrigger>
-                  <TabsTrigger value="monthly" className="rounded-lg font-black text-[8px] md:text-[9px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Monthly</TabsTrigger>
-                  <TabsTrigger value="yearly" className="rounded-lg font-black text-[8px] md:text-[9px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Yearly</TabsTrigger>
+                <TabsList className="grid grid-cols-4 bg-secondary/50 p-1 rounded-xl h-9 w-full md:min-w-[300px]">
+                  <TabsTrigger value="daily" className="rounded-lg font-black text-[8px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Daily</TabsTrigger>
+                  <TabsTrigger value="weekly" className="rounded-lg font-black text-[8px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Weekly</TabsTrigger>
+                  <TabsTrigger value="monthly" className="rounded-lg font-black text-[8px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Monthly</TabsTrigger>
+                  <TabsTrigger value="yearly" className="rounded-lg font-black text-[8px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Yearly</TabsTrigger>
                 </TabsList>
               </Tabs>
             </CardContent>
           </Card>
 
-          {/* Rankings List */}
+          {/* Rankings List - Custom Scroll and XL Corners */}
           <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
             <div className="p-3 md:p-4 border-b bg-secondary/10 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-black flex items-center gap-2 tracking-tight">
-                   <List className="h-4 w-4 text-primary" /> Contender Directory
+                <h3 className="text-xs font-black flex items-center gap-2 tracking-tight">
+                   <List className="h-3.5 w-3.5 text-primary" /> Contender Directory
                 </h3>
                 <p className="text-[7px] font-black uppercase text-muted-foreground tracking-[0.2em] mt-0.5">Live from global data servers</p>
               </div>
-              <Badge variant="outline" className="font-black text-[8px] uppercase tracking-widest border-primary/20 text-primary h-6 px-2">
+              <Badge variant="outline" className="font-black text-[8px] uppercase tracking-widest border-primary/20 text-primary h-5 px-1.5">
                 {rankings.length} Tracked
               </Badge>
             </div>
@@ -250,33 +252,33 @@ export default function LeaderboardPage() {
 
                   return (
                     <Link key={contender.uid} href={`/profile/${contender.uid}`} className={cn("flex items-center justify-between p-3 md:p-4 hover:bg-primary/[0.03] transition-all group", isMe && "bg-primary/[0.05] ring-1 ring-inset ring-primary/10")}>
-                      <div className="flex items-center gap-3 md:gap-5 min-w-0">
-                        <span className={cn("w-6 text-center font-black text-xs md:text-sm", idx === 0 ? "text-yellow-500" : idx === 1 ? "text-slate-400" : idx === 2 ? "text-orange-500" : "text-muted-foreground/30")}>#{idx + 1}</span>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className={cn("w-6 text-center font-black text-[10px] md:text-sm", idx === 0 ? "text-yellow-500" : idx === 1 ? "text-slate-400" : idx === 2 ? "text-orange-500" : "text-muted-foreground/30")}>#{idx + 1}</span>
                         <div className="relative">
-                          <Avatar className={cn("h-8 w-8 md:h-10 md:w-10 border transition-transform group-hover:scale-105", isMe ? "border-primary" : "border-background shadow-sm")}>
+                          <Avatar className={cn("h-8 w-8 md:h-9 md:w-9 border transition-transform group-hover:scale-105", isMe ? "border-primary" : "border-background shadow-sm")}>
                             <AvatarImage src={contender.photoURL || undefined} />
-                            <AvatarFallback className="font-black text-xs bg-secondary text-primary">{contender.displayName?.[0]}</AvatarFallback>
+                            <AvatarFallback className="font-black text-[10px] bg-secondary text-primary">{contender.displayName?.[0]}</AvatarFallback>
                           </Avatar>
                           {contender.isLive && (
-                            <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-red-600 rounded-full border-2 border-card flex items-center justify-center">
+                            <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 bg-red-600 rounded-full border-2 border-card flex items-center justify-center">
                               <div className="h-1 w-1 bg-white rounded-full animate-ping" />
                             </div>
                           )}
                         </div>
                         <div className="min-w-0 space-y-0.5">
-                            <div className="flex items-center gap-1.5 mb-0.5">
+                            <div className="flex items-center gap-1.5">
                                 <p className="font-bold text-[11px] md:text-sm truncate group-hover:text-primary transition-colors tracking-tight">{contender.displayName}</p>
                                 {isMe && <Badge className="text-[6px] font-black bg-primary text-white h-3 tracking-widest border-none px-1">YOU</Badge>}
                             </div>
                             <div className="flex flex-wrap items-center gap-1.5">
                                 <span className="text-[7px] md:text-[8px] font-black uppercase text-muted-foreground">{contender.category || 'SSC'} {contender.batch || ''}</span>
-                                {userGuildName && <div className="flex items-center gap-1 text-[7px] md:text-[8px] font-black text-primary bg-primary/5 px-1.5 py-0.5 rounded-full"><Users2 className="h-2 w-2" /> {userGuildName}</div>}
+                                {userGuildName && <div className="flex items-center gap-1 text-[7px] md:text-[8px] font-black text-primary bg-primary/5 px-1 py-0.5 rounded-full"><Users2 className="h-2 w-2" /> {userGuildName}</div>}
                             </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 md:gap-5">
+                      <div className="flex items-center gap-3">
                         <div className="text-right shrink-0">
-                            <p className="font-black text-sm md:text-lg text-primary leading-none tracking-tighter tabular-nums">{formatTime(contender.displayMinutes)}</p>
+                            <p className="font-black text-xs md:text-base text-primary leading-none tracking-tighter tabular-nums">{formatTime(contender.displayMinutes)}</p>
                             <p className="text-[6px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">{timeFilter}</p>
                         </div>
                         <div className="hidden sm:flex h-6 w-6 rounded-full items-center justify-center bg-secondary/50 group-hover:bg-primary group-hover:text-white transition-all"><ArrowRight className="h-3 w-3" /></div>
@@ -299,25 +301,39 @@ function PodiumMember({ user, rank, time }: { user: any; rank: number; time: str
     <Link href={`/profile/${user.uid}`} className="flex flex-col items-center group overflow-visible relative">
        <div className="relative flex flex-col items-center overflow-visible">
           {isWinner && (
-             <>
-               <div className="absolute -top-9 md:-top-14 z-[50] animate-bounce pointer-events-none">
-                  <Crown className="h-8 w-8 md:h-12 md:w-12 text-yellow-400 fill-current drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]" />
-               </div>
-               {user.isLive && <div className="absolute top-0 right-0 z-[60] bg-red-600 text-white text-[7px] md:text-[9px] font-black px-1.5 md:px-2 py-0.5 rounded-full shadow-lg border border-red-400 animate-pulse">LIVE</div>}
-             </>
+             <div className="absolute -top-10 md:-top-14 z-[50] animate-bounce pointer-events-none">
+                <Crown className="h-10 w-10 md:h-14 md:w-14 text-yellow-400 fill-current drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]" />
+             </div>
           )}
-          <div className={cn("relative rounded-full transition-transform duration-500 group-hover:scale-105 overflow-visible", isWinner ? "h-20 w-20 md:h-32 md:w-32 border-[4px] border-yellow-400 shadow-[0_0_25px_rgba(250,204,21,0.4)]" : rank === 2 ? "h-16 w-16 md:h-24 md:w-24 border-[3px] border-slate-400" : "h-16 w-16 md:h-24 md:w-24 border-[3px] border-orange-500")}>
+          <div className={cn(
+            "relative rounded-full transition-all duration-500 group-hover:scale-110",
+            isWinner 
+              ? "h-20 w-20 md:h-28 md:w-28 border-[4px] border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.3)]" 
+              : "h-16 w-16 md:h-20 md:w-20 border-[3px] " + (rank === 2 ? "border-slate-300" : "border-orange-400")
+          )}>
              <Avatar className="h-full w-full">
                 <AvatarImage src={user.photoURL || undefined} />
-                <AvatarFallback className="text-sm md:text-lg font-black bg-secondary">{user.displayName?.[0]}</AvatarFallback>
+                <AvatarFallback className="text-xs md:text-lg font-black bg-secondary">{user.displayName?.[0]}</AvatarFallback>
              </Avatar>
-             {!isWinner && <div className={cn("absolute -bottom-1 -right-1 h-6 w-6 md:h-8 md:w-8 rounded-full flex items-center justify-center border-2 border-white shadow-lg", rank === 2 ? "bg-slate-400" : "bg-orange-500")}><Medal className="h-3 w-3 md:h-4 md:w-4 text-white fill-current" /></div>}
+             {user.isLive && <div className="absolute -top-1 -right-1 z-[60] bg-red-600 text-white text-[6px] md:text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-lg border border-red-400 animate-pulse">LIVE</div>}
+             {!isWinner && (
+               <div className={cn(
+                 "absolute -bottom-1 -right-1 h-5 w-5 md:h-7 md:w-7 rounded-full flex items-center justify-center border-2 border-background shadow-lg",
+                 rank === 2 ? "bg-slate-300" : "bg-orange-400"
+               )}>
+                 <Medal className="h-2.5 w-2.5 md:h-3.5 md:w-3.5 text-white fill-current" />
+               </div>
+             )}
           </div>
        </div>
        <div className="mt-2 text-center space-y-0.5">
-          <h3 className={cn("font-black tracking-tight truncate max-w-[80px] md:max-w-[120px]", isWinner ? "text-xs md:text-lg" : "text-[10px] md:text-sm")}>{user.displayName}</h3>
-          <div className="flex flex-col items-center gap-1">
-             {isWinner ? <div className="bg-yellow-400 text-black px-2 md:px-3 py-0.5 rounded-full text-[7px] md:text-xs font-black shadow-md">{time}</div> : <span className="text-primary font-black text-[8px] md:text-xs">{time}</span>}
+          <h3 className={cn("font-black tracking-tight truncate max-w-[70px] md:max-w-[100px]", isWinner ? "text-[10px] md:text-sm" : "text-[8px] md:text-xs")}>{user.displayName}</h3>
+          <div className="flex flex-col items-center">
+             {isWinner ? (
+               <div className="bg-yellow-400 text-black px-1.5 md:px-2.5 py-0.5 rounded-full text-[8px] md:text-[10px] font-black shadow-sm">{time}</div>
+             ) : (
+               <span className="text-primary font-black text-[8px] md:text-[10px]">{time}</span>
+             )}
           </div>
        </div>
     </Link>
