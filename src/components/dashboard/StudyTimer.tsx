@@ -16,7 +16,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RotateCcw, Clock, ArrowRight, ListTodo, CheckCircle2, Target, Zap, Wifi } from 'lucide-react';
+import { Play, Pause, Clock, ArrowRight, ListTodo, CheckCircle2, Target, Zap, Wifi } from 'lucide-react';
 import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -71,13 +71,6 @@ export function StudyTimer() {
     }
   }, [activeTask, isActive, isBreak, profile?.currentSession?.status]);
 
-  const totalSeconds = useMemo(() => {
-    if (isBreak) return BREAK_MINUTES * 60;
-    // If paused, the 'duration' in currentSession stores the remaining seconds
-    if (profile?.currentSession?.status === 'paused') return profile.currentSession.duration;
-    return (activeTask?.duration || 25) * 60;
-  }, [isBreak, activeTask, profile?.currentSession]);
-
   const progress = useMemo(() => {
     // For visual progress, we need the ORIGINAL total duration
     const originalTotal = isBreak ? BREAK_MINUTES * 60 : (activeTask?.duration || 25) * 60;
@@ -91,7 +84,7 @@ export function StudyTimer() {
     return Math.min(100, (current / goal) * 100);
   }, [profile]);
 
-  const handleReset = useCallback(async () => {
+  const handleResetInternal = useCallback(async () => {
     if (user) {
       setIsActive(false);
       setIsBreak(false);
@@ -129,12 +122,11 @@ export function StudyTimer() {
       lastLoggedMinuteRef.current = 0;
       audioRef.current?.play().catch(() => {});
       
-      // When resuming, 'timeLeft' is already correct (it was loaded from cloud or kept in state)
       const currentRemaining = timeLeft;
       
       const newSession: CurrentSession = {
         startTime,
-        duration: currentRemaining, // Use current timeLeft as the base duration for this segment
+        duration: currentRemaining, 
         status: 'active',
         subjectId: activeTask.subjectId,
         chapterId: activeTask.chapterId,
@@ -153,12 +145,11 @@ export function StudyTimer() {
     if (user) {
       setIsActive(false);
       audioRef.current?.pause();
-      // Save current timeLeft to Firestore as the new duration to resume from
       updateUserProfile(firestore, user.uid, { 
         isStudying: false,
         "currentSession.status": "paused",
         "currentSession.startTime": null,
-        "currentSession.duration": timeLeft // Store exact seconds remaining
+        "currentSession.duration": timeLeft 
       });
     }
   };
@@ -167,7 +158,7 @@ export function StudyTimer() {
     if (user && activeTask) {
        await updateTaskStatus(firestore, user.uid, activeTask.id, true);
        toast({ title: "Objective Secured!", description: `${activeTask.chapterName} has been completed.` });
-       handleReset();
+       handleResetInternal();
     }
   };
 
@@ -211,7 +202,6 @@ export function StudyTimer() {
     alarmRef.current = new Audio(ALARM_AUDIO_PATH);
   }, []);
 
-  // Hydrate timer state from cloud session on load
   useEffect(() => {
     if (profile?.currentSession && !initializedFromCloud.current) {
       const { startTime, duration, status, isBreak: cloudIsBreak } = profile.currentSession;
@@ -228,24 +218,23 @@ export function StudyTimer() {
           lastLoggedMinuteRef.current = Math.floor(elapsedSeconds / 60);
           audioRef.current?.play().catch(() => {});
         } else {
-          handleReset();
+          handleResetInternal();
         }
       } else if (status === 'paused') {
-        // Load the paused time
         setTimeLeft(duration);
         setIsBreak(cloudIsBreak);
         setIsActive(false);
       }
       initializedFromCloud.current = true;
     }
-  }, [profile?.currentSession, handleReset]);
+  }, [profile?.currentSession, handleResetInternal]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
       interval = setInterval(() => {
         const startTime = profile.currentSession!.startTime;
-        const duration = profile.currentSession!.duration; // This is the budget when session started/resumed
+        const duration = profile.currentSession!.duration;
         const now = Date.now();
         const elapsedSeconds = Math.floor((now - startTime) / 1000);
         const newTimeLeft = Math.max(0, duration - elapsedSeconds);
@@ -268,7 +257,7 @@ export function StudyTimer() {
           clearInterval(interval!);
           if (isBreak) {
             playAlarm();
-            handleReset();
+            handleResetInternal();
           } else {
             startBreak();
           }
@@ -276,7 +265,7 @@ export function StudyTimer() {
       }, 1000);
     }
     return () => { if (interval) clearInterval(interval); };
-  }, [isActive, isBreak, activeTask, profile?.currentSession, user, firestore, handleReset, startBreak, handleMinuteLog, playAlarm]);
+  }, [isActive, isBreak, activeTask, profile?.currentSession, user, firestore, handleResetInternal, startBreak, handleMinuteLog, playAlarm]);
 
   const minutesDisplay = Math.floor(timeLeft / 60);
   const secondsDisplay = timeLeft % 60;
@@ -438,9 +427,6 @@ export function StudyTimer() {
             >
               {isActive ? <Pause className="mr-2 h-5 w-5" /> : <Play className="mr-2 h-5 w-5 fill-current" />}
               {isActive ? 'Pause' : 'Engage'}
-            </Button>
-            <Button onClick={handleReset} variant="outline" size="icon" className="h-14 w-14 rounded-2xl bg-white/10 border-white/20 hover:bg-white/20 text-white transition-all">
-              <RotateCcw className="h-5 w-5" />
             </Button>
           </div>
           
