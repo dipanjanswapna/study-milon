@@ -48,7 +48,12 @@ export default function PublicProfilePage() {
   const { userId } = useParams();
   const firestore = useFirestore();
   const [filter, setFilter] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
-  const [ranks, setRanks] = useState({ daily: '-', weekly: '-', monthly: '-', yearly: '-' });
+  const [ranks, setRanks] = useState<{ daily: string | null; weekly: string | null; monthly: string | null; yearly: string | null }>({ 
+    daily: null, 
+    weekly: null, 
+    monthly: null, 
+    yearly: null 
+  });
 
   // Fetch Target User Profile
   const userRef = useMemo(() => doc(firestore, 'users', userId as string), [firestore, userId]);
@@ -71,8 +76,8 @@ export default function PublicProfilePage() {
     if (!profile) return;
 
     const calculateRanks = async () => {
-      const periods = ['daily', 'weekly', 'monthly', 'yearly'];
-      const newRanks: any = {};
+      const periods = ['daily', 'weekly', 'monthly', 'yearly'] as const;
+      const newRanks: any = { daily: null, weekly: null, monthly: null, yearly: null };
 
       const now = new Date();
       const todayStr = format(now, 'yyyy-MM-dd');
@@ -90,7 +95,7 @@ export default function PublicProfilePage() {
           const data = d.data();
           let val = data[field] || 0;
           
-          // Virtual Reset Check for ranking accuracy
+          // Virtual Reset Check
           if (p === 'daily' && data.last_study_day !== todayStr) val = 0;
           if (p === 'weekly' && data.last_study_week !== weekStr) val = 0;
           if (p === 'monthly' && data.last_study_month !== monthStr) val = 0;
@@ -99,8 +104,8 @@ export default function PublicProfilePage() {
           return { uid: d.id, val };
         }).sort((a, b) => b.val - a.val);
 
-        const rankIndex = sortedUsers.findIndex(u => u.uid === userId);
-        newRanks[p] = rankIndex !== -1 ? `#${rankIndex + 1}` : '100+';
+        const rankIndex = sortedUsers.findIndex(u => u.uid === userId && u.val > 0);
+        newRanks[p] = rankIndex !== -1 ? `#${rankIndex + 1}` : null;
       }
       setRanks(newRanks);
     };
@@ -108,11 +113,11 @@ export default function PublicProfilePage() {
     calculateRanks();
   }, [profile, firestore, userId]);
 
-  // Fetch Guild Info if exists
+  // Fetch Guild Info
   const guildRef = useMemo(() => profile?.groupId ? doc(firestore, 'groups', profile.groupId) : null, [firestore, profile?.groupId]);
   const { data: guild } = useDoc<any>(guildRef as any);
 
-  // Fetch Study Sessions for charts
+  // Fetch Study Sessions
   const sessionsQuery = useMemo(() => {
     return query(
       collection(firestore, 'users', userId as string, 'studySessions'),
@@ -138,10 +143,7 @@ export default function PublicProfilePage() {
       for (let i = 0; i < 24; i++) {
         const dateObj = new Date();
         dateObj.setHours(i, 0, 0, 0);
-        hourlyData[i] = { 
-          date: format(dateObj, 'h a'), 
-          hour: i 
-        };
+        hourlyData[i] = { date: format(dateObj, 'h a'), hour: i };
       }
 
       for (const session of todaySessions) {
@@ -161,15 +163,12 @@ export default function PublicProfilePage() {
     else if (filter === 'weekly') {
       const sevenDaysAgo = startOfDay(subDays(now, 6));
       const interval = eachDayOfInterval({ start: sevenDaysAgo, end: now });
-      
       const dailyAgg: Record<string, any> = {};
       interval.forEach(day => {
         const key = format(day, 'yyyy-MM-dd');
         dailyAgg[key] = { date: format(day, 'EEE'), key };
       });
-
       filteredSessions = sessions.filter(s => s.date && isAfter(new Date(s.date), subDays(now, 7)));
-      
       filteredSessions.forEach(s => {
         if (dailyAgg[s.date]) {
           const subName = s.subject || 'Other';
@@ -177,7 +176,6 @@ export default function PublicProfilePage() {
           dailyAgg[s.date][subName] = (dailyAgg[s.date][subName] || 0) + s.duration;
         }
       });
-
       chartData = Object.values(dailyAgg);
     }
     else if (filter === 'monthly') {
@@ -187,7 +185,6 @@ export default function PublicProfilePage() {
           dailyAgg[s.date] = (dailyAgg[s.date] || 0) + s.duration;
         }
       });
-
       const weeks: Record<string, number> = {};
       Object.entries(dailyAgg).forEach(([dateStr, mins]) => {
         const date = new Date(dateStr);
@@ -195,7 +192,6 @@ export default function PublicProfilePage() {
         const w = `Week ${weekOfMonth}`;
         weeks[w] = (weeks[w] || 0) + mins;
       });
-
       chartData = ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'].map(w => ({
         date: w,
         minutes: weeks[w] || 0
@@ -206,13 +202,11 @@ export default function PublicProfilePage() {
       const createdAt = profile?.createdAt?.toDate() || now;
       const startOfJoinMonth = startOfMonth(createdAt);
       const monthsInterval = eachMonthOfInterval({ start: startOfJoinMonth, end: now });
-
       const monthsAgg: Record<string, any> = {};
       monthsInterval.forEach(month => {
         const mKey = format(month, 'MMM yy');
         monthsAgg[mKey] = { date: mKey };
       });
-
       sessions.forEach(s => {
         if (s.date) {
           const date = new Date(s.date);
@@ -224,13 +218,11 @@ export default function PublicProfilePage() {
           }
         }
       });
-
       chartData = Object.values(monthsAgg);
       filteredSessions = sessions;
     }
 
     const currentPeriodMins = filteredSessions.reduce((acc, curr) => acc + curr.duration, 0);
-
     const subjectMinutes: Record<string, number> = {};
     for (const session of filteredSessions) {
       const sub = session.subject || 'Other';
@@ -251,6 +243,13 @@ export default function PublicProfilePage() {
     const m = minutes % 60;
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
   };
+
+  const activeRanks = [
+    { label: "Daily Rank", value: ranks.daily, icon: <Star className="h-4 w-4 text-yellow-400" />, color: "from-yellow-400/20" },
+    { label: "Weekly Rank", value: ranks.weekly, icon: <Medal className="h-4 w-4 text-slate-300" />, color: "from-slate-400/20" },
+    { label: "Monthly Rank", value: ranks.monthly, icon: <Award className="h-4 w-4 text-orange-400" />, color: "from-orange-500/20" },
+    { label: "Yearly Rank", value: ranks.yearly, icon: <Crown className="h-4 w-4 text-indigo-400" />, color: "from-indigo-500/20" },
+  ].filter(r => r.value !== null);
 
   if (profileLoading) {
     return (
@@ -273,18 +272,18 @@ export default function PublicProfilePage() {
         <main className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
           
           {/* Hero Profile Card */}
-          <Card className="rounded-[2rem] border-none shadow-2xl overflow-hidden bg-[#1A1C3D] text-white relative group">
+          <Card className="rounded-[2.5rem] border-none shadow-2xl overflow-hidden bg-[#1A1C3D] text-white relative group">
             <div className="absolute top-0 right-0 p-8 opacity-5">
               <Trophy className="h-48 w-48 transition-transform group-hover:scale-110 duration-1000" />
             </div>
             <CardContent className="p-6 md:p-10 relative z-10">
-              <div className="flex flex-col lg:flex-row items-center lg:items-start gap-8 lg:gap-12">
+              <div className="flex flex-col lg:flex-row items-center lg:items-center gap-8 lg:gap-12">
                 
-                {/* Left Side: Avatar & Basic Info */}
-                <div className="flex flex-col items-center text-center lg:items-start lg:text-left space-y-5">
+                {/* Profile Info */}
+                <div className="flex flex-col items-center text-center lg:items-start lg:text-left space-y-5 lg:min-w-[300px]">
                   <div className="relative">
                     <div className="absolute -inset-1.5 bg-gradient-to-tr from-primary to-indigo-400 rounded-full blur opacity-40 animate-pulse" />
-                    <Avatar className="h-24 w-24 md:h-32 md:w-32 border-4 border-white/10 shadow-2xl relative">
+                    <Avatar className="h-28 w-24 md:h-32 md:w-32 border-4 border-white/10 shadow-2xl relative">
                       <AvatarImage src={profile.photoURL || undefined} />
                       <AvatarFallback className="text-3xl font-black bg-white/5">{profile.displayName?.[0]}</AvatarFallback>
                     </Avatar>
@@ -320,40 +319,23 @@ export default function PublicProfilePage() {
                   </div>
                 </div>
 
-                {/* Right Side: Global Rankings Grid */}
-                <div className="flex-1 w-full max-w-2xl">
+                {/* Rankings Grids */}
+                <div className="flex-1 w-full">
                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 h-full content-center">
-                      <RankCard 
-                        label="Daily Rank" 
-                        value={ranks.daily} 
-                        icon={<Star className="h-4 w-4 text-yellow-400" />} 
-                        color="from-yellow-400/20"
-                      />
-                      <RankCard 
-                        label="Weekly Rank" 
-                        value={ranks.weekly} 
-                        icon={<Medal className="h-4 w-4 text-slate-300" />} 
-                        color="from-slate-400/20"
-                      />
-                      <RankCard 
-                        label="Monthly Rank" 
-                        value={ranks.monthly} 
-                        icon={<Award className="h-4 w-4 text-orange-400" />} 
-                        color="from-orange-500/20"
-                      />
-                      <RankCard 
-                        label="Yearly Rank" 
-                        value={ranks.yearly} 
-                        icon={<Crown className="h-4 w-4 text-indigo-400" />} 
-                        color="from-indigo-500/20"
-                      />
+                      {activeRanks.length > 0 ? activeRanks.map((r, i) => (
+                        <RankCard key={i} label={r.label} value={r.value!} icon={r.icon} color={r.color} />
+                      )) : (
+                        <div className="col-span-2 md:col-span-4 bg-white/5 rounded-2xl p-6 border border-dashed border-white/20 text-center">
+                           <p className="text-sm font-bold text-white/40 uppercase tracking-widest">No Global Rankings Secured Yet</p>
+                        </div>
+                      )}
 
                       <div className="col-span-2 md:col-span-4 mt-2 bg-white/5 rounded-2xl p-4 md:p-6 border border-white/10 flex items-center justify-between shadow-inner backdrop-blur-sm">
                         <div className="space-y-1">
                           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Lifetime Hustle</p>
-                          <h3 className="text-2xl md:text-3xl font-black tracking-tighter leading-none">{(profile.total_study_minutes / 60).toFixed(1)} <span className="text-sm font-bold text-white/40">Hours</span></h3>
+                          <h3 className="text-2xl md:text-3xl font-black tracking-tighter leading-none">{( (profile.total_study_minutes || 0) / 60).toFixed(1)} <span className="text-sm font-bold text-white/40">Hours</span></h3>
                         </div>
-                        <div className="text-right">
+                        <div className="hidden sm:block text-right">
                            <div className="bg-primary/20 px-3 py-1 rounded-full text-[10px] font-black uppercase text-primary border border-primary/20">
                               Joined {profile.createdAt ? format(profile.createdAt.toDate(), 'MMM yyyy') : 'Recently'}
                            </div>
@@ -389,17 +371,13 @@ export default function PublicProfilePage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-               
-               {/* Consistency Tracker */}
-               <Card className="lg:col-span-12 rounded-[2rem] border-none shadow-xl bg-card overflow-hidden">
+               <Card className="lg:col-span-12 rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
                   <CardHeader className="flex flex-row items-center justify-between pb-3 bg-secondary/10 border-b">
                     <div>
                       <CardTitle className="text-sm font-black flex items-center gap-2 tracking-tight uppercase">
                         <CalendarIcon className="h-4 w-4 text-primary" /> Session Mapping
                       </CardTitle>
-                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
-                        Activity distribution for {filter}
-                      </p>
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Activity distribution for {filter}</p>
                     </div>
                   </CardHeader>
                   <CardContent className="p-4 md:p-8">
@@ -417,8 +395,7 @@ export default function PublicProfilePage() {
                   </CardContent>
                </Card>
 
-               {/* Focus Areas Chart */}
-               <Card className="lg:col-span-7 rounded-[2rem] border-none shadow-xl bg-card overflow-hidden">
+               <Card className="lg:col-span-7 rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
                   <CardHeader className="bg-secondary/10 border-b pb-4">
                     <CardTitle className="text-sm font-black flex items-center gap-2 tracking-tight uppercase">
                        <PieChart className="h-4 w-4 text-primary" /> Subject Focus
@@ -434,28 +411,11 @@ export default function PublicProfilePage() {
                   </CardContent>
                </Card>
 
-               {/* Quick Stats Summary */}
                <div className="lg:col-span-5 space-y-6">
-                  <StatSummaryCard 
-                    label="Daily Target" 
-                    value={formatTime(profile.daily_goal_minutes)} 
-                    icon={<Target className="h-5 w-5" />} 
-                    color="primary"
-                  />
-                  <StatSummaryCard 
-                    label={`${filter} Hustle`} 
-                    value={formatTime(stats.currentPeriodMins)} 
-                    icon={<Clock className="h-5 w-5" />} 
-                    color="orange"
-                  />
-                  <StatSummaryCard 
-                    label="Academic Status" 
-                    value={isLive ? 'Studying' : 'Active'} 
-                    icon={isLive ? <Wifi className="h-5 w-5 animate-pulse" /> : <Trophy className="h-5 w-5" />} 
-                    color="indigo"
-                  />
+                  <StatSummaryCard label="Daily Target" value={formatTime(profile.daily_goal_minutes)} icon={<Target className="h-5 w-5" />} color="primary" />
+                  <StatSummaryCard label={`${filter} Hustle`} value={formatTime(stats.currentPeriodMins)} icon={<Clock className="h-5 w-5" />} color="orange" />
+                  <StatSummaryCard label="Academic Status" value={isLive ? 'Studying' : 'Active'} icon={isLive ? <Wifi className="h-5 w-5 animate-pulse" /> : <Trophy className="h-5 w-5" />} color="indigo" />
                </div>
-
             </div>
           </div>
         </main>
@@ -489,7 +449,7 @@ function StatSummaryCard({ label, value, icon, color }: { label: string; value: 
   };
 
   return (
-    <Card className={cn("rounded-2xl border-none shadow-lg p-6 space-y-4 ring-1 ring-inset", colorMap[color])}>
+    <Card className={cn("rounded-[2rem] border-none shadow-lg p-6 space-y-4 ring-1 ring-inset", colorMap[color])}>
       <div className="flex items-center justify-between">
           <p className="text-[10px] font-black uppercase tracking-[0.2em]">{label}</p>
           <div className="p-2 bg-background/50 rounded-lg shadow-sm">
