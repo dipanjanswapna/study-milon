@@ -116,6 +116,7 @@ export function StudyTimer() {
         lastSyncTime: now,
         duration: timeLeft, 
         status: 'active',
+        taskId: activeTask.id,
         subjectId: activeTask.subjectId,
         chapterId: activeTask.chapterId,
         isBreak: isBreak
@@ -172,7 +173,8 @@ export function StudyTimer() {
          isStudying: false,
          "currentSession.status": "idle",
          "currentSession.startTime": null,
-         "currentSession.lastSyncTime": null
+         "currentSession.lastSyncTime": null,
+         "currentSession.taskId": null
        });
     }
   };
@@ -202,6 +204,7 @@ export function StudyTimer() {
           lastSyncTime: now,
           duration: breakSeconds,
           status: 'active',
+          taskId: null,
           subjectId: activeTask.subjectId,
           chapterId: activeTask.chapterId,
           isBreak: true
@@ -214,7 +217,7 @@ export function StudyTimer() {
   // MISSION RECONCILER: Handles auto-completion even if the app was closed
   useEffect(() => {
     if (profile?.currentSession && !initializedFromCloud.current && user) {
-      const { startTime, lastSyncTime, duration, status, isBreak: cloudIsBreak, subjectId, chapterId } = profile.currentSession;
+      const { startTime, lastSyncTime, duration, status, isBreak: cloudIsBreak, subjectId, chapterId, taskId } = profile.currentSession;
       
       if (status === 'active' && startTime) {
         const now = Date.now();
@@ -237,7 +240,7 @@ export function StudyTimer() {
           lastSyncTimestampRef.current = now;
           audioRef.current?.play().catch(() => {});
         } else {
-          // 2. Session finished while app was closed: AUTO COMPLETE
+          // 2. Session finished while app was closed: AUTO COMPLETE MISSION
           const totalRemainingToSync = Math.max(0, Math.floor((expectedEndTime - effectiveLastSync) / 1000));
           
           if (!cloudIsBreak && subjectId && chapterId) {
@@ -247,11 +250,11 @@ export function StudyTimer() {
             }
 
             // AUTO MARK TASK AS DONE
-            if (activeTask && activeTask.chapterId === chapterId) {
-              updateTaskStatus(firestore, user.uid, activeTask.id, true).then(() => {
+            if (taskId) {
+              updateTaskStatus(firestore, user.uid, taskId, true).then(() => {
                 toast({ 
                   title: "Background Mission Secured!", 
-                  description: `${activeTask.chapterName} was completed while you were away.` 
+                  description: `One objective was completed while you were away.` 
                 });
               });
             }
@@ -264,7 +267,8 @@ export function StudyTimer() {
             isStudying: false,
             "currentSession.status": "idle",
             "currentSession.startTime": null,
-            "currentSession.lastSyncTime": null
+            "currentSession.lastSyncTime": null,
+            "currentSession.taskId": null
           });
         }
       } else if (status === 'paused') {
@@ -274,7 +278,7 @@ export function StudyTimer() {
       }
       initializedFromCloud.current = true;
     }
-  }, [profile, firestore, user, activeTask, toast]);
+  }, [profile, firestore, user, toast]);
 
   useEffect(() => {
     audioRef.current = new Audio(SILENT_AUDIO_URI);

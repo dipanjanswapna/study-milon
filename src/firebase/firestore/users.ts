@@ -35,6 +35,7 @@ export type CurrentSession = {
   lastSyncTime: number | null; // Track exactly when the last DB commit happened
   duration: number;
   status: 'active' | 'paused' | 'idle';
+  taskId: string | null;
   subjectId: string | null;
   chapterId: string | null;
   isBreak: boolean;
@@ -114,6 +115,7 @@ export async function createUserProfile(
           lastSyncTime: null,
           duration: 25,
           status: 'idle',
+          taskId: null,
           subjectId: null,
           chapterId: null,
           isBreak: false
