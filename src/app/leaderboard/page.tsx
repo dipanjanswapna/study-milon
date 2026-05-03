@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -48,7 +49,7 @@ export default function LeaderboardPage() {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    // Tick every 60 seconds to ensure resets at midnight happen live in the UI
+    // Tick every 60 seconds to ensure resets at midnight happen live in the UI (Virtual Reset)
     const timer = setInterval(() => setTick(t => t + 1), 60000);
     return () => clearInterval(timer);
   }, []);
@@ -108,7 +109,7 @@ export default function LeaderboardPage() {
       
       // --- VIRTUAL RESET LOGIC ---
       // If the period has changed but the user hasn't studied yet (data in DB is old),
-      // we display 0 to ensure the leaderboard is live.
+      // we display 0 to ensure the leaderboard is live according to the user's local clock.
       if (timeFilter === 'daily' && u.last_study_day !== todayStr) currentVal = 0;
       if (timeFilter === 'weekly' && u.last_study_week !== weekStr) currentVal = 0;
       if (timeFilter === 'monthly' && u.last_study_month !== monthStr) currentVal = 0;
@@ -142,7 +143,7 @@ export default function LeaderboardPage() {
         <Header />
         <main className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-4">
           
-          {/* Hero Banner - Compact for Mobile */}
+          {/* Hero Banner */}
           <Card className="rounded-xl border-none shadow-xl overflow-hidden bg-[#1A1C3D] text-white relative group">
             <div className="absolute top-0 right-0 p-8 opacity-5">
               <Trophy className="h-20 w-20 transition-transform group-hover:scale-110 duration-1000" />
@@ -163,8 +164,8 @@ export default function LeaderboardPage() {
             </CardContent>
           </Card>
 
-          {/* Podium Section - Properly Spaced and Scaled */}
-          <div className="w-full flex justify-center pt-8 pb-4 overflow-visible relative z-20">
+          {/* Podium Section */}
+          <div className="w-full flex justify-center pt-4 pb-2 overflow-visible relative z-20">
             {loading ? (
               <div className="flex items-end justify-center gap-8">
                 <Skeleton className="h-20 w-20 rounded-full" />
@@ -182,7 +183,7 @@ export default function LeaderboardPage() {
             )}
           </div>
 
-          {/* Filters - Side by Side on Mobile */}
+          {/* Filters */}
           <Card className="rounded-xl border-none shadow-sm bg-card overflow-hidden">
             <CardContent className="p-2 md:p-3 flex flex-col md:flex-row items-center justify-between gap-3">
               <div className="grid grid-cols-2 gap-2 w-full md:w-auto">
@@ -230,7 +231,7 @@ export default function LeaderboardPage() {
             </CardContent>
           </Card>
 
-          {/* Rankings List - Custom Scroll and XL Corners */}
+          {/* List Section */}
           <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
             <div className="p-3 md:p-4 border-b bg-secondary/10 flex items-center justify-between">
               <div>
@@ -286,6 +287,17 @@ export default function LeaderboardPage() {
                     </Link>
                   );
                 })}
+                {rankings.length === 0 && !loading && (
+                   <div className="py-20 text-center space-y-4">
+                        <div className="bg-secondary/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                            <Zap className="h-8 w-8 text-muted-foreground/30" />
+                        </div>
+                        <h3 className="text-lg font-black tracking-tighter">No Rankings</h3>
+                        <Button variant="outline" size="sm" className="rounded-lg px-6 h-9 font-black uppercase tracking-widest text-[9px]" asChild>
+                          <Link href="/todo">Start Mission</Link>
+                        </Button>
+                   </div>
+                )}
               </div>
             </ScrollArea>
           </Card>

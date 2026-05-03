@@ -1,3 +1,4 @@
+
 'use client';
 import {
   collection,
@@ -192,7 +193,7 @@ export async function logStudyTime(
 
         // --- PHYSICAL RESET LOGIC ---
         
-        // 1. Daily Reset
+        // 1. Daily Reset (12:00 AM)
         if (userData.last_study_day !== dateStr) {
             userUpdate.daily_study_minutes = minutesToAdd;
             userUpdate.last_study_day = dateStr;
@@ -200,7 +201,7 @@ export async function logStudyTime(
             userUpdate.daily_study_minutes = increment(minutesToAdd);
         }
 
-        // 2. Weekly Reset (Friday to Thursday)
+        // 2. Weekly Reset (Friday 12:00 AM)
         if (userData.last_study_week !== weekStr) {
             userUpdate.weekly_study_minutes = minutesToAdd;
             userUpdate.last_study_week = weekStr;
@@ -208,7 +209,7 @@ export async function logStudyTime(
             userUpdate.weekly_study_minutes = increment(minutesToAdd);
         }
 
-        // 3. Monthly Reset
+        // 3. Monthly Reset (1st Day 12:00 AM)
         if (userData.last_study_month !== monthStr) {
             userUpdate.monthly_study_minutes = minutesToAdd;
             userUpdate.last_study_month = monthStr;
@@ -216,7 +217,7 @@ export async function logStudyTime(
             userUpdate.monthly_study_minutes = increment(minutesToAdd);
         }
 
-        // 4. Yearly Reset
+        // 4. Yearly Reset (Jan 1st 12:00 AM)
         if (userData.last_study_year !== yearStr) {
             userUpdate.yearly_study_minutes = minutesToAdd;
             userUpdate.last_study_year = yearStr;
