@@ -257,10 +257,10 @@ export default function PublicProfilePage() {
   };
 
   const activeRanks = [
-    { label: "Daily Rank", value: ranks.daily, icon: <Star className="h-4 w-4 text-yellow-400" />, color: "from-yellow-400/20" },
-    { label: "Weekly Rank", value: ranks.weekly, icon: <Medal className="h-4 w-4 text-slate-300" />, color: "from-slate-400/20" },
-    { label: "Monthly Rank", value: ranks.monthly, icon: <Award className="h-4 w-4 text-orange-400" />, color: "from-orange-500/20" },
-    { label: "Yearly Rank", value: ranks.yearly, icon: <Crown className="h-4 w-4 text-indigo-400" />, color: "from-indigo-500/20" },
+    { label: "Daily Rank", value: ranks.daily, icon: <Star className="h-3 w-3 text-yellow-400" />, color: "from-yellow-400/20" },
+    { label: "Weekly Rank", value: ranks.weekly, icon: <Medal className="h-3 w-3 text-slate-300" />, color: "from-slate-400/20" },
+    { label: "Monthly Rank", value: ranks.monthly, icon: <Award className="h-3 w-3 text-orange-400" />, color: "from-orange-500/20" },
+    { label: "Yearly Rank", value: ranks.yearly, icon: <Crown className="h-3 w-3 text-indigo-400" />, color: "from-indigo-500/20" },
   ].filter(r => r.value !== null);
 
   // Calendar Helper Logic
@@ -291,8 +291,8 @@ export default function PublicProfilePage() {
       <div className="min-h-screen">
         <Header />
         <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
-          <Skeleton className="h-48 rounded-[2.5rem]" />
-          <Skeleton className="h-96 rounded-[2.5rem]" />
+          <Skeleton className="h-48 rounded-xl" />
+          <Skeleton className="h-96 rounded-xl" />
         </div>
       </div>
     );
@@ -304,49 +304,48 @@ export default function PublicProfilePage() {
     <ProtectedRoute>
       <div className="min-h-screen bg-background text-foreground pb-24 md:pb-10">
         <Header />
-        <main className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
+        <main className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-4">
           
           {/* Hero Profile Card */}
-          <Card className="rounded-[2.5rem] border-none shadow-2xl overflow-hidden bg-[#1A1C3D] text-white relative group">
+          <Card className="rounded-xl border-none shadow-xl overflow-hidden bg-[#1A1C3D] text-white relative group">
             <div className="absolute top-0 right-0 p-8 opacity-5">
-              <Trophy className="h-48 w-48 transition-transform group-hover:scale-110 duration-1000" />
+              <Trophy className="h-32 w-32 transition-transform group-hover:scale-110 duration-1000" />
             </div>
-            <CardContent className="p-6 md:p-10 relative z-10">
-              <div className="flex flex-col lg:flex-row items-center lg:items-center gap-8 lg:gap-12">
+            <CardContent className="p-5 md:p-8 relative z-10">
+              <div className="flex flex-col lg:flex-row items-center gap-6 md:gap-10">
                 
-                <div className="flex flex-col items-center text-center lg:items-start lg:text-left space-y-5 lg:min-w-[300px]">
+                <div className="flex flex-col items-center text-center lg:items-start lg:text-left space-y-4 lg:min-w-[280px]">
                   <div className="relative">
-                    <div className="absolute -inset-1.5 bg-gradient-to-tr from-primary to-indigo-400 rounded-full blur opacity-40 animate-pulse" />
-                    <Avatar className="h-28 w-24 md:h-32 md:w-32 border-4 border-white/10 shadow-2xl relative">
+                    <Avatar className="h-24 w-24 md:h-28 md:w-28 border-4 border-white/10 shadow-2xl relative">
                       <AvatarImage src={profile.photoURL || undefined} />
-                      <AvatarFallback className="text-3xl font-black bg-white/5">{profile.displayName?.[0]}</AvatarFallback>
+                      <AvatarFallback className="text-2xl font-black bg-white/5">{profile.displayName?.[0]}</AvatarFallback>
                     </Avatar>
                     {isLive && (
-                      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[9px] font-black px-3 py-1 rounded-full animate-pulse flex items-center gap-1.5 shadow-xl border-2 border-[#1A1C3D]">
-                        <Wifi className="h-3 w-3" /> LIVE
+                      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse flex items-center gap-1 shadow-xl border border-[#1A1C3D]">
+                        <Wifi className="h-2 w-2" /> LIVE
                       </div>
                     )}
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2">
-                      <Badge className="bg-primary/20 text-primary-foreground border-none font-black text-[10px] uppercase px-2.5 h-6">
+                      <Badge className="bg-primary/20 text-primary-foreground border-none font-black text-[9px] uppercase px-2 h-5">
                         {profile.category} {profile.batch}
                       </Badge>
                       {guild && (
-                        <Badge variant="outline" className="border-white/20 text-white font-black text-[10px] uppercase px-2.5 h-6 flex items-center gap-1.5 bg-white/5">
-                          <Users2 className="h-3 w-3 text-primary" /> {guild.name}
+                        <Badge variant="outline" className="border-white/10 text-white/70 font-black text-[9px] uppercase h-5 flex items-center gap-1 bg-white/5">
+                          <Users2 className="h-2 w-2 text-primary" /> {guild.name}
                         </Badge>
                       )}
                     </div>
-                    <h1 className="text-2xl md:text-4xl font-black tracking-tighter leading-tight">{profile.displayName}</h1>
-                    <div className="flex flex-col space-y-1.5 text-xs font-medium text-white/50">
-                      <div className="flex items-center justify-center lg:justify-start gap-2">
-                        <Mail className="h-3.5 w-3.5 text-primary" /> {profile.email}
+                    <h1 className="text-xl md:text-3xl font-black tracking-tighter leading-tight">{profile.displayName}</h1>
+                    <div className="flex flex-col space-y-1 text-[10px] font-medium text-white/40">
+                      <div className="flex items-center justify-center lg:justify-start gap-1.5">
+                        <Mail className="h-3 w-3 text-primary" /> {profile.email}
                       </div>
                       {profile.institution && (
-                        <div className="flex items-center justify-center lg:justify-start gap-2">
-                          <School className="h-3.5 w-3.5 text-primary" /> {profile.institution}
+                        <div className="flex items-center justify-center lg:justify-start gap-1.5">
+                          <School className="h-3 w-3 text-primary" /> {profile.institution}
                         </div>
                       )}
                     </div>
@@ -354,22 +353,22 @@ export default function PublicProfilePage() {
                 </div>
 
                 <div className="flex-1 w-full">
-                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 h-full content-center">
+                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       {activeRanks.length > 0 ? activeRanks.map((r, i) => (
                         <RankCard key={i} label={r.label} value={r.value!} icon={r.icon} color={r.color} />
                       )) : (
-                        <div className="col-span-2 md:col-span-4 bg-white/5 rounded-2xl p-6 border border-dashed border-white/20 text-center">
-                           <p className="text-sm font-bold text-white/40 uppercase tracking-widest">No Global Rankings Secured Yet</p>
+                        <div className="col-span-2 md:col-span-4 bg-white/5 rounded-xl p-6 border border-dashed border-white/10 text-center">
+                           <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">No Global Rankings secured</p>
                         </div>
                       )}
 
-                      <div className="col-span-2 md:col-span-4 mt-2 bg-white/5 rounded-2xl p-4 md:p-6 border border-white/10 flex items-center justify-between shadow-inner backdrop-blur-sm">
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Lifetime Hustle</p>
-                          <h3 className="text-2xl md:text-3xl font-black tracking-tighter leading-none">{( (profile.total_study_minutes || 0) / 60).toFixed(1)} <span className="text-sm font-bold text-white/40">Hours</span></h3>
+                      <div className="col-span-2 md:col-span-4 bg-white/5 rounded-xl p-4 border border-white/10 flex items-center justify-between backdrop-blur-sm">
+                        <div className="space-y-0.5">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-primary">Lifetime Hustle</p>
+                          <h3 className="text-xl md:text-2xl font-black tracking-tighter">{( (profile.total_study_minutes || 0) / 60).toFixed(1)} <span className="text-[10px] font-bold text-white/30 uppercase">Hours</span></h3>
                         </div>
                         <div className="hidden sm:block text-right">
-                           <div className="bg-primary/20 px-3 py-1 rounded-full text-[10px] font-black uppercase text-primary border border-primary/20">
+                           <div className="bg-primary/20 px-3 py-1 rounded-full text-[8px] font-black uppercase text-primary border border-primary/20">
                               Joined {profile.createdAt ? format(profile.createdAt.toDate(), 'MMM yyyy') : 'Recently'}
                            </div>
                         </div>
@@ -381,40 +380,39 @@ export default function PublicProfilePage() {
           </Card>
 
           {/* Hustle Analytics */}
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-1">
-               <div className="flex items-center gap-3">
-                  <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
-                    <BarChart className="h-5 w-5 text-white" />
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1">
+               <div className="flex items-center gap-2">
+                  <div className="bg-primary p-1.5 rounded-lg shadow-md">
+                    <BarChart className="h-4 w-4 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-black tracking-tighter uppercase leading-none">Hustle Analytics</h2>
-                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1">Activity Mapping & Focus</p>
+                    <h2 className="text-sm font-black tracking-tighter uppercase leading-none">Hustle Analytics</h2>
+                    <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest mt-1">Focus & Mapping</p>
                   </div>
                </div>
                <Tabs value={filter} onValueChange={(v: any) => setFilter(v)} className="w-full sm:w-auto">
-                  <TabsList className="grid grid-cols-4 bg-secondary/50 h-10 p-1.5 rounded-xl border">
-                    <TabsTrigger value="daily" className="rounded-lg font-black text-[10px] uppercase tracking-wider">Daily</TabsTrigger>
-                    <TabsTrigger value="weekly" className="rounded-lg font-black text-[10px] uppercase tracking-wider">Weekly</TabsTrigger>
-                    <TabsTrigger value="monthly" className="rounded-lg font-black text-[10px] uppercase tracking-wider">Monthly</TabsTrigger>
-                    <TabsTrigger value="yearly" className="rounded-lg font-black text-[10px] uppercase tracking-wider">Yearly</TabsTrigger>
+                  <TabsList className="grid grid-cols-4 bg-secondary/50 h-9 p-1 rounded-xl">
+                    <TabsTrigger value="daily" className="rounded-lg font-black text-[9px] uppercase tracking-wider">Daily</TabsTrigger>
+                    <TabsTrigger value="weekly" className="rounded-lg font-black text-[9px] uppercase tracking-wider">Weekly</TabsTrigger>
+                    <TabsTrigger value="monthly" className="rounded-lg font-black text-[9px] uppercase tracking-wider">Monthly</TabsTrigger>
+                    <TabsTrigger value="yearly" className="rounded-lg font-black text-[9px] uppercase tracking-wider">Yearly</TabsTrigger>
                   </TabsList>
                </Tabs>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-               <Card className="lg:col-span-12 rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+               <Card className="lg:col-span-12 rounded-xl border-none shadow-xl bg-card overflow-hidden">
                   <CardHeader className="flex flex-row items-center justify-between pb-3 bg-secondary/10 border-b">
                     <div>
-                      <CardTitle className="text-sm font-black flex items-center gap-2 tracking-tight uppercase">
-                        <CalendarIcon className="h-4 w-4 text-primary" /> Session Mapping
+                      <CardTitle className="text-[10px] font-black flex items-center gap-2 tracking-tight uppercase">
+                        <CalendarIcon className="h-3 w-3 text-primary" /> Session Mapping
                       </CardTitle>
-                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Activity distribution for {filter}</p>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-4 md:p-8">
+                  <CardContent className="p-4 md:p-6">
                     {sessionsLoading ? (
-                      <Skeleton className="h-[350px] w-full rounded-2xl" />
+                      <Skeleton className="h-[300px] w-full rounded-xl" />
                     ) : (
                       <StudyActivityChart 
                         data={stats.chartData} 
@@ -427,73 +425,72 @@ export default function PublicProfilePage() {
                   </CardContent>
                </Card>
 
-               <Card className="lg:col-span-7 rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
+               <Card className="lg:col-span-7 rounded-xl border-none shadow-xl bg-card overflow-hidden">
                   <CardHeader className="bg-secondary/10 border-b pb-4">
-                    <CardTitle className="text-sm font-black flex items-center gap-2 tracking-tight uppercase">
-                       <PieChart className="h-4 w-4 text-primary" /> Subject Focus
+                    <CardTitle className="text-[10px] font-black flex items-center gap-2 tracking-tight uppercase">
+                       <PieChart className="h-3 w-3 text-primary" /> Subject Focus
                     </CardTitle>
-                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Time distribution per subject</p>
                   </CardHeader>
-                  <CardContent className="p-6 md:p-10">
+                  <CardContent className="p-6 md:p-8">
                     {sessionsLoading ? (
-                      <Skeleton className="h-[300px] w-full rounded-2xl" />
+                      <Skeleton className="h-[250px] w-full rounded-xl" />
                     ) : (
                       <SubjectDistributionChart data={stats.subjectData} />
                     )}
                   </CardContent>
                </Card>
 
-               <div className="lg:col-span-5 space-y-6">
-                  <StatSummaryCard label="Daily Target" value={formatTime(profile.daily_goal_minutes)} icon={<Target className="h-5 w-5" />} color="primary" />
-                  <StatSummaryCard label={`${filter} Hustle`} value={formatTime(stats.currentPeriodMins)} icon={<Clock className="h-5 w-5" />} color="orange" />
-                  <StatSummaryCard label="Academic Status" value={isLive ? 'Studying' : 'Active'} icon={isLive ? <Wifi className="h-5 w-5 animate-pulse" /> : <Trophy className="h-5 w-5" />} color="indigo" />
+               <div className="lg:col-span-5 space-y-4">
+                  <StatSummaryCard label="Daily Target" value={formatTime(profile.daily_goal_minutes)} icon={<Target className="h-4 w-4" />} color="primary" />
+                  <StatSummaryCard label={`${filter} Hustle`} value={formatTime(stats.currentPeriodMins)} icon={<Clock className="h-4 w-4" />} color="orange" />
+                  <StatSummaryCard label="Status" value={isLive ? 'Studying' : 'Active'} icon={isLive ? <Wifi className="h-4 w-4 animate-pulse" /> : <Trophy className="h-4 w-4" />} color="indigo" />
                </div>
             </div>
           </div>
 
           {/* Calendar Analytics Section */}
-          <div className="space-y-6 pt-4">
-             <div className="flex items-center gap-3 px-1">
-                <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-600/20">
-                   <CalendarIcon className="h-5 w-5 text-white" />
+          <div className="space-y-4 pt-4">
+             <div className="flex items-center gap-2 px-1">
+                <div className="bg-indigo-600 p-1.5 rounded-lg shadow-md">
+                   <CalendarIcon className="h-4 w-4 text-white" />
                 </div>
                 <div>
-                   <h2 className="text-lg font-black tracking-tighter uppercase leading-none">Calendar Analytics</h2>
-                   <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1">Day-wise Historical Deep Dive</p>
+                   <h2 className="text-sm font-black tracking-tighter uppercase leading-none">Calendar Analytics</h2>
+                   <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest mt-1">Day-wise deep dive</p>
                 </div>
              </div>
 
-             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 {/* Calendar Card */}
-                <Card className="lg:col-span-7 xl:col-span-8 bg-[#1A1C3D] border-none shadow-2xl rounded-[2.5rem] p-6 md:p-8">
-                  <div className="flex justify-between items-center mb-8">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-primary/20 rounded-xl">
-                        <CalendarIcon className="h-6 w-6 text-primary" />
+                <Card className="lg:col-span-7 xl:col-span-8 bg-[#1A1C3D] border-none shadow-xl rounded-xl p-5 md:p-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-primary/20 rounded-lg">
+                        <CalendarIcon className="h-4 w-4 text-primary" />
                       </div>
-                      <h2 className="text-lg md:text-xl font-black text-white tracking-tighter uppercase">
+                      <h2 className="text-sm font-black text-white tracking-tighter uppercase">
                         {format(currentMonth, 'MMMM yyyy')}
                       </h2>
                     </div>
-                    <div className="flex gap-2 bg-white/5 p-1.5 rounded-xl">
-                      <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(subDays(startOfMonth(currentMonth), 1))} className="text-white hover:bg-white/10 h-10 w-10">
-                        <ChevronLeft className="h-5 w-5" />
+                    <div className="flex gap-1.5 bg-white/5 p-1 rounded-lg">
+                      <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(subDays(startOfMonth(currentMonth), 1))} className="text-white hover:bg-white/10 h-8 w-8">
+                        <ChevronLeft className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(addDays(endOfMonth(currentMonth), 1))} className="text-white hover:bg-white/10 h-10 w-10">
-                        <ChevronRight className="h-5 w-5" />
+                      <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(addDays(endOfMonth(currentMonth), 1))} className="text-white hover:bg-white/10 h-8 w-8">
+                        <ChevronRight className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-7 mb-4 text-center">
+                  <div className="grid grid-cols-7 mb-2 text-center">
                     {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => (
-                      <div key={idx} className="text-[9px] font-black uppercase tracking-widest text-white/30">
+                      <div key={idx} className="text-[8px] font-black uppercase tracking-widest text-white/30">
                         {day}
                       </div>
                     ))}
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {(() => {
                       const rows = [];
                       let days = [];
@@ -509,25 +506,25 @@ export default function PublicProfilePage() {
                             <div
                               key={day.toString()}
                               className={cn(
-                                "relative h-12 sm:h-20 flex flex-col items-center justify-center rounded-[1.2rem] transition-all cursor-pointer border-2",
+                                "relative h-10 sm:h-14 flex flex-col items-center justify-center rounded-xl transition-all cursor-pointer border-2",
                                 !isCurrentMonth ? "opacity-5 pointer-events-none" : "",
                                 isSelected 
-                                  ? "bg-primary border-primary text-white shadow-2xl scale-105 z-10" 
-                                  : "bg-white/5 border-transparent text-white/70 hover:border-white/20"
+                                  ? "bg-primary border-primary text-white shadow-lg scale-105 z-10" 
+                                  : "bg-white/5 border-transparent text-white/70 hover:border-white/10"
                               )}
                               onClick={() => setSelectedDate(cloneDay)}
                             >
-                              <span className={cn("text-xs sm:text-xl font-black", isSelected ? "text-white" : "text-white/80")}>
+                              <span className={cn("text-xs sm:text-base font-black", isSelected ? "text-white" : "text-white/80")}>
                                 {format(day, 'd')}
                               </span>
                               {hasData && !isSelected && (
-                                <div className="absolute bottom-2 h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+                                <div className="absolute bottom-1.5 h-1 w-1 rounded-full bg-primary shadow-[0_0_5px_rgba(59,130,246,0.8)]" />
                               )}
                             </div>
                           );
                           day = addDays(day, 1);
                         }
-                        rows.push(<div className="grid grid-cols-7 gap-2 sm:gap-3" key={day.toString()}>{days}</div>);
+                        rows.push(<div className="grid grid-cols-7 gap-1.5 sm:gap-2" key={day.toString()}>{days}</div>);
                         days = [];
                       }
                       return rows;
@@ -536,68 +533,52 @@ export default function PublicProfilePage() {
                 </Card>
 
                 {/* Day Summary Card */}
-                <Card className="lg:col-span-5 xl:col-span-4 rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden h-full min-h-[500px] flex flex-col">
-                  <CardHeader className="bg-secondary/10 border-b pb-6 p-8">
+                <Card className="lg:col-span-5 xl:col-span-4 rounded-xl border-none shadow-xl bg-card overflow-hidden h-full min-h-[450px] flex flex-col">
+                  <CardHeader className="bg-secondary/10 border-b pb-4 p-6">
                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                           <CardTitle className="text-xl font-black tracking-tight">{format(selectedDate, 'MMMM do')}</CardTitle>
-                           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Session Breakdown</p>
+                        <div className="space-y-0.5">
+                           <CardTitle className="text-base font-black tracking-tight">{format(selectedDate, 'MMMM do')}</CardTitle>
+                           <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Session Log</p>
                         </div>
-                        <div className="bg-primary/10 p-3 rounded-2xl">
-                           <Activity className="h-6 w-6 text-primary" />
+                        <div className="bg-primary/10 p-2 rounded-lg">
+                           <Activity className="h-4 w-4 text-primary" />
                         </div>
                      </div>
                   </CardHeader>
                   <CardContent className="flex-1 p-0 flex flex-col">
                     <ScrollArea className="flex-1">
-                       <div className="p-8 space-y-6">
+                       <div className="p-6 space-y-4">
                           {selectedDaySubjectAgg.length > 0 ? (
                              <>
-                                <div className="bg-primary/5 rounded-[2rem] p-6 border border-primary/10 text-center space-y-2">
-                                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Total Daily Hustle</p>
-                                   <h3 className="text-4xl font-black tracking-tighter">{formatTime(totalSelectedMins)}</h3>
+                                <div className="bg-primary/5 rounded-xl p-4 border border-primary/10 text-center space-y-1">
+                                   <p className="text-[8px] font-black uppercase tracking-[0.2em] text-primary">Daily Hustle</p>
+                                   <h3 className="text-2xl font-black tracking-tighter">{formatTime(totalSelectedMins)}</h3>
                                 </div>
 
-                                <div className="space-y-4">
-                                   <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">
-                                      <List className="h-3 w-3" /> Subject List
-                                   </div>
-                                   <div className="space-y-3">
-                                      {selectedDaySubjectAgg.map((item, idx) => (
-                                         <div key={idx} className="flex items-center justify-between p-4 rounded-2xl bg-secondary/20 hover:bg-secondary/30 transition-colors border border-transparent hover:border-primary/10 group">
-                                            <div className="flex items-center gap-4">
-                                               <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                                                  <BookOpen className="h-5 w-5 text-primary" />
-                                               </div>
-                                               <span className="font-bold text-sm tracking-tight">{item.name}</span>
+                                <div className="space-y-2">
+                                   {selectedDaySubjectAgg.map((item, idx) => (
+                                      <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-secondary/20 transition-colors group">
+                                         <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm">
+                                               <BookOpen className="h-4 w-4 text-primary" />
                                             </div>
-                                            <Badge variant="secondary" className="font-black text-[11px] h-8 px-3 rounded-lg bg-white border-none shadow-sm">
-                                               {formatTime(item.mins)}
-                                            </Badge>
+                                            <span className="font-bold text-xs tracking-tight">{item.name}</span>
                                          </div>
-                                      ))}
-                                   </div>
+                                         <Badge variant="secondary" className="font-black text-[9px] h-6 px-2 rounded-md bg-white border-none shadow-sm">
+                                            {formatTime(item.mins)}
+                                         </Badge>
+                                      </div>
+                                   ))}
                                 </div>
                              </>
                           ) : (
-                             <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-                                <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center">
-                                   <Zap className="h-8 w-8 text-muted-foreground/30" />
-                                </div>
-                                <div className="space-y-1">
-                                   <h4 className="font-black tracking-tighter uppercase text-muted-foreground">No Hustle Logged</h4>
-                                   <p className="text-[10px] font-medium text-muted-foreground/60 max-w-[150px]">No study sessions recorded for this specific date.</p>
-                                </div>
+                             <div className="flex flex-col items-center justify-center py-20 text-center space-y-2">
+                                <Zap className="h-6 w-6 text-muted-foreground/20" />
+                                <h4 className="text-[10px] font-black uppercase text-muted-foreground/40">No Hustle Logged</h4>
                              </div>
                           )}
                        </div>
                     </ScrollArea>
-                    <div className="p-8 pt-0 border-t bg-secondary/5 mt-auto">
-                       <div className="flex items-center gap-3 pt-6">
-                          <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Live Sync Status: Secure</p>
-                       </div>
-                    </div>
                   </CardContent>
                 </Card>
              </div>
@@ -611,15 +592,15 @@ export default function PublicProfilePage() {
 function RankCard({ label, value, icon, color }: { label: string; value: string; icon: React.ReactNode; color: string }) {
   return (
     <div className={cn(
-      "bg-gradient-to-br from-white/10 to-transparent p-4 rounded-2xl border border-white/10 flex flex-col items-center justify-center gap-2 transition-all hover:bg-white/15 group/rank shadow-lg",
+      "bg-gradient-to-br from-white/10 to-transparent p-3 rounded-xl border border-white/10 flex flex-col items-center justify-center gap-1.5 transition-all hover:bg-white/15 group/rank shadow-lg",
       color
     )}>
-       <div className="p-2 bg-white/10 rounded-xl group-hover/rank:scale-110 transition-transform">
+       <div className="p-1.5 bg-white/10 rounded-lg group-hover/rank:scale-110 transition-transform">
           {icon}
        </div>
        <div className="text-center">
-          <p className="text-[8px] font-black uppercase tracking-widest text-white/40 mb-1">{label}</p>
-          <p className="text-xl md:text-2xl font-black tracking-tighter leading-none">{value}</p>
+          <p className="text-[7px] font-black uppercase tracking-widest text-white/30 mb-0.5">{label}</p>
+          <p className="text-base font-black tracking-tighter leading-none">{value}</p>
        </div>
     </div>
   );
@@ -633,14 +614,14 @@ function StatSummaryCard({ label, value, icon, color }: { label: string; value: 
   };
 
   return (
-    <Card className={cn("rounded-[2rem] border-none shadow-lg p-6 space-y-4 ring-1 ring-inset", colorMap[color])}>
+    <Card className={cn("rounded-xl border-none shadow-lg p-4 space-y-3 ring-1 ring-inset", colorMap[color])}>
       <div className="flex items-center justify-between">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em]">{label}</p>
-          <div className="p-2 bg-background/50 rounded-lg shadow-sm">
+          <p className="text-[8px] font-black uppercase tracking-[0.2em]">{label}</p>
+          <div className="p-1.5 bg-background/50 rounded-lg shadow-sm">
              {icon}
           </div>
       </div>
-      <h4 className="text-3xl font-black tracking-tighter text-foreground">{value}</h4>
+      <h4 className="text-xl font-black tracking-tighter text-foreground">{value}</h4>
     </Card>
   );
 }
