@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -91,7 +92,7 @@ export function StudyTimer() {
 
     const goalSeconds = (profile.daily_goal_minutes || 360) * 60;
     return Math.min(100, (currentSeconds / goalSeconds) * 100);
-  }, [profile, isActive, isBreak, timeLeft]); 
+  }, [profile, isActive, isBreak]); 
 
   const performSync = useCallback(async (secondsToSync: number) => {
     if (!user || !activeTask || isBreak || secondsToSync <= 0) return;
@@ -208,21 +209,23 @@ export function StudyTimer() {
       });
       if (alarmRef.current) alarmRef.current.play().catch(() => {});
     }
-  }, [user, activeTask, firestore, profile, performSync]);
+  }, [user, activeTask, firestore, profile, performSync, toast]);
 
-  // RECONCILER: Recovers time lost when tab was closed/refreshed
+  // MISSION RECONCILER: Handles auto-completion even if the app was closed
   useEffect(() => {
     if (profile?.currentSession && !initializedFromCloud.current && user) {
       const { startTime, lastSyncTime, duration, status, isBreak: cloudIsBreak, subjectId, chapterId } = profile.currentSession;
       
       if (status === 'active' && startTime) {
         const now = Date.now();
-        const elapsedSinceStart = Math.floor((now - startTime) / 1000);
+        const expectedEndTime = startTime + (duration * 1000);
         const effectiveLastSync = lastSyncTime || startTime;
-        const totalElapsedSinceLastSync = Math.floor((now - effectiveLastSync) / 1000);
         
-        if (elapsedSinceStart < duration) {
-          // Recover session that is still running
+        if (now < expectedEndTime) {
+          // 1. Session is still ongoing: Resume it
+          const elapsedSinceStart = Math.floor((now - startTime) / 1000);
+          const totalElapsedSinceLastSync = Math.floor((now - effectiveLastSync) / 1000);
+          
           setTimeLeft(duration - elapsedSinceStart);
           setIsBreak(cloudIsBreak);
           setIsActive(true);
@@ -234,12 +237,27 @@ export function StudyTimer() {
           lastSyncTimestampRef.current = now;
           audioRef.current?.play().catch(() => {});
         } else {
-          // Session finished while app was closed
-          const totalUnsyncedSessionTime = Math.max(0, Math.floor((startTime + duration * 1000 - effectiveLastSync) / 1000));
-          if (totalUnsyncedSessionTime > 0 && !cloudIsBreak && subjectId && chapterId) {
-            logStudyTime(firestore, user.uid, subjectId, chapterId, totalUnsyncedSessionTime);
+          // 2. Session finished while app was closed: AUTO COMPLETE
+          const totalRemainingToSync = Math.max(0, Math.floor((expectedEndTime - effectiveLastSync) / 1000));
+          
+          if (!cloudIsBreak && subjectId && chapterId) {
+            // Commit final missing minutes
+            if (totalRemainingToSync > 0) {
+              logStudyTime(firestore, user.uid, subjectId, chapterId, totalRemainingToSync);
+            }
+
+            // AUTO MARK TASK AS DONE
+            if (activeTask && activeTask.chapterId === chapterId) {
+              updateTaskStatus(firestore, user.uid, activeTask.id, true).then(() => {
+                toast({ 
+                  title: "Background Mission Secured!", 
+                  description: `${activeTask.chapterName} was completed while you were away.` 
+                });
+              });
+            }
           }
           
+          // Reset session to idle
           setIsActive(false);
           setIsBreak(false);
           updateUserProfile(firestore, user.uid, { 
@@ -256,7 +274,7 @@ export function StudyTimer() {
       }
       initializedFromCloud.current = true;
     }
-  }, [profile, firestore, user]);
+  }, [profile, firestore, user, activeTask, toast]);
 
   useEffect(() => {
     audioRef.current = new Audio(SILENT_AUDIO_URI);
@@ -264,7 +282,7 @@ export function StudyTimer() {
     alarmRef.current = new Audio(ALARM_AUDIO_PATH);
   }, []);
 
-  // Precise Heartbeat with high-frequency background sync
+  // Heartbeat Loop
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
