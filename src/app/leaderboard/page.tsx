@@ -8,9 +8,6 @@ import { Header } from '@/components/dashboard/Header';
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
 import {
   Tabs,
@@ -47,6 +44,14 @@ export default function LeaderboardPage() {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('All');
   const [batchFilter, setBatchFilter] = useState<string>('All');
   const [groupMap, setGroupMap] = useState<Record<string, string>>({});
+  
+  // Tick state to force UI refresh at exactly 12:00 AM
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setTick(t => t + 1), 60000); // Check every minute
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const fetchGroups = async () => {
@@ -98,6 +103,7 @@ export default function LeaderboardPage() {
     }).map(u => {
       let currentVal = u[getSortField(timeFilter)] || 0;
       
+      // Virtual Reset Logic: If stored date key doesn't match current time, treat as 0
       if (timeFilter === 'daily' && u.last_study_day !== todayStr) currentVal = 0;
       if (timeFilter === 'weekly' && u.last_study_week !== weekStr) currentVal = 0;
       if (timeFilter === 'monthly' && u.last_study_month !== monthStr) currentVal = 0;
@@ -114,7 +120,7 @@ export default function LeaderboardPage() {
     })
     .sort((a, b) => b.displayMinutes - a.displayMinutes)
     .slice(0, 100);
-  }, [allRankings, categoryFilter, batchFilter, timeFilter]);
+  }, [allRankings, categoryFilter, batchFilter, timeFilter, tick]);
 
   const top3 = rankings?.slice(0, 3) || [];
 
@@ -129,24 +135,24 @@ export default function LeaderboardPage() {
     <ProtectedRoute>
       <div className="min-h-screen bg-background text-foreground pb-24 md:pb-10">
         <Header />
-        <main className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-4">
+        <main className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-2">
           
           {/* Dashboard-Style Hero Banner */}
           <Card className="rounded-xl border-none shadow-2xl overflow-hidden bg-[#1A1C3D] text-white relative group">
             <div className="absolute top-0 right-0 p-8 opacity-5">
-              <Trophy className="h-32 w-32 transition-transform group-hover:scale-110 duration-1000" />
+              <Trophy className="h-24 w-24 transition-transform group-hover:scale-110 duration-1000" />
             </div>
-            <CardContent className="p-5 md:p-10 relative z-10 space-y-2">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="space-y-2 text-center md:text-left">
+            <CardContent className="p-5 md:p-8 relative z-10 space-y-1">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-2">
+                <div className="space-y-1 text-center md:text-left">
                   <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
                     <div className="inline-flex items-center gap-1.5 bg-primary/20 backdrop-blur-lg px-2.5 py-0.5 rounded-full border border-primary/30 text-[9px] font-black text-primary-foreground uppercase tracking-widest">
                        <Zap className="h-2.5 w-2.5 fill-current" />
                        Million Minute Quest
                     </div>
                   </div>
-                  <h1 className="text-2xl md:text-4xl font-black tracking-tighter leading-none">Hustle Standings</h1>
-                  <p className="text-white/60 font-medium max-w-xl text-xs md:text-base">
+                  <h1 className="text-xl md:text-2xl font-black tracking-tighter leading-none">Hustle Standings</h1>
+                  <p className="text-white/60 font-medium max-w-xl text-[10px] md:text-xs">
                     Real-time global rankings. Push your limits and claim the top spot.
                   </p>
                 </div>
@@ -155,7 +161,7 @@ export default function LeaderboardPage() {
           </Card>
 
           {/* New Image-Style Podium Section */}
-          <div className="w-full flex justify-center pt-16 pb-2 overflow-visible">
+          <div className="w-full flex justify-center pt-14 pb-0 overflow-visible relative z-20">
             {loading ? (
               <div className="flex items-end justify-center gap-8 md:gap-20">
                 <Skeleton className="h-24 w-24 rounded-full" />
@@ -163,7 +169,7 @@ export default function LeaderboardPage() {
                 <Skeleton className="h-24 w-24 rounded-full" />
               </div>
             ) : top3.length > 0 ? (
-              <div className="flex items-end justify-center gap-4 md:gap-16 lg:gap-24 px-4 w-full overflow-visible pb-4 scrollbar-none">
+              <div className="flex items-end justify-center gap-4 md:gap-16 lg:gap-24 px-4 w-full overflow-visible pb-0 scrollbar-none">
                 
                 {/* 2nd Place */}
                 {top3[1] && (
@@ -199,12 +205,12 @@ export default function LeaderboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             <div className="lg:col-span-12">
               <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
-                <CardContent className="p-3 md:p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                <CardContent className="p-2 md:p-4 flex flex-col md:flex-row items-center justify-between gap-3">
                   <div className="flex flex-row items-center justify-center md:justify-start gap-2 w-full md:w-auto">
                       <div className="bg-secondary/50 p-0.5 rounded-xl flex items-center flex-1 sm:flex-initial">
                         <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as any)}>
-                            <SelectTrigger className="h-9 w-full sm:w-[160px] rounded-lg border-none bg-transparent font-bold text-[10px] md:text-xs">
-                                <Filter className="h-3 w-3 mr-1.5 text-primary hidden sm:inline" />
+                            <SelectTrigger className="h-9 w-full sm:w-[150px] rounded-lg border-none bg-transparent font-bold text-[10px]">
+                                <Filter className="h-3 w-3 mr-1.5 text-primary" />
                                 <SelectValue placeholder="Category" />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl">
@@ -221,7 +227,7 @@ export default function LeaderboardPage() {
 
                       <div className="bg-secondary/50 p-0.5 rounded-xl flex items-center flex-1 sm:flex-initial">
                         <Select value={batchFilter} onValueChange={setBatchFilter}>
-                            <SelectTrigger className="h-9 w-full sm:w-[110px] rounded-lg border-none bg-transparent font-bold text-[10px] md:text-xs">
+                            <SelectTrigger className="h-9 w-full sm:w-[100px] rounded-lg border-none bg-transparent font-bold text-[10px]">
                                 <SelectValue placeholder="Batch" />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl">
@@ -235,7 +241,7 @@ export default function LeaderboardPage() {
                   </div>
 
                   <Tabs value={timeFilter} onValueChange={(v) => setTimeFilter(v as any)} className="w-full md:w-auto">
-                    <TabsList className="grid grid-cols-4 bg-secondary/50 p-1 rounded-xl h-10 w-full md:min-w-[360px]">
+                    <TabsList className="grid grid-cols-4 bg-secondary/50 p-1 rounded-xl h-10 w-full md:min-w-[320px]">
                       <TabsTrigger value="daily" className="rounded-lg font-black text-[8px] md:text-[9px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Daily</TabsTrigger>
                       <TabsTrigger value="weekly" className="rounded-lg font-black text-[8px] md:text-[9px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Weekly</TabsTrigger>
                       <TabsTrigger value="monthly" className="rounded-lg font-black text-[8px] md:text-[9px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Monthly</TabsTrigger>
@@ -249,9 +255,9 @@ export default function LeaderboardPage() {
             {/* Ranking Directory */}
             <div className="lg:col-span-12">
               <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
-                <div className="p-4 md:p-6 border-b bg-secondary/10 flex items-center justify-between">
+                <div className="p-3 md:p-4 border-b bg-secondary/10 flex items-center justify-between">
                   <div>
-                    <h3 className="text-base font-black flex items-center gap-2 tracking-tight">
+                    <h3 className="text-sm font-black flex items-center gap-2 tracking-tight">
                        <List className="h-4 w-4 text-primary" /> Contender Directory
                     </h3>
                     <p className="text-[7px] font-black uppercase text-muted-foreground tracking-[0.2em] mt-0.5">Live from global data servers</p>
@@ -287,11 +293,11 @@ export default function LeaderboardPage() {
                             key={contender.uid} 
                             href={`/profile/${contender.uid}`}
                             className={cn(
-                              "flex items-center justify-between p-3 md:p-5 hover:bg-primary/[0.03] transition-all duration-300 group",
+                              "flex items-center justify-between p-3 md:p-4 hover:bg-primary/[0.03] transition-all duration-300 group",
                               isMe && "bg-primary/[0.05] ring-1 ring-inset ring-primary/10"
                             )}
                           >
-                            <div className="flex items-center gap-3 md:gap-6 min-w-0">
+                            <div className="flex items-center gap-3 md:gap-5 min-w-0">
                               <span className={cn(
                                 "w-6 text-center font-black text-xs md:text-sm italic transition-colors",
                                 idx === 0 ? "text-yellow-500" : idx === 1 ? "text-slate-400" : idx === 2 ? "text-orange-500" : "text-muted-foreground/30 group-hover:text-primary"
@@ -301,25 +307,25 @@ export default function LeaderboardPage() {
                               
                               <div className="relative">
                                 <Avatar className={cn(
-                                  "h-9 w-9 md:h-12 md:w-12 border transition-transform group-hover:scale-105 duration-300",
+                                  "h-9 w-9 md:h-10 md:w-10 border transition-transform group-hover:scale-105 duration-300",
                                   isMe ? "border-primary" : "border-background shadow-sm"
                                 )}>
                                   <AvatarImage src={contender.photoURL || undefined} />
-                                  <AvatarFallback className="font-black text-xs md:text-sm bg-secondary text-primary">{contender.displayName?.[0]}</AvatarFallback>
+                                  <AvatarFallback className="font-black text-xs bg-secondary text-primary">{contender.displayName?.[0]}</AvatarFallback>
                                 </Avatar>
                                 {contender.isLive && (
-                                  <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 md:h-3.5 md:w-3.5 bg-red-600 rounded-full border-2 border-card flex items-center justify-center shadow-lg">
-                                    <div className="h-1 md:h-1.5 w-1 md:w-1.5 bg-white rounded-full animate-ping" />
+                                  <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-red-600 rounded-full border-2 border-card flex items-center justify-center shadow-lg">
+                                    <div className="h-1 w-1 bg-white rounded-full animate-ping" />
                                   </div>
                                 )}
                               </div>
 
                               <div className="min-w-0 space-y-0.5">
                                   <div className="flex items-center gap-1.5 mb-0.5">
-                                      <p className="font-bold text-xs md:text-base truncate group-hover:text-primary transition-colors tracking-tight">
+                                      <p className="font-bold text-xs md:text-sm truncate group-hover:text-primary transition-colors tracking-tight">
                                         {contender.displayName}
                                       </p>
-                                      {isMe && <Badge className="text-[6px] md:text-[7px] font-black bg-primary text-white h-3 md:h-3.5 tracking-widest border-none px-1 md:px-1.5">YOU</Badge>}
+                                      {isMe && <Badge className="text-[6px] font-black bg-primary text-white h-3 tracking-widest border-none px-1">YOU</Badge>}
                                   </div>
                                   <div className="flex flex-wrap items-center gap-1.5">
                                       <span className="text-[7px] md:text-[8px] font-black uppercase text-muted-foreground">
@@ -334,17 +340,17 @@ export default function LeaderboardPage() {
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-3 md:gap-6">
+                            <div className="flex items-center gap-3 md:gap-5">
                               <div className="text-right shrink-0">
-                                  <p className="font-black text-sm md:text-xl text-primary leading-none tracking-tighter tabular-nums">
+                                  <p className="font-black text-sm md:text-lg text-primary leading-none tracking-tighter tabular-nums">
                                       {formatTime(contender.displayMinutes)}
                                   </p>
-                                  <p className="text-[6px] md:text-[7px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">
+                                  <p className="text-[6px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">
                                     {timeFilter}
                                   </p>
                               </div>
-                              <div className="hidden sm:flex h-7 w-7 rounded-full items-center justify-center bg-secondary/50 group-hover:bg-primary group-hover:text-white transition-all duration-300 group-hover:translate-x-0.5">
-                                 <ArrowRight className="h-3.5 w-3.5" />
+                              <div className="hidden sm:flex h-6 w-6 rounded-full items-center justify-center bg-secondary/50 group-hover:bg-primary group-hover:text-white transition-all duration-300 group-hover:translate-x-0.5">
+                                 <ArrowRight className="h-3 w-3" />
                               </div>
                             </div>
                           </Link>
@@ -376,16 +382,16 @@ function PodiumMember({ user, rank, time }: { user: any; rank: number; time: str
   const isWinner = rank === 1;
   
   return (
-    <Link href={`/profile/${user.uid}`} className="flex flex-col items-center group overflow-visible">
+    <Link href={`/profile/${user.uid}`} className="flex flex-col items-center group overflow-visible relative">
        <div className="relative flex flex-col items-center overflow-visible">
           {/* Winner Crown & Badge */}
           {isWinner && (
              <>
-               <div className="absolute -top-7 md:-top-10 z-[50] animate-bounce pointer-events-none">
-                  <Crown className="h-7 w-7 md:h-12 md:w-12 text-yellow-400 fill-current drop-shadow-[0_0_8px_rgba(250,204,21,0.6)]" />
+               <div className="absolute -top-7 md:-top-11 z-[50] animate-bounce pointer-events-none">
+                  <Crown className="h-8 w-8 md:h-12 md:w-12 text-yellow-400 fill-current drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]" />
                </div>
                {user.isLive && (
-                  <div className="absolute top-0 right-0 z-[60] bg-red-600 text-white text-[7px] md:text-[10px] font-black px-1.5 md:px-2 py-0.5 rounded-full shadow-lg border border-red-400 animate-pulse">
+                  <div className="absolute top-0 right-0 z-[60] bg-red-600 text-white text-[7px] md:text-[9px] font-black px-1.5 md:px-2 py-0.5 rounded-full shadow-lg border border-red-400 animate-pulse">
                     LIVE
                   </div>
                )}
@@ -396,44 +402,44 @@ function PodiumMember({ user, rank, time }: { user: any; rank: number; time: str
           <div className={cn(
              "relative rounded-full transition-transform duration-500 group-hover:scale-105 overflow-visible",
              isWinner 
-              ? "h-20 w-20 md:h-36 md:w-36 border-[4px] border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.2)]" 
+              ? "h-20 w-20 md:h-32 md:w-32 border-[4px] border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.3)]" 
               : rank === 2 
-                ? "h-16 w-16 md:h-28 md:w-28 border-[3px] border-slate-400" 
-                : "h-16 w-16 md:h-28 md:w-28 border-[3px] border-orange-500"
+                ? "h-16 w-16 md:h-24 md:w-24 border-[3px] border-slate-400" 
+                : "h-16 w-16 md:h-24 md:w-24 border-[3px] border-orange-500"
           )}>
              <Avatar className="h-full w-full">
                 <AvatarImage src={user.photoURL || undefined} />
-                <AvatarFallback className="text-sm md:text-xl font-black bg-secondary">{user.displayName?.[0]}</AvatarFallback>
+                <AvatarFallback className="text-sm md:text-lg font-black bg-secondary">{user.displayName?.[0]}</AvatarFallback>
              </Avatar>
              
              {/* Medal Badge for 2nd & 3rd */}
              {!isWinner && (
                 <div className={cn(
-                   "absolute -bottom-1 -right-1 h-6 w-6 md:h-9 md:w-9 rounded-full flex items-center justify-center border-2 border-white shadow-lg",
+                   "absolute -bottom-1 -right-1 h-6 w-6 md:h-8 md:w-8 rounded-full flex items-center justify-center border-2 border-white shadow-lg",
                    rank === 2 ? "bg-slate-400" : "bg-orange-500"
                 )}>
-                   <Medal className="h-3 w-3 md:h-5 md:w-5 text-white fill-current" />
+                   <Medal className="h-3 w-3 md:h-4 md:w-4 text-white fill-current" />
                 </div>
              )}
           </div>
        </div>
 
        {/* Member Info */}
-       <div className="mt-3 text-center space-y-0.5">
+       <div className="mt-2 text-center space-y-0.5">
           <h3 className={cn(
-             "font-black tracking-tight truncate max-w-[80px] md:max-w-[150px]",
-             isWinner ? "text-sm md:text-xl" : "text-xs md:text-base"
+             "font-black tracking-tight truncate max-w-[80px] md:max-w-[120px]",
+             isWinner ? "text-xs md:text-lg" : "text-[10px] md:text-sm"
           )}>
              {user.displayName}
           </h3>
           
           <div className="flex flex-col items-center gap-1">
              {isWinner ? (
-                <div className="bg-yellow-400 text-black px-2 md:px-4 py-0.5 rounded-full text-[8px] md:text-xs font-black shadow-md">
+                <div className="bg-yellow-400 text-black px-2 md:px-3 py-0.5 rounded-full text-[7px] md:text-xs font-black shadow-md">
                    {time}
                 </div>
              ) : (
-                <span className="text-primary font-black text-[9px] md:text-sm">{time}</span>
+                <span className="text-primary font-black text-[8px] md:text-xs">{time}</span>
              )}
           </div>
        </div>

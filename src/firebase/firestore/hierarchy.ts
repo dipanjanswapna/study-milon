@@ -130,8 +130,7 @@ export async function updateChapterStatus(
 
 /**
  * Precision logging system that handles seconds to prevent any time gaps.
- * Rollover logic ensures minutes are only incremented when full 60 seconds are reached.
- * Implements auto-resetting for Daily, Weekly (Fri-Thu), Monthly, and Yearly leaderboards.
+ * Implements physical reset on first sync of a new day/week/month/year.
  */
 export async function logStudyTime(
     db: Firestore,
@@ -154,8 +153,7 @@ export async function logStudyTime(
     const dateStr = format(now, 'yyyy-MM-dd');
     const monthStr = format(now, 'yyyy-MM');
     const yearStr = format(now, 'yyyy');
-    // Custom Week: Friday to Thursday
-    const weekStart = startOfWeek(now, { weekStartsOn: 5 }); 
+    const weekStart = startOfWeek(now, { weekStartsOn: 5 }); // Friday is 5
     const weekStr = `Friday_${format(weekStart, 'yyyy-MM-dd')}`;
     
     const hour = now.getHours().toString();
@@ -190,23 +188,34 @@ export async function logStudyTime(
             "currentSession.lastSyncTime": Date.now() 
         };
 
-        if (minutesToAdd > 0) {
-            // Check for resets by comparing keys
-            const dailyUpdate = userData.last_study_day === dateStr ? increment(minutesToAdd) : minutesToAdd;
-            const weeklyUpdate = userData.last_study_week === weekStr ? increment(minutesToAdd) : minutesToAdd;
-            const monthlyUpdate = userData.last_study_month === monthStr ? increment(minutesToAdd) : minutesToAdd;
-            const yearlyUpdate = userData.last_study_year === yearStr ? increment(minutesToAdd) : minutesToAdd;
-
-            userUpdate.total_study_minutes = increment(minutesToAdd);
-            userUpdate.daily_study_minutes = dailyUpdate;
-            userUpdate.weekly_study_minutes = weeklyUpdate;
-            userUpdate.monthly_study_minutes = monthlyUpdate;
-            userUpdate.yearly_study_minutes = yearlyUpdate;
-            
+        // --- HARD RESET LOGIC (Physical Reset in DB) ---
+        // If the date keys have changed since the last study update, 
+        // it means we are in a new period. Reset those values to 0.
+        
+        if (userData.last_study_day !== dateStr) {
+            userUpdate.daily_study_minutes = 0;
             userUpdate.last_study_day = dateStr;
+        }
+        if (userData.last_study_week !== weekStr) {
+            userUpdate.weekly_study_minutes = 0;
             userUpdate.last_study_week = weekStr;
+        }
+        if (userData.last_study_month !== monthStr) {
+            userUpdate.monthly_study_minutes = 0;
             userUpdate.last_study_month = monthStr;
+        }
+        if (userData.last_study_year !== yearStr) {
+            userUpdate.yearly_study_minutes = 0;
             userUpdate.last_study_year = yearStr;
+        }
+
+        // --- INCREMENTAL UPDATE ---
+        if (minutesToAdd > 0) {
+            userUpdate.total_study_minutes = increment(minutesToAdd);
+            userUpdate.daily_study_minutes = increment(minutesToAdd);
+            userUpdate.weekly_study_minutes = increment(minutesToAdd);
+            userUpdate.monthly_study_minutes = increment(minutesToAdd);
+            userUpdate.yearly_study_minutes = increment(minutesToAdd);
 
             if (chapterRef) {
                 batch.update(chapterRef, {
