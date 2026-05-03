@@ -45,11 +45,12 @@ export default function LeaderboardPage() {
   const [batchFilter, setBatchFilter] = useState<string>('All');
   const [groupMap, setGroupMap] = useState<Record<string, string>>({});
   
-  // Tick state to force UI refresh at exactly 12:00 AM
+  // Tick state to force UI refresh at exactly 12:00 AM (Virtual Reset)
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    const timer = setInterval(() => setTick(t => t + 1), 60000); // Check every minute
+    // Check every 60 seconds to see if the day has rolled over
+    const timer = setInterval(() => setTick(t => t + 1), 60000);
     return () => clearInterval(timer);
   }, []);
 
@@ -103,12 +104,15 @@ export default function LeaderboardPage() {
     }).map(u => {
       let currentVal = u[getSortField(timeFilter)] || 0;
       
-      // Virtual Reset Logic: If stored date key doesn't match current time, treat as 0
+      // --- VIRTUAL RESET LOGIC ---
+      // If the day has rolled over but the user hasn't studied yet (physical reset not triggered),
+      // we manually set their score to 0 on the UI.
       if (timeFilter === 'daily' && u.last_study_day !== todayStr) currentVal = 0;
       if (timeFilter === 'weekly' && u.last_study_week !== weekStr) currentVal = 0;
       if (timeFilter === 'monthly' && u.last_study_month !== monthStr) currentVal = 0;
       if (timeFilter === 'yearly' && u.last_study_year !== yearStr) currentVal = 0;
 
+      // Real-time Live Status
       let isLive = u.isStudying === true;
       if (u.last_active_date) {
          const lastActive = u.last_active_date.toDate();
@@ -140,19 +144,19 @@ export default function LeaderboardPage() {
           {/* Dashboard-Style Hero Banner */}
           <Card className="rounded-xl border-none shadow-2xl overflow-hidden bg-[#1A1C3D] text-white relative group">
             <div className="absolute top-0 right-0 p-8 opacity-5">
-              <Trophy className="h-24 w-24 transition-transform group-hover:scale-110 duration-1000" />
+              <Trophy className="h-20 w-20 transition-transform group-hover:scale-110 duration-1000" />
             </div>
             <CardContent className="p-5 md:p-8 relative z-10 space-y-1">
               <div className="flex flex-col md:flex-row items-center justify-between gap-2">
-                <div className="space-y-1 text-center md:text-left">
+                <div className="space-y-0.5 text-center md:text-left">
                   <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-                    <div className="inline-flex items-center gap-1.5 bg-primary/20 backdrop-blur-lg px-2.5 py-0.5 rounded-full border border-primary/30 text-[9px] font-black text-primary-foreground uppercase tracking-widest">
-                       <Zap className="h-2.5 w-2.5 fill-current" />
+                    <div className="inline-flex items-center gap-1.5 bg-primary/20 backdrop-blur-lg px-2 py-0.5 rounded-full border border-primary/30 text-[8px] font-black text-primary-foreground uppercase tracking-widest">
+                       <Zap className="h-2 w-2 fill-current" />
                        Million Minute Quest
                     </div>
                   </div>
-                  <h1 className="text-xl md:text-2xl font-black tracking-tighter leading-none">Hustle Standings</h1>
-                  <p className="text-white/60 font-medium max-w-xl text-[10px] md:text-xs">
+                  <h1 className="text-lg md:text-xl font-black tracking-tighter leading-none">Hustle Standings</h1>
+                  <p className="text-white/60 font-medium max-w-xl text-[9px] md:text-xs">
                     Real-time global rankings. Push your limits and claim the top spot.
                   </p>
                 </div>
@@ -160,8 +164,8 @@ export default function LeaderboardPage() {
             </CardContent>
           </Card>
 
-          {/* New Image-Style Podium Section */}
-          <div className="w-full flex justify-center pt-14 pb-0 overflow-visible relative z-20">
+          {/* Podium Section (1st, 2nd, 3rd) */}
+          <div className="w-full flex justify-center pt-20 pb-2 overflow-visible relative z-20">
             {loading ? (
               <div className="flex items-end justify-center gap-8 md:gap-20">
                 <Skeleton className="h-24 w-24 rounded-full" />
@@ -169,7 +173,7 @@ export default function LeaderboardPage() {
                 <Skeleton className="h-24 w-24 rounded-full" />
               </div>
             ) : top3.length > 0 ? (
-              <div className="flex items-end justify-center gap-4 md:gap-16 lg:gap-24 px-4 w-full overflow-visible pb-0 scrollbar-none">
+              <div className="flex items-end justify-center gap-4 md:gap-16 lg:gap-24 px-4 w-full overflow-visible pb-0">
                 
                 {/* 2nd Place */}
                 {top3[1] && (
@@ -180,7 +184,7 @@ export default function LeaderboardPage() {
                   />
                 )}
 
-                {/* 1st Place */}
+                {/* 1st Place (The Winner) */}
                 {top3[0] && (
                   <PodiumMember 
                     user={top3[0]} 
@@ -202,175 +206,171 @@ export default function LeaderboardPage() {
           </div>
 
           {/* Filtering Engine */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            <div className="lg:col-span-12">
-              <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
-                <CardContent className="p-2 md:p-4 flex flex-col md:flex-row items-center justify-between gap-3">
-                  <div className="flex flex-row items-center justify-center md:justify-start gap-2 w-full md:w-auto">
-                      <div className="bg-secondary/50 p-0.5 rounded-xl flex items-center flex-1 sm:flex-initial">
-                        <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as any)}>
-                            <SelectTrigger className="h-9 w-full sm:w-[150px] rounded-lg border-none bg-transparent font-bold text-[10px]">
-                                <Filter className="h-3 w-3 mr-1.5 text-primary" />
-                                <SelectValue placeholder="Category" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl">
-                                <SelectItem value="All">All Categories</SelectItem>
-                                <SelectItem value="SSC">SSC</SelectItem>
-                                <SelectItem value="HSC">HSC</SelectItem>
-                                <SelectItem value="Admission 1st">Admission 1st</SelectItem>
-                                <SelectItem value="Admission 2nd">Admission 2nd</SelectItem>
-                                <SelectItem value="Job Prep">Job Prep</SelectItem>
-                                <SelectItem value="University">University</SelectItem>
-                            </SelectContent>
-                        </Select>
-                      </div>
+          <div className="grid grid-cols-1 gap-3">
+            <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
+              <CardContent className="p-2 md:p-3 flex flex-col md:flex-row items-center justify-between gap-3">
+                <div className="flex flex-row items-center justify-center md:justify-start gap-2 w-full md:w-auto">
+                    <div className="bg-secondary/50 p-0.5 rounded-xl flex items-center flex-1 sm:flex-initial">
+                      <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as any)}>
+                          <SelectTrigger className="h-9 w-full sm:w-[150px] rounded-lg border-none bg-transparent font-bold text-[10px]">
+                              <Filter className="h-3 w-3 mr-1.5 text-primary" />
+                              <SelectValue placeholder="Category" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                              <SelectItem value="All">All Categories</SelectItem>
+                              <SelectItem value="SSC">SSC</SelectItem>
+                              <SelectItem value="HSC">HSC</SelectItem>
+                              <SelectItem value="Admission 1st">Admission 1st</SelectItem>
+                              <SelectItem value="Admission 2nd">Admission 2nd</SelectItem>
+                              <SelectItem value="Job Prep">Job Prep</SelectItem>
+                              <SelectItem value="University">University</SelectItem>
+                          </SelectContent>
+                      </Select>
+                    </div>
 
-                      <div className="bg-secondary/50 p-0.5 rounded-xl flex items-center flex-1 sm:flex-initial">
-                        <Select value={batchFilter} onValueChange={setBatchFilter}>
-                            <SelectTrigger className="h-9 w-full sm:w-[100px] rounded-lg border-none bg-transparent font-bold text-[10px]">
-                                <SelectValue placeholder="Batch" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl">
-                                <SelectItem value="All">All Batches</SelectItem>
-                                {YEARS.map(year => (
-                                  <SelectItem key={year} value={year}>{year}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                      </div>
-                  </div>
-
-                  <Tabs value={timeFilter} onValueChange={(v) => setTimeFilter(v as any)} className="w-full md:w-auto">
-                    <TabsList className="grid grid-cols-4 bg-secondary/50 p-1 rounded-xl h-10 w-full md:min-w-[320px]">
-                      <TabsTrigger value="daily" className="rounded-lg font-black text-[8px] md:text-[9px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Daily</TabsTrigger>
-                      <TabsTrigger value="weekly" className="rounded-lg font-black text-[8px] md:text-[9px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Weekly</TabsTrigger>
-                      <TabsTrigger value="monthly" className="rounded-lg font-black text-[8px] md:text-[9px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Monthly</TabsTrigger>
-                      <TabsTrigger value="yearly" className="rounded-lg font-black text-[8px] md:text-[9px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Yearly</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Ranking Directory */}
-            <div className="lg:col-span-12">
-              <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
-                <div className="p-3 md:p-4 border-b bg-secondary/10 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-black flex items-center gap-2 tracking-tight">
-                       <List className="h-4 w-4 text-primary" /> Contender Directory
-                    </h3>
-                    <p className="text-[7px] font-black uppercase text-muted-foreground tracking-[0.2em] mt-0.5">Live from global data servers</p>
-                  </div>
-                  <Badge variant="outline" className="font-black text-[8px] uppercase tracking-widest border-primary/20 text-primary h-6 px-2">
-                    {rankings.length} Tracked
-                  </Badge>
+                    <div className="bg-secondary/50 p-0.5 rounded-xl flex items-center flex-1 sm:flex-initial">
+                      <Select value={batchFilter} onValueChange={setBatchFilter}>
+                          <SelectTrigger className="h-9 w-full sm:w-[100px] rounded-lg border-none bg-transparent font-bold text-[10px]">
+                              <SelectValue placeholder="Batch" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                              <SelectItem value="All">All Batches</SelectItem>
+                              {YEARS.map(year => (
+                                <SelectItem key={year} value={year}>{year}</SelectItem>
+                              ))}
+                          </SelectContent>
+                      </Select>
+                    </div>
                 </div>
-                
-                <ScrollArea className="h-[500px]">
-                  <div className="divide-y divide-secondary/30">
-                    {loading ? (
-                      Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className="p-4 flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Skeleton className="h-5 w-5 rounded-full" />
-                            <Skeleton className="h-10 w-10 rounded-full" />
-                            <div className="space-y-1">
-                               <Skeleton className="h-3 w-32" />
-                               <Skeleton className="h-2 w-20" />
+
+                <Tabs value={timeFilter} onValueChange={(v) => setTimeFilter(v as any)} className="w-full md:w-auto">
+                  <TabsList className="grid grid-cols-4 bg-secondary/50 p-1 rounded-xl h-10 w-full md:min-w-[320px]">
+                    <TabsTrigger value="daily" className="rounded-lg font-black text-[8px] md:text-[9px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Daily</TabsTrigger>
+                    <TabsTrigger value="weekly" className="rounded-lg font-black text-[8px] md:text-[9px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Weekly</TabsTrigger>
+                    <TabsTrigger value="monthly" className="rounded-lg font-black text-[8px] md:text-[9px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Monthly</TabsTrigger>
+                    <TabsTrigger value="yearly" className="rounded-lg font-black text-[8px] md:text-[9px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Yearly</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </CardContent>
+            </Card>
+
+            {/* Ranking Directory with Internal Scroll */}
+            <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
+              <div className="p-3 md:p-4 border-b bg-secondary/10 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-black flex items-center gap-2 tracking-tight">
+                     <List className="h-4 w-4 text-primary" /> Contender Directory
+                  </h3>
+                  <p className="text-[7px] font-black uppercase text-muted-foreground tracking-[0.2em] mt-0.5">Live from global data servers</p>
+                </div>
+                <Badge variant="outline" className="font-black text-[8px] uppercase tracking-widest border-primary/20 text-primary h-6 px-2">
+                  {rankings.length} Tracked
+                </Badge>
+              </div>
+              
+              <ScrollArea className="h-[450px]">
+                <div className="divide-y divide-secondary/30">
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="h-5 w-5 rounded-full" />
+                          <Skeleton className="h-10 w-10 rounded-full" />
+                          <div className="space-y-1">
+                             <Skeleton className="h-3 w-32" />
+                             <Skeleton className="h-2 w-20" />
+                          </div>
+                        </div>
+                        <Skeleton className="h-6 w-16 rounded-full" />
+                      </div>
+                    ))
+                  ) : rankings.length > 0 ? (
+                    rankings.map((contender: any, idx) => {
+                      const userGuildName = contender.groupId ? groupMap[contender.groupId] : null;
+                      const isMe = contender.uid === user?.uid;
+
+                      return (
+                        <Link 
+                          key={contender.uid} 
+                          href={`/profile/${contender.uid}`}
+                          className={cn(
+                            "flex items-center justify-between p-3 md:p-4 hover:bg-primary/[0.03] transition-all duration-300 group",
+                            isMe && "bg-primary/[0.05] ring-1 ring-inset ring-primary/10"
+                          )}
+                        >
+                          <div className="flex items-center gap-3 md:gap-5 min-w-0">
+                            <span className={cn(
+                              "w-6 text-center font-black text-xs md:text-sm italic transition-colors",
+                              idx === 0 ? "text-yellow-500" : idx === 1 ? "text-slate-400" : idx === 2 ? "text-orange-500" : "text-muted-foreground/30 group-hover:text-primary"
+                            )}>
+                               #{idx + 1}
+                            </span>
+                            
+                            <div className="relative">
+                              <Avatar className={cn(
+                                "h-8 w-8 md:h-10 md:w-10 border transition-transform group-hover:scale-105 duration-300",
+                                isMe ? "border-primary" : "border-background shadow-sm"
+                              )}>
+                                <AvatarImage src={contender.photoURL || undefined} />
+                                <AvatarFallback className="font-black text-xs bg-secondary text-primary">{contender.displayName?.[0]}</AvatarFallback>
+                              </Avatar>
+                              {contender.isLive && (
+                                <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-red-600 rounded-full border-2 border-card flex items-center justify-center shadow-lg">
+                                  <div className="h-1 w-1 bg-white rounded-full animate-ping" />
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="min-w-0 space-y-0.5">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                    <p className="font-bold text-[11px] md:text-sm truncate group-hover:text-primary transition-colors tracking-tight">
+                                      {contender.displayName}
+                                    </p>
+                                    {isMe && <Badge className="text-[6px] font-black bg-primary text-white h-3 tracking-widest border-none px-1">YOU</Badge>}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                    <span className="text-[7px] md:text-[8px] font-black uppercase text-muted-foreground">
+                                        {contender.category || 'SSC'} {contender.batch || ''}
+                                    </span>
+                                    {userGuildName && (
+                                      <div className="flex items-center gap-1 text-[7px] md:text-[8px] font-black text-primary bg-primary/5 px-1.5 py-0.5 rounded-full">
+                                         <Users2 className="h-2 w-2" /> {userGuildName}
+                                      </div>
+                                    )}
+                                </div>
                             </div>
                           </div>
-                          <Skeleton className="h-6 w-16 rounded-full" />
-                        </div>
-                      ))
-                    ) : rankings.length > 0 ? (
-                      rankings.map((contender: any, idx) => {
-                        const userGuildName = contender.groupId ? groupMap[contender.groupId] : null;
-                        const isMe = contender.uid === user?.uid;
 
-                        return (
-                          <Link 
-                            key={contender.uid} 
-                            href={`/profile/${contender.uid}`}
-                            className={cn(
-                              "flex items-center justify-between p-3 md:p-4 hover:bg-primary/[0.03] transition-all duration-300 group",
-                              isMe && "bg-primary/[0.05] ring-1 ring-inset ring-primary/10"
-                            )}
-                          >
-                            <div className="flex items-center gap-3 md:gap-5 min-w-0">
-                              <span className={cn(
-                                "w-6 text-center font-black text-xs md:text-sm italic transition-colors",
-                                idx === 0 ? "text-yellow-500" : idx === 1 ? "text-slate-400" : idx === 2 ? "text-orange-500" : "text-muted-foreground/30 group-hover:text-primary"
-                              )}>
-                                 #{idx + 1}
-                              </span>
-                              
-                              <div className="relative">
-                                <Avatar className={cn(
-                                  "h-9 w-9 md:h-10 md:w-10 border transition-transform group-hover:scale-105 duration-300",
-                                  isMe ? "border-primary" : "border-background shadow-sm"
-                                )}>
-                                  <AvatarImage src={contender.photoURL || undefined} />
-                                  <AvatarFallback className="font-black text-xs bg-secondary text-primary">{contender.displayName?.[0]}</AvatarFallback>
-                                </Avatar>
-                                {contender.isLive && (
-                                  <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-red-600 rounded-full border-2 border-card flex items-center justify-center shadow-lg">
-                                    <div className="h-1 w-1 bg-white rounded-full animate-ping" />
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="min-w-0 space-y-0.5">
-                                  <div className="flex items-center gap-1.5 mb-0.5">
-                                      <p className="font-bold text-xs md:text-sm truncate group-hover:text-primary transition-colors tracking-tight">
-                                        {contender.displayName}
-                                      </p>
-                                      {isMe && <Badge className="text-[6px] font-black bg-primary text-white h-3 tracking-widest border-none px-1">YOU</Badge>}
-                                  </div>
-                                  <div className="flex flex-wrap items-center gap-1.5">
-                                      <span className="text-[7px] md:text-[8px] font-black uppercase text-muted-foreground">
-                                          {contender.category || 'SSC'} {contender.batch || ''}
-                                      </span>
-                                      {userGuildName && (
-                                        <div className="flex items-center gap-1 text-[7px] md:text-[8px] font-black text-primary bg-primary/5 px-1.5 py-0.5 rounded-full">
-                                           <Users2 className="h-2 w-2" /> {userGuildName}
-                                        </div>
-                                      )}
-                                  </div>
-                              </div>
+                          <div className="flex items-center gap-3 md:gap-5">
+                            <div className="text-right shrink-0">
+                                <p className="font-black text-sm md:text-lg text-primary leading-none tracking-tighter tabular-nums">
+                                    {formatTime(contender.displayMinutes)}
+                                </p>
+                                <p className="text-[6px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">
+                                  {timeFilter}
+                                </p>
                             </div>
-
-                            <div className="flex items-center gap-3 md:gap-5">
-                              <div className="text-right shrink-0">
-                                  <p className="font-black text-sm md:text-lg text-primary leading-none tracking-tighter tabular-nums">
-                                      {formatTime(contender.displayMinutes)}
-                                  </p>
-                                  <p className="text-[6px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">
-                                    {timeFilter}
-                                  </p>
-                              </div>
-                              <div className="hidden sm:flex h-6 w-6 rounded-full items-center justify-center bg-secondary/50 group-hover:bg-primary group-hover:text-white transition-all duration-300 group-hover:translate-x-0.5">
-                                 <ArrowRight className="h-3 w-3" />
-                              </div>
+                            <div className="hidden sm:flex h-6 w-6 rounded-full items-center justify-center bg-secondary/50 group-hover:bg-primary group-hover:text-white transition-all duration-300 group-hover:translate-x-0.5">
+                               <ArrowRight className="h-3 w-3" />
                             </div>
-                          </Link>
-                        );
-                      })
-                    ) : (
-                      <div className="py-16 text-center space-y-4">
-                        <div className="bg-primary/5 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2 border-2 border-dashed border-primary/20">
-                          <Clock className="h-6 w-6 text-primary/30" />
-                        </div>
-                        <h3 className="text-lg font-black tracking-tighter">No Rankings</h3>
-                        <Button variant="outline" size="sm" className="rounded-lg px-6 h-9 font-black uppercase tracking-widest text-[9px]" asChild>
-                          <Link href="/todo">Start Mission</Link>
-                        </Button>
+                          </div>
+                        </Link>
+                      );
+                    })
+                  ) : (
+                    <div className="py-16 text-center space-y-4">
+                      <div className="bg-primary/5 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2 border-2 border-dashed border-primary/20">
+                        <Clock className="h-6 w-6 text-primary/30" />
                       </div>
-                    )}
-                  </div>
-                </ScrollArea>
-              </Card>
-            </div>
+                      <h3 className="text-lg font-black tracking-tighter">No Rankings</h3>
+                      <Button variant="outline" size="sm" className="rounded-lg px-6 h-9 font-black uppercase tracking-widest text-[9px]" asChild>
+                        <Link href="/todo">Start Mission</Link>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </Card>
           </div>
         </main>
       </div>
@@ -387,8 +387,8 @@ function PodiumMember({ user, rank, time }: { user: any; rank: number; time: str
           {/* Winner Crown & Badge */}
           {isWinner && (
              <>
-               <div className="absolute -top-7 md:-top-11 z-[50] animate-bounce pointer-events-none">
-                  <Crown className="h-8 w-8 md:h-12 md:w-12 text-yellow-400 fill-current drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]" />
+               <div className="absolute -top-9 md:-top-14 z-[50] animate-bounce pointer-events-none">
+                  <Crown className="h-8 w-8 md:h-12 md:w-12 text-yellow-400 fill-current drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]" />
                </div>
                {user.isLive && (
                   <div className="absolute top-0 right-0 z-[60] bg-red-600 text-white text-[7px] md:text-[9px] font-black px-1.5 md:px-2 py-0.5 rounded-full shadow-lg border border-red-400 animate-pulse">
@@ -402,7 +402,7 @@ function PodiumMember({ user, rank, time }: { user: any; rank: number; time: str
           <div className={cn(
              "relative rounded-full transition-transform duration-500 group-hover:scale-105 overflow-visible",
              isWinner 
-              ? "h-20 w-20 md:h-32 md:w-32 border-[4px] border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.3)]" 
+              ? "h-20 w-20 md:h-32 md:w-32 border-[4px] border-yellow-400 shadow-[0_0_25px_rgba(250,204,21,0.4)]" 
               : rank === 2 
                 ? "h-16 w-16 md:h-24 md:w-24 border-[3px] border-slate-400" 
                 : "h-16 w-16 md:h-24 md:w-24 border-[3px] border-orange-500"

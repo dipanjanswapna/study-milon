@@ -131,6 +131,7 @@ export async function updateChapterStatus(
 /**
  * Precision logging system that handles seconds to prevent any time gaps.
  * Implements physical reset on first sync of a new day/week/month/year.
+ * This is the CORE system for Daily/Weekly/Monthly/Yearly Leaderboards.
  */
 export async function logStudyTime(
     db: Firestore,
@@ -153,7 +154,7 @@ export async function logStudyTime(
     const dateStr = format(now, 'yyyy-MM-dd');
     const monthStr = format(now, 'yyyy-MM');
     const yearStr = format(now, 'yyyy');
-    const weekStart = startOfWeek(now, { weekStartsOn: 5 }); // Friday is 5
+    const weekStart = startOfWeek(now, { weekStartsOn: 5 }); // Custom Study Week: Starts on Friday
     const weekStr = `Friday_${format(weekStart, 'yyyy-MM-dd')}`;
     
     const hour = now.getHours().toString();
@@ -190,32 +191,39 @@ export async function logStudyTime(
 
         // --- HARD RESET LOGIC (Physical Reset in DB) ---
         // If the date keys have changed since the last study update, 
-        // it means we are in a new period. Reset those values to 0.
+        // it means we are in a new period. Reset those values.
         
         if (userData.last_study_day !== dateStr) {
-            userUpdate.daily_study_minutes = 0;
+            userUpdate.daily_study_minutes = minutesToAdd; // Hard Reset to current session mins
             userUpdate.last_study_day = dateStr;
-        }
-        if (userData.last_study_week !== weekStr) {
-            userUpdate.weekly_study_minutes = 0;
-            userUpdate.last_study_week = weekStr;
-        }
-        if (userData.last_study_month !== monthStr) {
-            userUpdate.monthly_study_minutes = 0;
-            userUpdate.last_study_month = monthStr;
-        }
-        if (userData.last_study_year !== yearStr) {
-            userUpdate.yearly_study_minutes = 0;
-            userUpdate.last_study_year = yearStr;
+        } else if (minutesToAdd > 0) {
+            userUpdate.daily_study_minutes = increment(minutesToAdd);
         }
 
-        // --- INCREMENTAL UPDATE ---
+        if (userData.last_study_week !== weekStr) {
+            userUpdate.weekly_study_minutes = minutesToAdd;
+            userUpdate.last_study_week = weekStr;
+        } else if (minutesToAdd > 0) {
+            userUpdate.weekly_study_minutes = increment(minutesToAdd);
+        }
+
+        if (userData.last_study_month !== monthStr) {
+            userUpdate.monthly_study_minutes = minutesToAdd;
+            userUpdate.last_study_month = monthStr;
+        } else if (minutesToAdd > 0) {
+            userUpdate.monthly_study_minutes = increment(minutesToAdd);
+        }
+
+        if (userData.last_study_year !== yearStr) {
+            userUpdate.yearly_study_minutes = minutesToAdd;
+            userUpdate.last_study_year = yearStr;
+        } else if (minutesToAdd > 0) {
+            userUpdate.yearly_study_minutes = increment(minutesToAdd);
+        }
+
+        // --- TOTAL & PROGRESS ---
         if (minutesToAdd > 0) {
             userUpdate.total_study_minutes = increment(minutesToAdd);
-            userUpdate.daily_study_minutes = increment(minutesToAdd);
-            userUpdate.weekly_study_minutes = increment(minutesToAdd);
-            userUpdate.monthly_study_minutes = increment(minutesToAdd);
-            userUpdate.yearly_study_minutes = increment(minutesToAdd);
 
             if (chapterRef) {
                 batch.update(chapterRef, {
@@ -223,6 +231,7 @@ export async function logStudyTime(
                 });
             }
             
+            // Log session for analytics
             batch.set(sessionRef, {
               duration: increment(minutesToAdd),
               [`hourlyBreakdown.${hour}`]: increment(minutesToAdd),
