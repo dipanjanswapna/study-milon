@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -98,10 +97,7 @@ export function StudyTimer() {
     if (!user || !activeTask || isBreak || secondsToSync <= 0) return;
     try {
       await logStudyTime(firestore, user.uid, activeTask.subjectId, activeTask.chapterId, secondsToSync);
-      // Also update the lastSyncTime in the session profile to keep DB in sync
-      updateUserProfile(firestore, user.uid, { 
-        "currentSession.lastSyncTime": Date.now() 
-      });
+      lastSyncTimestampRef.current = Date.now();
     } catch (e) {
       console.error("Precision sync failed:", e);
     }
@@ -214,46 +210,39 @@ export function StudyTimer() {
     }
   }, [user, activeTask, firestore, profile, performSync]);
 
-  // RECONCILER: The heart of the "Screen Off / Refresh" fix
+  // RECONCILER: Recovers time lost when tab was closed/refreshed
   useEffect(() => {
-    if (profile?.currentSession && !initializedFromCloud.current) {
-      const { startTime, lastSyncTime, duration, status, isBreak: cloudIsBreak } = profile.currentSession;
+    if (profile?.currentSession && !initializedFromCloud.current && user) {
+      const { startTime, lastSyncTime, duration, status, isBreak: cloudIsBreak, subjectId, chapterId } = profile.currentSession;
       
       if (status === 'active' && startTime) {
         const now = Date.now();
         const elapsedSinceStart = Math.floor((now - startTime) / 1000);
-        
-        // 1. Calculate how many seconds passed while the tab was closed/inactive
         const effectiveLastSync = lastSyncTime || startTime;
         const totalElapsedSinceLastSync = Math.floor((now - effectiveLastSync) / 1000);
         
-        // 2. Determine if the session is still within its allotted time
         if (elapsedSinceStart < duration) {
-          // Still running!
+          // Recover session that is still running
           setTimeLeft(duration - elapsedSinceStart);
           setIsBreak(cloudIsBreak);
           setIsActive(true);
           
-          // CRITICAL: Catch up the DB totals for the time missed while away
-          if (totalElapsedSinceLastSync > 0 && !cloudIsBreak) {
-            logStudyTime(firestore, user!.uid, profile.currentSession.subjectId, profile.currentSession.chapterId, totalElapsedSinceLastSync);
+          if (totalElapsedSinceLastSync > 0 && !cloudIsBreak && subjectId && chapterId) {
+            logStudyTime(firestore, user.uid, subjectId, chapterId, totalElapsedSinceLastSync);
           }
           
           lastSyncTimestampRef.current = now;
-          updateUserProfile(firestore, user!.uid, { "currentSession.lastSyncTime": now });
           audioRef.current?.play().catch(() => {});
         } else {
-          // Finished while away! 
-          // Sync only the remaining part of the session
+          // Session finished while app was closed
           const totalUnsyncedSessionTime = Math.max(0, Math.floor((startTime + duration * 1000 - effectiveLastSync) / 1000));
-          if (totalUnsyncedSessionTime > 0 && !cloudIsBreak) {
-            logStudyTime(firestore, user!.uid, profile.currentSession.subjectId, profile.currentSession.chapterId, totalUnsyncedSessionTime);
+          if (totalUnsyncedSessionTime > 0 && !cloudIsBreak && subjectId && chapterId) {
+            logStudyTime(firestore, user.uid, subjectId, chapterId, totalUnsyncedSessionTime);
           }
           
-          // Reset to idle
           setIsActive(false);
           setIsBreak(false);
-          updateUserProfile(firestore, user!.uid, { 
+          updateUserProfile(firestore, user.uid, { 
             isStudying: false,
             "currentSession.status": "idle",
             "currentSession.startTime": null,
@@ -275,7 +264,7 @@ export function StudyTimer() {
     alarmRef.current = new Audio(ALARM_AUDIO_PATH);
   }, []);
 
-  // Precise Heartbeat
+  // Precise Heartbeat with high-frequency background sync
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
@@ -291,7 +280,6 @@ export function StudyTimer() {
         const elapsedSinceLastSync = Math.floor((now - lastSyncTimestampRef.current) / 1000);
         if (elapsedSinceLastSync >= SYNC_INTERVAL_SECONDS && !isBreak) {
           performSync(elapsedSinceLastSync);
-          lastSyncTimestampRef.current = now;
         }
 
         if (newTimeLeft === 0) {

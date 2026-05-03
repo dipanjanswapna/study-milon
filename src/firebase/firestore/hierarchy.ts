@@ -131,6 +131,7 @@ export async function updateChapterStatus(
 /**
  * Precision logging system that handles seconds to prevent any time gaps.
  * Rollover logic ensures minutes are only incremented when full 60 seconds are reached.
+ * Also synchronizes the currentSession.lastSyncTime to ensure background tracking persistence.
  */
 export async function logStudyTime(
     db: Firestore,
@@ -141,11 +142,9 @@ export async function logStudyTime(
 ) {
     if (seconds <= 0) return;
 
-    // Check if this is a group task. Group tasks don't exist in the subjects/chapters hierarchy.
     const isGroupTask = subjectId === 'group-task' || chapterId.startsWith('group-task');
     const userRef = doc(db, 'users', userId);
     
-    // Only create refs if it's not a group task to avoid "No document to update" errors
     const chapterRef = !isGroupTask ? doc(db, 'users', userId, 'subjects', subjectId, 'chapters', chapterId) : null;
     const subjectRef = !isGroupTask ? doc(db, 'users', userId, 'subjects', subjectId) : null;
     
@@ -155,7 +154,6 @@ export async function logStudyTime(
     const monthStr = format(now, 'yyyy-MM');
     const hour = now.getHours().toString();
 
-    // Use a unique session ID per day and subject
     const sessionDocId = `${dateStr}_${subjectId}`;
     const sessionRef = doc(db, 'users', userId, 'studySessions', sessionDocId);
 
@@ -163,7 +161,6 @@ export async function logStudyTime(
 
     try {
         const promises = [getDoc(userRef)];
-        // Only fetch subject info if it's not a group task
         if (subjectRef) promises.push(getDoc(subjectRef));
         
         const snaps = await Promise.all(promises);
@@ -181,14 +178,13 @@ export async function logStudyTime(
         const minutesToAdd = Math.floor(totalSeconds / 60);
         const remainingSeconds = totalSeconds % 60;
 
-        // Basic precision update (always update partial seconds to avoid loss)
         const userUpdate: any = {
             partial_study_seconds: remainingSeconds,
             last_active_date: serverTimestamp(),
-            isStudying: true
+            isStudying: true,
+            "currentSession.lastSyncTime": Date.now() // Critical pointer for reconciler
         };
 
-        // If we crossed a minute boundary, perform global increments
         if (minutesToAdd > 0) {
             const lastStudyDay = userData.last_study_day;
             const lastStudyWeek = userData.last_study_week;
@@ -206,14 +202,12 @@ export async function logStudyTime(
             userUpdate.last_study_week = weekStr;
             userUpdate.last_study_month = monthStr;
 
-            // Only update chapter document if it exists (Personal Task)
             if (chapterRef) {
                 batch.update(chapterRef, {
                     time_spent: increment(minutesToAdd)
                 });
             }
 
-            // Determine Subject Name for Analytics
             let subjectName = 'Unknown';
             if (isGroupTask) {
               subjectName = 'Guild Task';
