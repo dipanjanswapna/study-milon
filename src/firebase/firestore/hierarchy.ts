@@ -129,14 +129,19 @@ export async function updateChapterStatus(
   await updateDoc(chapterRef, updatePayload);
 }
 
-// Atomic Auto-saving timer logic with 12AM reset sync & Hourly Tracking
+/**
+ * Precision logging system that handles seconds to prevent any time gaps.
+ * Rollover logic ensures minutes are only incremented when full 60 seconds are reached.
+ */
 export async function logStudyTime(
     db: Firestore,
     userId: string,
     subjectId: string,
     chapterId: string,
-    minutes: number
+    seconds: number
 ) {
+    if (seconds <= 0) return;
+
     const userRef = doc(db, 'users', userId);
     const chapterRef = doc(db, 'users', userId, 'subjects', subjectId, 'chapters', chapterId);
     const subjectRef = doc(db, 'users', userId, 'subjects', subjectId);
@@ -163,42 +168,54 @@ export async function logStudyTime(
         }
         
         const userData = userSnap.data();
-        const lastStudyDay = userData.last_study_day;
-        const lastStudyWeek = userData.last_study_week;
-        const lastStudyMonth = userData.last_study_month;
+        const currentPartialSeconds = userData.partial_study_seconds || 0;
+        const totalSeconds = currentPartialSeconds + seconds;
         
-        const dailyUpdate = lastStudyDay === dateStr ? increment(minutes) : minutes;
-        const weeklyUpdate = lastStudyWeek === weekStr ? increment(minutes) : minutes;
-        const monthlyUpdate = lastStudyMonth === monthStr ? increment(minutes) : minutes;
+        const minutesToAdd = Math.floor(totalSeconds / 60);
+        const remainingSeconds = totalSeconds % 60;
 
-        batch.update(userRef, {
-            total_study_minutes: increment(minutes),
-            daily_study_minutes: dailyUpdate,
-            weekly_study_minutes: weeklyUpdate,
-            monthly_study_minutes: monthlyUpdate,
+        // Basic precision update (always update partial seconds)
+        const userUpdate: any = {
+            partial_study_seconds: remainingSeconds,
             last_active_date: serverTimestamp(),
-            last_study_day: dateStr,
-            last_study_week: weekStr,
-            last_study_month: monthStr,
             isStudying: true
-        });
+        };
 
-        batch.update(chapterRef, {
-            time_spent: increment(minutes)
-        });
+        // If we crossed a minute boundary, perform global increments
+        if (minutesToAdd > 0) {
+            const lastStudyDay = userData.last_study_day;
+            const lastStudyWeek = userData.last_study_week;
+            const lastStudyMonth = userData.last_study_month;
+            
+            const dailyUpdate = lastStudyDay === dateStr ? increment(minutesToAdd) : minutesToAdd;
+            const weeklyUpdate = lastStudyWeek === weekStr ? increment(minutesToAdd) : minutesToAdd;
+            const monthlyUpdate = lastStudyMonth === monthStr ? increment(minutesToAdd) : minutesToAdd;
 
-        const subjectName = subjectSnap.exists() ? subjectSnap.data().name : 'Unknown';
-        
-        // Stacked hourly breakdown logic
-        batch.set(sessionRef, {
-          duration: increment(minutes),
-          [`hourlyBreakdown.${hour}`]: increment(minutes),
-          subject: subjectName,
-          subjectId: subjectId,
-          createdAt: serverTimestamp(),
-          date: dateStr 
-        }, { merge: true });
+            userUpdate.total_study_minutes = increment(minutesToAdd);
+            userUpdate.daily_study_minutes = dailyUpdate;
+            userUpdate.weekly_study_minutes = weeklyUpdate;
+            userUpdate.monthly_study_minutes = monthlyUpdate;
+            userUpdate.last_study_day = dateStr;
+            userUpdate.last_study_week = weekStr;
+            userUpdate.last_study_month = monthStr;
 
+            batch.update(chapterRef, {
+                time_spent: increment(minutesToAdd)
+            });
+
+            const subjectName = subjectSnap.exists() ? subjectSnap.data().name : 'Unknown';
+            
+            batch.set(sessionRef, {
+              duration: increment(minutesToAdd),
+              [`hourlyBreakdown.${hour}`]: increment(minutesToAdd),
+              subject: subjectName,
+              subjectId: subjectId,
+              createdAt: serverTimestamp(),
+              date: dateStr 
+            }, { merge: true });
+        }
+
+        batch.update(userRef, userUpdate);
         await batch.commit();
 
     } catch (error) {

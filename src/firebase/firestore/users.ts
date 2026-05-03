@@ -51,6 +51,7 @@ export type UserProfile = {
   daily_study_minutes?: number;
   weekly_study_minutes?: number;
   monthly_study_minutes?: number;
+  partial_study_seconds?: number; // Precision tracking (0-59)
   daily_goal_minutes?: number;
   last_active_date?: any;
   last_study_day?: string; // Format: YYYY-MM-DD
@@ -96,6 +97,7 @@ export async function createUserProfile(
         daily_study_minutes: 0,
         weekly_study_minutes: 0,
         monthly_study_minutes: 0,
+        partial_study_seconds: 0,
         daily_goal_minutes: 360, 
         last_active_date: serverTimestamp(),
         last_study_day: todayStr,

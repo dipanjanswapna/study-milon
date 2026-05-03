@@ -24,6 +24,7 @@ import { format } from 'date-fns';
 const BREAK_MINUTES = 5;
 const SILENT_AUDIO_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
 const ALARM_AUDIO_PATH = "/WhatsApp Audio 2026-05-02 at 4.38.00 PM.mp3";
+const SYNC_INTERVAL_SECONDS = 10; // High frequency sync for "Live" status
 
 export function StudyTimer() {
   const { user } = useUser();
@@ -61,7 +62,9 @@ export function StudyTimer() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const alarmRef = useRef<HTMLAudioElement | null>(null);
-  const lastLoggedMinuteRef = useRef<number>(0);
+  
+  // Tracking refs for absolute precision
+  const lastSyncTimestampRef = useRef<number>(0);
   const initializedFromCloud = useRef(false);
 
   // Sync timeLeft with activeTask ONLY if idle or if this is the first task
@@ -72,17 +75,28 @@ export function StudyTimer() {
   }, [activeTask, isActive, isBreak, profile?.currentSession?.status]);
 
   const progress = useMemo(() => {
-    // For visual progress, we need the ORIGINAL total duration
     const originalTotal = isBreak ? BREAK_MINUTES * 60 : (activeTask?.duration || 25) * 60;
     return ((originalTotal - timeLeft) / originalTotal) * 100;
   }, [timeLeft, isBreak, activeTask]);
 
+  // POWERFUL LIVE CALCULATION: Combines DB stats + current uncommitted seconds
   const dailyStudyProgress = useMemo(() => {
     if (!profile) return 0;
-    const current = profile.daily_study_minutes || 0;
-    const goal = profile.daily_goal_minutes || 360;
-    return Math.min(100, (current / goal) * 100);
-  }, [profile]);
+    
+    let currentSeconds = (profile.daily_study_minutes || 0) * 60 + (profile.partial_study_seconds || 0);
+    
+    // Add time that hasn't been synced to DB yet for "True Live" visual
+    if (isActive && !isBreak && profile.currentSession?.startTime) {
+      const now = Date.now();
+      const sessionElapsed = Math.floor((now - profile.currentSession.startTime) / 1000);
+      const sessionSyncedSoFar = Math.floor((lastSyncTimestampRef.current - profile.currentSession.startTime) / 1000);
+      const uncommittedSeconds = Math.max(0, sessionElapsed - (sessionSyncedSoFar > 0 ? sessionSyncedSoFar : 0));
+      currentSeconds += uncommittedSeconds;
+    }
+
+    const goalSeconds = (profile.daily_goal_minutes || 360) * 60;
+    return Math.min(100, (currentSeconds / goalSeconds) * 100);
+  }, [profile, isActive, isBreak, timeLeft]); // Re-calculate when timeLeft (every sec) or profile updates
 
   const handleResetInternal = useCallback(async () => {
     if (user) {
@@ -92,13 +106,13 @@ export function StudyTimer() {
       
       const duration = activeTask?.duration || 25;
       setTimeLeft(duration * 60);
-      lastLoggedMinuteRef.current = 0;
+      lastSyncTimestampRef.current = 0;
       
       updateUserProfile(firestore, user.uid, { 
         isStudying: false,
         currentSession: {
           startTime: null,
-          duration: duration * 60, // Store as seconds for precision
+          duration: duration * 60,
           status: 'idle',
           subjectId: activeTask?.subjectId || null,
           chapterId: activeTask?.chapterId || null,
@@ -115,11 +129,23 @@ export function StudyTimer() {
     }
   }, []);
 
+  /**
+   * Syncs specific amount of seconds to Firestore precisely.
+   */
+  const performSync = useCallback(async (secondsToSync: number) => {
+    if (!user || !activeTask || isBreak || secondsToSync <= 0) return;
+    try {
+      await logStudyTime(firestore, user.uid, activeTask.subjectId, activeTask.chapterId, secondsToSync);
+    } catch (e) {
+      console.error("Precision sync failed:", e);
+    }
+  }, [user, activeTask, isBreak, firestore]);
+
   const handleStart = async () => {
     if (!isActive && user && activeTask) {
       const startTime = Date.now();
       setIsActive(true);
-      lastLoggedMinuteRef.current = 0;
+      lastSyncTimestampRef.current = startTime;
       audioRef.current?.play().catch(() => {});
       
       const currentRemaining = timeLeft;
@@ -142,9 +168,20 @@ export function StudyTimer() {
   };
 
   const handlePause = async () => {
-    if (user) {
+    if (user && profile?.currentSession?.startTime) {
+      const now = Date.now();
+      const totalElapsedThisRun = Math.floor((now - profile.currentSession.startTime) / 1000);
+      const alreadySyncedThisRun = Math.floor((lastSyncTimestampRef.current - profile.currentSession.startTime) / 1000);
+      const remainingToSync = Math.max(0, totalElapsedThisRun - (alreadySyncedThisRun > 0 ? alreadySyncedThisRun : 0));
+      
       setIsActive(false);
       audioRef.current?.pause();
+
+      // Ensure every last second is committed before pausing
+      if (remainingToSync > 0) {
+        await performSync(remainingToSync);
+      }
+
       updateUserProfile(firestore, user.uid, { 
         isStudying: false,
         "currentSession.status": "paused",
@@ -156,6 +193,15 @@ export function StudyTimer() {
 
   const markTaskDone = async () => {
     if (user && activeTask) {
+       // Commit remaining seconds before clearing
+       if (isActive && profile?.currentSession?.startTime) {
+         const now = Date.now();
+         const totalElapsed = Math.floor((now - profile.currentSession.startTime) / 1000);
+         const alreadySynced = Math.floor((lastSyncTimestampRef.current - profile.currentSession.startTime) / 1000);
+         const remaining = Math.max(0, totalElapsed - (alreadySynced > 0 ? alreadySynced : 0));
+         if (remaining > 0) await performSync(remaining);
+       }
+       
        await updateTaskStatus(firestore, user.uid, activeTask.id, true);
        toast({ title: "Objective Secured!", description: `${activeTask.chapterName} has been completed.` });
        handleResetInternal();
@@ -165,6 +211,16 @@ export function StudyTimer() {
   const startBreak = useCallback(async () => {
     if (user && activeTask) {
       playAlarm();
+      
+      // Final sync for the task
+      if (profile?.currentSession?.startTime) {
+        const now = Date.now();
+        const totalElapsed = Math.floor((now - profile.currentSession.startTime) / 1000);
+        const alreadySynced = Math.floor((lastSyncTimestampRef.current - profile.currentSession.startTime) / 1000);
+        const remaining = Math.max(0, totalElapsed - (alreadySynced > 0 ? alreadySynced : 0));
+        if (remaining > 0) await performSync(remaining);
+      }
+
       await updateTaskStatus(firestore, user.uid, activeTask.id, true);
       toast({ title: "Objective Secured!", description: `${activeTask.chapterName} is complete.` });
 
@@ -173,7 +229,7 @@ export function StudyTimer() {
       const startTime = Date.now();
       setTimeLeft(breakSeconds);
       setIsActive(true);
-      lastLoggedMinuteRef.current = 0;
+      lastSyncTimestampRef.current = startTime;
       
       updateUserProfile(firestore, user.uid, {
         isStudying: false,
@@ -187,14 +243,7 @@ export function StudyTimer() {
         } as any
       });
     }
-  }, [user, activeTask, firestore, toast, playAlarm]);
-
-  const handleMinuteLog = useCallback(async () => {
-    if (!user || !activeTask || isBreak) return;
-    try {
-        await logStudyTime(firestore, user.uid, activeTask.subjectId, activeTask.chapterId, 1);
-    } catch (error) { }
-  }, [user, firestore, activeTask, isBreak]);
+  }, [user, activeTask, firestore, toast, playAlarm, profile, performSync]);
 
   useEffect(() => {
     audioRef.current = new Audio(SILENT_AUDIO_URI);
@@ -202,6 +251,7 @@ export function StudyTimer() {
     alarmRef.current = new Audio(ALARM_AUDIO_PATH);
   }, []);
 
+  // Hydrate from Cloud
   useEffect(() => {
     if (profile?.currentSession && !initializedFromCloud.current) {
       const { startTime, duration, status, isBreak: cloudIsBreak } = profile.currentSession;
@@ -215,7 +265,7 @@ export function StudyTimer() {
           setTimeLeft(calculatedTimeLeft);
           setIsBreak(cloudIsBreak);
           setIsActive(true);
-          lastLoggedMinuteRef.current = Math.floor(elapsedSeconds / 60);
+          lastSyncTimestampRef.current = startTime + (Math.floor(elapsedSeconds / SYNC_INTERVAL_SECONDS) * SYNC_INTERVAL_SECONDS * 1000);
           audioRef.current?.play().catch(() => {});
         } else {
           handleResetInternal();
@@ -229,30 +279,33 @@ export function StudyTimer() {
     }
   }, [profile?.currentSession, handleResetInternal]);
 
+  // HEARTBEAT TIMER EFFECT
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
       interval = setInterval(() => {
-        const startTime = profile.currentSession!.startTime;
-        const duration = profile.currentSession!.duration;
+        const startTime = profile.currentSession!.startTime!;
+        const totalDuration = profile.currentSession!.duration;
         const now = Date.now();
-        const elapsedSeconds = Math.floor((now - startTime) / 1000);
-        const newTimeLeft = Math.max(0, duration - elapsedSeconds);
         
+        // 1. Calculate precise time left
+        const elapsedSinceStart = Math.floor((now - startTime) / 1000);
+        const newTimeLeft = Math.max(0, totalDuration - elapsedSinceStart);
         setTimeLeft(newTimeLeft);
 
-        if (!isBreak && activeTask) {
-          const currentElapsedMinutes = Math.floor(elapsedSeconds / 60);
-          if (currentElapsedMinutes > lastLoggedMinuteRef.current) {
-            handleMinuteLog();
-            lastLoggedMinuteRef.current = currentElapsedMinutes;
-          }
+        // 2. Periodic High-Frequency Sync (10s)
+        const elapsedSinceLastSync = Math.floor((now - lastSyncTimestampRef.current) / 1000);
+        if (elapsedSinceLastSync >= SYNC_INTERVAL_SECONDS && !isBreak) {
+          performSync(elapsedSinceLastSync);
+          lastSyncTimestampRef.current = now;
         }
 
-        if (elapsedSeconds % 30 === 0 && !isBreak) {
+        // 3. Keep "Live" status updated
+        if (elapsedSinceStart % 30 === 0 && !isBreak) {
           updateUserProfile(firestore, user!.uid, { last_active_date: serverTimestamp() });
         }
 
+        // 4. Session completion
         if (newTimeLeft === 0) {
           clearInterval(interval!);
           if (isBreak) {
@@ -265,7 +318,7 @@ export function StudyTimer() {
       }, 1000);
     }
     return () => { if (interval) clearInterval(interval); };
-  }, [isActive, isBreak, activeTask, profile?.currentSession, user, firestore, handleResetInternal, startBreak, handleMinuteLog, playAlarm]);
+  }, [isActive, isBreak, activeTask, profile?.currentSession, user, firestore, handleResetInternal, startBreak, performSync, playAlarm]);
 
   const minutesDisplay = Math.floor(timeLeft / 60);
   const secondsDisplay = timeLeft % 60;
