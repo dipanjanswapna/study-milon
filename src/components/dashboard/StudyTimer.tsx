@@ -15,7 +15,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, Clock, ArrowRight, ListTodo, CheckCircle2, Target, Zap, Wifi } from 'lucide-react';
+import { Play, Pause, Clock, ArrowRight, ListTodo, CheckCircle2, Target, Zap, Wifi, FastForward, Coffee } from 'lucide-react';
 import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -153,6 +153,70 @@ export function StudyTimer() {
     }
   };
 
+  const startBreak = useCallback(async () => {
+    if (user && activeTask) {
+      if (profile?.currentSession?.startTime) {
+        const now = Date.now();
+        const totalElapsed = Math.floor((now - profile.currentSession.startTime) / 1000);
+        const alreadySynced = Math.floor((lastSyncTimestampRef.current - profile.currentSession.startTime) / 1000);
+        const remaining = Math.max(0, totalElapsed - (alreadySynced > 0 ? alreadySynced : 0));
+        if (remaining > 0) await performSync(remaining);
+      }
+
+      const breakSeconds = BREAK_MINUTES * 60;
+      const now = Date.now();
+      setTimeLeft(breakSeconds);
+      setIsBreak(true);
+      setIsActive(true);
+      lastSyncTimestampRef.current = now;
+      
+      updateUserProfile(firestore, user.uid, {
+        isStudying: false,
+        currentSession: {
+          startTime: now,
+          lastSyncTime: now,
+          duration: breakSeconds,
+          status: 'active',
+          taskId: null,
+          subjectId: activeTask.subjectId,
+          chapterId: activeTask.chapterId,
+          isBreak: true
+        } as any
+      });
+      if (alarmRef.current) alarmRef.current.play().catch(() => {});
+    }
+  }, [user, activeTask, firestore, profile, performSync]);
+
+  const handleSkip = async () => {
+    if (!user) return;
+    
+    if (!isBreak) {
+      // Skip Study: Finish time tracking for current and go to break
+      if (profile?.currentSession?.startTime) {
+        const now = Date.now();
+        const totalElapsed = Math.floor((now - profile.currentSession.startTime) / 1000);
+        const alreadySynced = Math.floor((lastSyncTimestampRef.current - profile.currentSession.startTime) / 1000);
+        const remaining = Math.max(0, totalElapsed - (alreadySynced > 0 ? alreadySynced : 0));
+        if (remaining > 0) await performSync(remaining);
+      }
+      
+      toast({ title: "Session Skipped", description: "Progress saved. Moving to Rest Cycle." });
+      startBreak();
+    } else {
+      // Skip Break: Go back to idle/next task
+      setIsActive(false);
+      setIsBreak(false);
+      updateUserProfile(firestore, user.uid, { 
+        isStudying: false,
+        "currentSession.status": "idle",
+        "currentSession.startTime": null,
+        "currentSession.lastSyncTime": null,
+        "currentSession.taskId": null
+      });
+      toast({ title: "Rest Cycle Skipped", description: "Ready for the next mission." });
+    }
+  };
+
   const markTaskDone = async () => {
     if (user && activeTask) {
        if (isActive && profile?.currentSession?.startTime) {
@@ -178,42 +242,7 @@ export function StudyTimer() {
     }
   };
 
-  const startBreak = useCallback(async () => {
-    if (user && activeTask) {
-      if (profile?.currentSession?.startTime) {
-        const now = Date.now();
-        const totalElapsed = Math.floor((now - profile.currentSession.startTime) / 1000);
-        const alreadySynced = Math.floor((lastSyncTimestampRef.current - profile.currentSession.startTime) / 1000);
-        const remaining = Math.max(0, totalElapsed - (alreadySynced > 0 ? alreadySynced : 0));
-        if (remaining > 0) await performSync(remaining);
-      }
-
-      await updateTaskStatus(firestore, user.uid, activeTask.id, true);
-      const breakSeconds = BREAK_MINUTES * 60;
-      const now = Date.now();
-      setTimeLeft(breakSeconds);
-      setIsBreak(true);
-      setIsActive(true);
-      lastSyncTimestampRef.current = now;
-      
-      updateUserProfile(firestore, user.uid, {
-        isStudying: false,
-        currentSession: {
-          startTime: now,
-          lastSyncTime: now,
-          duration: breakSeconds,
-          status: 'active',
-          taskId: null,
-          subjectId: activeTask.subjectId,
-          chapterId: activeTask.chapterId,
-          isBreak: true
-        } as any
-      });
-      if (alarmRef.current) alarmRef.current.play().catch(() => {});
-    }
-  }, [user, activeTask, firestore, profile, performSync, toast]);
-
-  // MISSION RECONCILER: Handles auto-completion even if the app was closed
+  // MISSION RECONCILER
   useEffect(() => {
     if (profile?.currentSession && !initializedFromCloud.current && user) {
       const { startTime, lastSyncTime, duration, status, isBreak: cloudIsBreak, subjectId, chapterId, taskId } = profile.currentSession;
@@ -238,7 +267,6 @@ export function StudyTimer() {
           lastSyncTimestampRef.current = now;
           audioRef.current?.play().catch(() => {});
         } else {
-          // Session finished while app was closed: AUTO COMPLETE MISSION
           const totalRemainingToSync = Math.max(0, Math.floor((expectedEndTime - effectiveLastSync) / 1000));
           
           if (!cloudIsBreak && subjectId && chapterId) {
@@ -280,7 +308,6 @@ export function StudyTimer() {
     alarmRef.current = new Audio(ALARM_AUDIO_PATH);
   }, []);
 
-  // Heartbeat Loop
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
@@ -452,7 +479,7 @@ export function StudyTimer() {
           </div>
         </div>
         
-        <div className="flex flex-col gap-3 w-full max-w-[280px]">
+        <div className="flex flex-col gap-3 w-full max-w-[320px]">
           <div className="flex items-center gap-3">
             <Button 
               onClick={isActive ? handlePause : handleStart} 
@@ -467,16 +494,44 @@ export function StudyTimer() {
               {isActive ? <Pause className="mr-2 h-5 w-5" /> : <Play className="mr-2 h-5 w-5 fill-current" />}
               {isActive ? 'Pause' : 'Engage'}
             </Button>
+            
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="h-14 w-14 rounded-2xl bg-white/10 border-white/20 text-white hover:bg-white/20"
+              onClick={handleSkip}
+            >
+              <FastForward className="h-6 w-6" />
+            </Button>
           </div>
           
           {!isBreak && activeTask && (
-            <Button 
-              variant="secondary" 
-              className="h-12 rounded-xl font-bold text-xs uppercase tracking-widest bg-blue-400/20 text-blue-100 hover:bg-blue-400/30 border border-blue-400/20"
-              onClick={markTaskDone}
-            >
-              <CheckCircle2 className="mr-2 h-4 w-4" /> Secure Objective
-            </Button>
+            <div className="grid grid-cols-2 gap-3">
+              <Button 
+                variant="secondary" 
+                className="h-12 rounded-xl font-bold text-[10px] uppercase tracking-widest bg-blue-400/20 text-blue-100 hover:bg-blue-400/30 border border-blue-400/20"
+                onClick={markTaskDone}
+              >
+                <CheckCircle2 className="mr-1.5 h-4 w-4" /> Secure
+              </Button>
+              <Button 
+                variant="secondary" 
+                className="h-12 rounded-xl font-bold text-[10px] uppercase tracking-widest bg-orange-400/20 text-orange-100 hover:bg-orange-400/30 border border-orange-400/20"
+                onClick={startBreak}
+              >
+                <Coffee className="mr-1.5 h-4 w-4" /> Engage Rest
+              </Button>
+            </div>
+          )}
+
+          {isBreak && (
+             <Button 
+                variant="secondary" 
+                className="h-12 rounded-xl font-bold text-xs uppercase tracking-widest bg-white/10 text-white hover:bg-white/20 border border-white/10"
+                onClick={handleSkip}
+              >
+                End Rest Cycle
+              </Button>
           )}
 
           {!isBreak && upcomingTasks.length > 0 && (
