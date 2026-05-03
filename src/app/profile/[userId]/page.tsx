@@ -22,7 +22,8 @@ import {
   PieChart,
   Target,
   Wifi,
-  Activity
+  Activity,
+  ChevronLeft
 } from 'lucide-react';
 import { 
   format, 
@@ -38,6 +39,8 @@ import {
 } from 'date-fns';
 import { StudyActivityChart } from '@/components/dashboard/StudyActivityChart';
 import { SubjectDistributionChart } from '@/components/dashboard/SubjectDistributionChart';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export default function PublicProfilePage() {
   const { userId } = useParams();
@@ -208,9 +211,9 @@ export default function PublicProfilePage() {
     return (
       <div className="min-h-screen">
         <Header />
-        <div className="p-8 max-w-5xl mx-auto space-y-6">
-          <Skeleton className="h-48 rounded-[2.5rem]" />
-          <Skeleton className="h-96 rounded-[2.5rem]" />
+        <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+          <Skeleton className="h-48 rounded-xl" />
+          <Skeleton className="h-96 rounded-xl" />
         </div>
       </div>
     );
@@ -220,102 +223,104 @@ export default function PublicProfilePage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-background text-foreground pb-20 md:pb-10">
+      <div className="min-h-screen bg-background text-foreground pb-24 md:pb-10">
         <Header />
-        <main className="p-4 md:p-8 max-w-5xl mx-auto space-y-8">
+        <main className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-4">
           
           {/* Hero Profile Card */}
-          <Card className="rounded-[3rem] border-none shadow-2xl overflow-hidden bg-[#1A1C3D] text-white relative">
-            <div className="absolute top-0 right-0 p-12 opacity-5">
-              <Trophy className="h-48 w-48" />
+          <Card className="rounded-xl border-none shadow-xl overflow-hidden bg-[#1A1C3D] text-white relative group">
+            <div className="absolute top-0 right-0 p-8 opacity-5">
+              <Trophy className="h-32 w-32 transition-transform group-hover:scale-110 duration-1000" />
             </div>
-            <CardContent className="p-8 md:p-12 relative">
-              <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
+            <CardContent className="p-4 md:p-8 relative z-10">
+              <div className="flex flex-col md:flex-row items-center gap-6">
                 <div className="relative">
-                  <Avatar className="h-24 w-24 md:h-32 md:w-32 ring-4 ring-primary/20 shadow-2xl">
+                  <Avatar className="h-20 w-20 md:h-28 md:w-28 border-4 border-white/10 shadow-2xl">
                     <AvatarImage src={profile.photoURL || undefined} />
-                    <AvatarFallback className="text-3xl font-black bg-white/10">{profile.displayName?.[0]}</AvatarFallback>
+                    <AvatarFallback className="text-2xl font-black bg-white/10">{profile.displayName?.[0]}</AvatarFallback>
                   </Avatar>
                   {isLive && (
-                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-full animate-pulse flex items-center gap-1.5 shadow-xl border-2 border-[#1A1C3D]">
-                      <Wifi className="h-3 w-3" /> LIVE
+                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse flex items-center gap-1 shadow-xl border-2 border-[#1A1C3D]">
+                      <Wifi className="h-2 w-2" /> LIVE
                     </div>
                   )}
                 </div>
                 
-                <div className="flex-1 text-center md:text-left space-y-4">
+                <div className="flex-1 text-center md:text-left space-y-3">
                   <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-                    <Badge className="bg-primary/20 text-primary-foreground border-none font-black text-[10px] uppercase px-3">
+                    <Badge className="bg-primary/20 text-primary-foreground border-none font-black text-[9px] uppercase px-2">
                       {profile.category} {profile.batch}
                     </Badge>
                     {guild && (
-                      <Badge variant="outline" className="border-white/20 text-white font-black text-[10px] uppercase px-3 flex items-center gap-1.5">
-                        <Users2 className="h-3 w-3" /> {guild.name}
+                      <Badge variant="outline" className="border-white/20 text-white font-black text-[9px] uppercase px-2 flex items-center gap-1">
+                        <Users2 className="h-2.5 w-2.5" /> {guild.name}
                       </Badge>
                     )}
                   </div>
                   
-                  <h1 className="text-3xl md:text-6xl font-black tracking-tighter leading-none">{profile.displayName}</h1>
+                  <h1 className="text-xl md:text-4xl font-black tracking-tighter leading-none">{profile.displayName}</h1>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm font-medium text-white/60">
-                    <div className="flex items-center justify-center md:justify-start gap-2">
-                      <Mail className="h-4 w-4 text-primary" /> {profile.email}
+                  <div className="flex flex-col sm:flex-row items-center gap-3 text-[10px] md:text-xs font-medium text-white/60">
+                    <div className="flex items-center gap-1.5">
+                      <Mail className="h-3 w-3 text-primary" /> {profile.email}
                     </div>
                     {profile.institution && (
-                      <div className="flex items-center justify-center md:justify-start gap-2">
-                        <School className="h-4 w-4 text-primary" /> {profile.institution}
+                      <div className="flex items-center gap-1.5">
+                        <School className="h-3 w-3 text-primary" /> {profile.institution}
                       </div>
                     )}
                   </div>
                 </div>
 
-                <div className="bg-white/5 rounded-3xl p-6 border border-white/10 text-center min-w-[140px]">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Total Hustle</p>
-                  <h3 className="text-2xl md:text-3xl font-black">{(profile.total_study_minutes / 60).toFixed(1)}h</h3>
-                  <p className="text-[10px] font-bold text-white/40">Since {profile.createdAt ? format(profile.createdAt.toDate(), 'MMM yyyy') : 'Joining'}</p>
+                <div className="bg-white/5 rounded-2xl p-4 md:p-6 border border-white/10 text-center min-w-[120px] shadow-inner backdrop-blur-sm">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-primary mb-1">Total Hustle</p>
+                  <h3 className="text-xl md:text-2xl font-black tracking-tighter">{(profile.total_study_minutes / 60).toFixed(1)}h</h3>
+                  <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mt-1">Since {profile.createdAt ? format(profile.createdAt.toDate(), 'MMM yyyy') : 'Joining'}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Analytics Section */}
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1">
                <div className="flex items-center gap-2">
-                  <BarChart className="h-6 w-6 text-primary" />
-                  <h2 className="text-2xl font-black tracking-tight">Hustle Insights</h2>
+                  <BarChart className="h-5 w-5 text-primary" />
+                  <h2 className="text-base font-black tracking-tighter uppercase leading-none">Hustle Insights</h2>
                </div>
                <Tabs value={filter} onValueChange={(v: any) => setFilter(v)} className="w-full sm:w-auto">
-                  <TabsList className="grid grid-cols-4 bg-secondary/50 h-11 p-1 rounded-xl">
-                    <TabsTrigger value="daily" className="rounded-lg font-bold text-xs">Daily</TabsTrigger>
-                    <TabsTrigger value="weekly" className="rounded-lg font-bold text-xs">Weekly</TabsTrigger>
-                    <TabsTrigger value="monthly" className="rounded-lg font-bold text-xs">Monthly</TabsTrigger>
-                    <TabsTrigger value="yearly" className="rounded-lg font-bold text-xs">Yearly</TabsTrigger>
+                  <TabsList className="grid grid-cols-4 bg-secondary/50 h-9 p-1 rounded-xl">
+                    <TabsTrigger value="daily" className="rounded-lg font-black text-[9px] uppercase tracking-wider">Daily</TabsTrigger>
+                    <TabsTrigger value="weekly" className="rounded-lg font-black text-[9px] uppercase tracking-wider">Weekly</TabsTrigger>
+                    <TabsTrigger value="monthly" className="rounded-lg font-black text-[9px] uppercase tracking-wider">Monthly</TabsTrigger>
+                    <TabsTrigger value="yearly" className="rounded-lg font-black text-[9px] uppercase tracking-wider">Yearly</TabsTrigger>
                   </TabsList>
                </Tabs>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-               <Card className="md:col-span-6 rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+               
+               {/* Consistency Tracker */}
+               <Card className="lg:col-span-12 rounded-xl border-none shadow-xl bg-card overflow-hidden">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2 bg-secondary/10 border-b">
                     <div>
-                      <CardTitle className="text-xl font-black flex items-center gap-2">
-                        <CalendarIcon className="h-6 w-6 text-primary" /> Consistency Tracker
+                      <CardTitle className="text-sm font-black flex items-center gap-2 tracking-tight uppercase">
+                        <CalendarIcon className="h-4 w-4 text-primary" /> Consistency Tracker
                       </CardTitle>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">
-                        {filter === 'daily' ? 'Hourly Session Mapping' : filter === 'yearly' ? 'Full Hustle History' : `Activity Overview for ${filter}`}
+                      <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
+                        {filter === 'daily' ? 'Hourly Mapping' : `Activity for ${filter}`}
                       </p>
                     </div>
                     {filter === 'daily' && isLive && (
-                      <div className="flex items-center gap-2 bg-red-600/10 px-3 py-1.5 rounded-full border border-red-600/20 animate-pulse">
-                         <Activity className="h-3 w-3 text-red-600" />
-                         <span className="text-[8px] font-black uppercase text-red-600 tracking-widest">Live Sync</span>
+                      <div className="flex items-center gap-1.5 bg-red-600/10 px-2 py-1 rounded-full border border-red-600/20 animate-pulse">
+                         <Activity className="h-2.5 w-2.5 text-red-600" />
+                         <span className="text-[7px] font-black uppercase text-red-600 tracking-widest">Live</span>
                       </div>
                     )}
                   </CardHeader>
-                  <CardContent className="p-4 pt-4">
+                  <CardContent className="p-4 pt-6">
                     {sessionsLoading ? (
-                      <Skeleton className="h-[380px] w-full" />
+                      <Skeleton className="h-[300px] w-full" />
                     ) : (
                       <StudyActivityChart 
                         data={stats.chartData} 
@@ -328,46 +333,50 @@ export default function PublicProfilePage() {
                   </CardContent>
                </Card>
 
-               <Card className="md:col-span-6 rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
-                  <CardHeader>
-                    <CardTitle className="text-xl font-black flex items-center gap-2">
-                       <PieChart className="h-6 w-6 text-primary" /> Focus Areas
+               {/* Focus Areas Chart */}
+               <Card className="lg:col-span-7 rounded-xl border-none shadow-xl bg-card overflow-hidden">
+                  <CardHeader className="bg-secondary/10 border-b pb-3">
+                    <CardTitle className="text-sm font-black flex items-center gap-2 tracking-tight uppercase">
+                       <PieChart className="h-4 w-4 text-primary" /> Focus Areas
                     </CardTitle>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">Subject-wise Distribution for {filter}</p>
+                    <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Subject-wise Distribution</p>
                   </CardHeader>
-                  <CardContent className="p-6 pt-0">
+                  <CardContent className="p-6">
                     {sessionsLoading ? (
-                      <Skeleton className="h-[350px] w-full" />
+                      <Skeleton className="h-[300px] w-full" />
                     ) : (
                       <SubjectDistributionChart data={stats.subjectData} />
                     )}
                   </CardContent>
                </Card>
 
-               {/* Summary Stats */}
-               <div className="md:col-span-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  <Card className="rounded-[2rem] border-none shadow-lg bg-primary/5 p-6 space-y-2">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">Daily Goal</p>
+               {/* Quick Stats Summary */}
+               <div className="lg:col-span-5 space-y-4">
+                  <Card className="rounded-xl border-none shadow-lg bg-primary/[0.03] ring-1 ring-inset ring-primary/10 p-5 space-y-3">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-2xl font-black">{formatTime(profile.daily_goal_minutes)}</h4>
-                      <Target className="h-8 w-8 text-primary/20" />
+                        <p className="text-[9px] font-black uppercase tracking-widest text-primary">Daily Goal</p>
+                        <Target className="h-4 w-4 text-primary/30" />
                     </div>
+                    <h4 className="text-2xl font-black tracking-tighter">{formatTime(profile.daily_goal_minutes)}</h4>
                   </Card>
-                  <Card className="rounded-[2rem] border-none shadow-lg bg-orange-500/5 p-6 space-y-2">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-orange-500">{filter} Hustle</p>
+                  
+                  <Card className="rounded-xl border-none shadow-lg bg-orange-500/[0.03] ring-1 ring-inset ring-orange-500/10 p-5 space-y-3">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-2xl font-black">{formatTime(stats.currentPeriodMins)}</h4>
-                      <Clock className="h-8 w-8 text-orange-500/20" />
+                        <p className="text-[9px] font-black uppercase tracking-widest text-orange-500">{filter} Hustle</p>
+                        <Clock className="h-4 w-4 text-orange-500/30" />
                     </div>
+                    <h4 className="text-2xl font-black tracking-tighter">{formatTime(stats.currentPeriodMins)}</h4>
                   </Card>
-                  <Card className="rounded-[2rem] border-none shadow-lg bg-indigo-500/5 p-6 space-y-2">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Global Status</p>
+                  
+                  <Card className="rounded-xl border-none shadow-lg bg-indigo-500/[0.03] ring-1 ring-inset ring-indigo-500/10 p-5 space-y-3">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-2xl font-black">{isLive ? 'Studying Now' : 'Active Student'}</h4>
-                      {isLive ? <Wifi className="h-8 w-8 text-red-600 animate-pulse" /> : <Trophy className="h-8 w-8 text-indigo-500/20" />}
+                        <p className="text-[9px] font-black uppercase tracking-widest text-indigo-500">Academic Status</p>
+                        {isLive ? <Wifi className="h-4 w-4 text-red-600 animate-pulse" /> : <Trophy className="h-4 w-4 text-indigo-500/30" />}
                     </div>
+                    <h4 className="text-2xl font-black tracking-tighter">{isLive ? 'Studying Now' : 'Active Student'}</h4>
                   </Card>
                </div>
+
             </div>
           </div>
         </main>
