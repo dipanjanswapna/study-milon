@@ -131,7 +131,6 @@ export async function updateChapterStatus(
 /**
  * Precision logging system that handles seconds to prevent any time gaps.
  * Rollover logic ensures minutes are only incremented when full 60 seconds are reached.
- * Also synchronizes the currentSession.lastSyncTime to ensure background tracking persistence.
  */
 export async function logStudyTime(
     db: Firestore,
@@ -160,15 +159,15 @@ export async function logStudyTime(
     const batch = writeBatch(db);
 
     try {
-        const promises = [getDoc(userRef)];
-        if (subjectRef) promises.push(getDoc(subjectRef));
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists()) throw new Error("User profile not found.");
         
-        const snaps = await Promise.all(promises);
-        const userSnap = snaps[0];
-        const subjectSnap = snaps[1] || null;
-
-        if (!userSnap.exists()) {
-            throw new Error("User profile not found.");
+        let subjectName = 'Guild Task';
+        if (!isGroupTask && subjectRef) {
+          const subjectSnap = await getDoc(subjectRef);
+          if (subjectSnap.exists()) {
+            subjectName = subjectSnap.data().name;
+          }
         }
         
         const userData = userSnap.data();
@@ -182,7 +181,7 @@ export async function logStudyTime(
             partial_study_seconds: remainingSeconds,
             last_active_date: serverTimestamp(),
             isStudying: true,
-            "currentSession.lastSyncTime": Date.now() // Critical pointer for reconciler
+            "currentSession.lastSyncTime": Date.now() 
         };
 
         if (minutesToAdd > 0) {
@@ -207,13 +206,6 @@ export async function logStudyTime(
                     time_spent: increment(minutesToAdd)
                 });
             }
-
-            let subjectName = 'Unknown';
-            if (isGroupTask) {
-              subjectName = 'Guild Task';
-            } else if (subjectSnap && subjectSnap.exists()) {
-              subjectName = subjectSnap.data().name;
-            }
             
             batch.set(sessionRef, {
               duration: increment(minutesToAdd),
@@ -230,6 +222,5 @@ export async function logStudyTime(
 
     } catch (error) {
         console.error("Error logging study time: ", error);
-        throw error;
     }
 }

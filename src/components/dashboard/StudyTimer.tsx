@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -225,7 +224,6 @@ export function StudyTimer() {
         const effectiveLastSync = lastSyncTime || startTime;
         
         if (now < expectedEndTime) {
-          // 1. Session is still ongoing: Resume it
           const elapsedSinceStart = Math.floor((now - startTime) / 1000);
           const totalElapsedSinceLastSync = Math.floor((now - effectiveLastSync) / 1000);
           
@@ -240,16 +238,13 @@ export function StudyTimer() {
           lastSyncTimestampRef.current = now;
           audioRef.current?.play().catch(() => {});
         } else {
-          // 2. Session finished while app was closed: AUTO COMPLETE MISSION
+          // Session finished while app was closed: AUTO COMPLETE MISSION
           const totalRemainingToSync = Math.max(0, Math.floor((expectedEndTime - effectiveLastSync) / 1000));
           
           if (!cloudIsBreak && subjectId && chapterId) {
-            // Commit final missing minutes
             if (totalRemainingToSync > 0) {
               logStudyTime(firestore, user.uid, subjectId, chapterId, totalRemainingToSync);
             }
-
-            // AUTO MARK TASK AS DONE
             if (taskId) {
               updateTaskStatus(firestore, user.uid, taskId, true).then(() => {
                 toast({ 
@@ -260,7 +255,6 @@ export function StudyTimer() {
             }
           }
           
-          // Reset session to idle
           setIsActive(false);
           setIsBreak(false);
           updateUserProfile(firestore, user.uid, { 
