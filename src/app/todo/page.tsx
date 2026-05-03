@@ -49,7 +49,9 @@ import {
   Zap,
   CalendarCheck,
   BookOpen,
-  Users2
+  Users2,
+  Calendar as CalendarIcon,
+  List
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -251,25 +253,25 @@ export default function TodoPage() {
           <div
             key={day.toString()}
             className={cn(
-              "relative h-16 md:h-20 flex flex-col items-center justify-center rounded-2xl transition-all cursor-pointer border-2",
-              !isCurrentMonth ? "opacity-20 pointer-events-none" : "",
+              "relative h-12 sm:h-16 flex flex-col items-center justify-center rounded-xl transition-all cursor-pointer border-2",
+              !isCurrentMonth ? "opacity-10 pointer-events-none" : "",
               isSelected 
-                ? "bg-primary border-primary text-white shadow-xl scale-105 z-10" 
-                : "bg-white border-transparent text-slate-800 hover:border-slate-300"
+                ? "bg-primary border-primary text-white shadow-lg z-10" 
+                : "bg-white/5 border-transparent text-white/70 hover:border-white/20"
             )}
             onClick={() => setSelectedDate(cloneDay)}
           >
-            <span className={cn("text-lg font-black", isSelected ? "text-white" : "text-slate-800")}>
+            <span className={cn("text-xs sm:text-base font-black", isSelected ? "text-white" : "text-white/80")}>
               {format(day, 'd')}
             </span>
             {hasTasks && !isSelected && (
-              <div className={cn("w-2 h-2 rounded-full mt-1", allCompleted ? "bg-success" : someCompleted ? "bg-orange-500" : "bg-primary")} />
+              <div className={cn("w-1.5 h-1.5 rounded-full mt-1", allCompleted ? "bg-success" : someCompleted ? "bg-orange-500" : "bg-primary")} />
             )}
           </div>
         );
         day = addDays(day, 1);
       }
-      rows.push(<div className="grid grid-cols-7 gap-3 mb-3" key={day.toString()}>{days}</div>);
+      rows.push(<div className="grid grid-cols-7 gap-2 mb-2" key={day.toString()}>{days}</div>);
       days = [];
     }
     return <div>{rows}</div>;
@@ -277,60 +279,84 @@ export default function TodoPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-background text-foreground pb-20 md:pb-10">
+      <div className="min-h-screen bg-background text-foreground pb-24 md:pb-10">
         <Header />
-        <main className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
+        <main className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-4">
           <ProfileSetupGate>
             
+            {/* Hero Banner (Leaderboard Style) */}
+            <Card className="rounded-xl border-none shadow-xl overflow-hidden bg-[#1A1C3D] text-white relative group">
+              <div className="absolute top-0 right-0 p-8 opacity-5">
+                <CalendarIcon className="h-20 w-20 transition-transform group-hover:scale-110 duration-1000" />
+              </div>
+              <CardContent className="p-4 md:p-6 relative z-10 space-y-1">
+                <div className="space-y-0.5 text-center md:text-left">
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                    <div className="inline-flex items-center gap-1 bg-primary/20 backdrop-blur-lg px-2 py-0.5 rounded-full border border-white/10 text-[8px] font-black text-primary-foreground uppercase tracking-widest">
+                       <Zap className="h-2 w-2 fill-current" />
+                       Hustle Execution
+                    </div>
+                  </div>
+                  <h1 className="text-lg md:text-xl font-black tracking-tighter leading-none">Study Roadmap</h1>
+                  <p className="text-white/60 font-medium max-w-xl text-[9px] md:text-xs">
+                    Plan your sessions, track chapter progress, and synchronize with your goals.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
             {expiredTasks && expiredTasks.length > 0 && isSameDay(selectedDate, new Date()) && (
-              <Card className="rounded-[2.5rem] border-none shadow-2xl bg-orange-500 text-white overflow-hidden animate-in slide-in-from-top duration-500">
-                <CardContent className="p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-                  <div className="flex items-center gap-5">
-                    <div className="p-4 bg-white/20 rounded-2xl">
-                      <History className="h-8 w-8" />
+              <Card className="rounded-xl border-none shadow-lg bg-orange-500 text-white overflow-hidden animate-in slide-in-from-top duration-500">
+                <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white/20 rounded-lg">
+                      <History className="h-5 w-5" />
                     </div>
                     <div>
-                      <h3 className="text-xl md:text-2xl font-black tracking-tighter">Unfinished Hustle Detected</h3>
-                      <p className="text-white/80 font-medium text-sm md:text-base">You have {expiredTasks.length} objectives from previous days. Sync them to today's roadmap.</p>
+                      <h3 className="text-sm font-black tracking-tight">Unfinished Hustle Detected</h3>
+                      <p className="text-white/80 font-medium text-[10px]">You have {expiredTasks.length} objectives from previous days.</p>
                     </div>
                   </div>
                   <Button 
                     onClick={handleRestoreAll} 
                     disabled={loading}
                     variant="secondary" 
-                    className="rounded-full px-8 h-14 font-black uppercase tracking-widest text-[10px] bg-white text-orange-600 hover:bg-white/90 shadow-xl"
+                    className="rounded-lg px-4 h-9 font-black uppercase tracking-widest text-[9px] bg-white text-orange-600 hover:bg-white/90 shadow-sm w-full sm:w-auto"
                   >
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4 fill-current" />}
-                    Restore All Objectives
+                    {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="mr-1.5 h-3 w-3 fill-current" />}
+                    Restore All
                   </Button>
                 </CardContent>
               </Card>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
+              {/* Left Column: Calendar (Leaderboard Filter Style) */}
               <div className="lg:col-span-7 xl:col-span-8">
-                <Card className="bg-[#1A1C3D] border-none shadow-2xl rounded-[3rem] p-6 md:p-10">
-                  <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-primary/20 rounded-xl">
-                        <CalendarCheck className="h-6 w-6 text-primary" />
+                <Card className="bg-[#1A1C3D] border-none shadow-xl rounded-xl p-4 md:p-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-primary/20 rounded-lg">
+                        <CalendarCheck className="h-5 w-5 text-primary" />
                       </div>
-                      <h2 className="text-2xl font-black text-white tracking-tighter uppercase font-headline">
+                      <h2 className="text-sm md:text-base font-black text-white tracking-tighter uppercase">
                         {format(currentMonth, 'MMMM yyyy')}
                       </h2>
                     </div>
-                    <div className="flex gap-2 bg-white/5 p-1 rounded-xl">
-                      <Button variant="ghost" size="icon" onClick={prevMonth} className="text-white hover:bg-white/10 rounded-lg">
-                        <ChevronLeft className="h-6 w-6" />
+                    <div className="flex gap-1.5 bg-white/5 p-1 rounded-lg">
+                      <Button variant="ghost" size="icon" onClick={prevMonth} className="text-white hover:bg-white/10 h-8 w-8">
+                        <ChevronLeft className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={nextMonth} className="text-white hover:bg-white/10 rounded-lg">
-                        <ChevronRight className="h-6 w-6" />
+                      <Button variant="ghost" size="icon" onClick={nextMonth} className="text-white hover:bg-white/10 h-8 w-8">
+                        <ChevronRight className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
-                  <div className="grid grid-cols-7 mb-4 text-center">
+                  
+                  <div className="grid grid-cols-7 mb-2 text-center">
                     {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => (
-                      <div key={idx} className="text-[10px] font-black uppercase tracking-widest text-white/40">
+                      <div key={idx} className="text-[8px] font-black uppercase tracking-widest text-white/40">
                         {day}
                       </div>
                     ))}
@@ -339,136 +365,130 @@ export default function TodoPage() {
                 </Card>
               </div>
 
-              <div className="lg:col-span-5 xl:col-span-4 space-y-6">
-                <div className="flex flex-col gap-4">
-                  <div className="space-y-1">
-                    <h2 className="text-3xl font-black tracking-tighter uppercase font-headline">
-                      {isSameDay(selectedDate, new Date()) ? "Today's Roadmap" : format(selectedDate, 'MMM do, yyyy')}
+              {/* Right Column: Task List (Leaderboard Directory Style) */}
+              <div className="lg:col-span-5 xl:col-span-4 space-y-4">
+                
+                <div className="flex items-center justify-between gap-2 px-1">
+                  <div className="min-w-0">
+                    <h2 className="text-base font-black tracking-tighter uppercase leading-none">
+                      {isSameDay(selectedDate, new Date()) ? "Today's Roadmap" : format(selectedDate, 'MMM do')}
                     </h2>
-                    <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest">
-                      {localTasks.length} {localTasks.length === 1 ? 'Objective' : 'Objectives'} Assigned
+                    <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mt-1">
+                      {localTasks.length} Objectives Assigned
                     </p>
                   </div>
                   <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
-                      <Button className="rounded-[1.5rem] shadow-xl shadow-primary/20 h-14 font-black uppercase tracking-widest text-xs">
-                        <Plus className="mr-2 h-5 w-5" /> Add New Objective
+                      <Button size="sm" className="rounded-lg shadow-md h-9 px-4 font-black uppercase tracking-widest text-[9px]">
+                        <Plus className="mr-1 h-3 w-3" /> New Task
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-md rounded-[2.5rem] border-none shadow-2xl p-8">
+                    <DialogContent className="max-w-md rounded-xl border-none shadow-2xl p-6">
                       <DialogHeader className="pb-4">
-                        <DialogTitle className="text-3xl font-black tracking-tighter font-headline uppercase">New Objective</DialogTitle>
+                        <DialogTitle className="text-xl font-black tracking-tighter uppercase">New Objective</DialogTitle>
                       </DialogHeader>
-                      <ScrollArea className="max-h-[60vh] px-1">
-                        <div className="space-y-6 py-2">
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Select Subject</Label>
+                      <ScrollArea className="max-h-[60vh] pr-2">
+                        <div className="space-y-4 py-2">
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Subject</Label>
                             <Select onValueChange={(val) => {setSelectedSubject(val); setSelectedChapter(null);}}>
-                              <SelectTrigger className="h-12 rounded-xl">
+                              <SelectTrigger className="h-10 rounded-lg">
                                 <SelectValue placeholder="Choose subject..." />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="rounded-xl">
                                 {subjects?.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Select Chapter</Label>
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Chapter</Label>
                             <Select onValueChange={setSelectedChapter} disabled={!selectedSubject}>
-                              <SelectTrigger className="h-12 rounded-xl">
+                              <SelectTrigger className="h-10 rounded-lg">
                                 <SelectValue placeholder="Choose chapter..." />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="rounded-xl">
                                 {chapters?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Instructions (Optional)</Label>
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Instructions</Label>
                             <Textarea 
-                              placeholder="Session notes or focus points..." 
-                              className="min-h-[100px] rounded-xl resize-none"
+                              placeholder="Focus points..." 
+                              className="min-h-[80px] rounded-lg resize-none text-sm"
                               value={taskNote}
                               onChange={(e) => setTaskNote(e.target.value)}
                             />
                           </div>
-                          <div className="space-y-3">
-                            <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Planned Duration</Label>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-1.5">
-                                <Label className="text-[9px] font-black uppercase tracking-widest opacity-40 px-1">Hours</Label>
-                                <Input type="number" min="0" value={plannedHours} onChange={(e) => setPlannedHours(e.target.value)} className="h-12 rounded-xl" />
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Planned Duration</Label>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-[8px] font-black uppercase text-muted-foreground/60 px-1">Hours</Label>
+                                <Input type="number" min="0" value={plannedHours} onChange={(e) => setPlannedHours(e.target.value)} className="h-10 rounded-lg" />
                               </div>
-                              <div className="space-y-1.5">
-                                <Label className="text-[9px] font-black uppercase tracking-widest opacity-40 px-1">Minutes</Label>
-                                <Input type="number" min="0" max="59" value={plannedMinutes} onChange={(e) => setPlannedMinutes(e.target.value)} className="h-12 rounded-xl" />
+                              <div className="space-y-1">
+                                <Label className="text-[8px] font-black uppercase text-muted-foreground/60 px-1">Minutes</Label>
+                                <Input type="number" min="0" max="59" value={plannedMinutes} onChange={(e) => setPlannedMinutes(e.target.value)} className="h-10 rounded-lg" />
                               </div>
                             </div>
                           </div>
                         </div>
                       </ScrollArea>
-                      <DialogFooter className="pt-6 border-t mt-4">
-                        <Button onClick={handleAddTask} disabled={loading || !selectedChapter} className="w-full h-14 font-black rounded-2xl shadow-lg shadow-primary/20">
-                          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Deploy to Roadmap"}
+                      <DialogFooter className="pt-4 border-t mt-4">
+                        <Button onClick={handleAddTask} disabled={loading || !selectedChapter} className="w-full h-11 font-black rounded-lg shadow-lg">
+                          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Deploy Task"}
                         </Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
                 </div>
 
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <div className="space-y-8">
-                    {/* Personal Tasks Section */}
-                    <div className="space-y-4">
-                      {tasksLoading ? (
-                        Array.from({ length: 2 }).map((_, i) => <div key={i} className="h-24 bg-muted animate-pulse rounded-3xl" />)
-                      ) : personalTasks.length > 0 ? (
-                        <SortableContext items={personalTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                          <div className="space-y-4">
-                            {personalTasks.map((task) => (
-                              <SortableTaskItem 
-                                key={task.id} 
-                                task={task} 
-                                onToggle={(id, val) => updateTaskStatus(firestore, user!.uid, id, val)}
-                                onDelete={(id) => deleteTask(firestore, user!.uid, id)}
-                              />
-                            ))}
-                          </div>
-                        </SortableContext>
-                      ) : !guildTasks.length && (
-                        <div className="text-center py-20 bg-secondary/20 rounded-[2.5rem] border-2 border-dashed">
-                          <Plus className="mx-auto h-12 w-12 text-muted-foreground/20 mb-4" />
-                          <h3 className="text-xl font-black">Empty Roadmap</h3>
-                          <p className="text-muted-foreground text-sm max-w-[200px] mx-auto">Add a new objective to begin your daily hustle sequence.</p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Guild Tasks Section */}
-                    {guildTasks.length > 0 && (
-                      <div className="space-y-4 pt-4">
-                        <div className="flex items-center gap-2 px-1">
-                           <div className="p-1.5 bg-primary/10 rounded-lg">
-                              <Users2 className="h-4 w-4 text-primary" />
-                           </div>
-                           <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground">Guild Objectives</h3>
-                        </div>
-                        <SortableContext items={guildTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                          <div className="space-y-4">
-                            {guildTasks.map((task) => (
-                              <SortableTaskItem 
-                                key={task.id} 
-                                task={task} 
-                                onToggle={(id, val) => updateTaskStatus(firestore, user!.uid, id, val)}
-                                onDelete={(id) => deleteTask(firestore, user!.uid, id)}
-                              />
-                            ))}
-                          </div>
-                        </SortableContext>
-                      </div>
-                    )}
+                <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
+                  <div className="p-3 border-b bg-secondary/10 flex items-center justify-between">
+                    <h3 className="text-[10px] font-black flex items-center gap-2 tracking-tight uppercase">
+                       <List className="h-3 w-3 text-primary" /> Objective Queue
+                    </h3>
                   </div>
-                </DndContext>
+                  
+                  <ScrollArea className="h-[450px]">
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                      <div className="divide-y divide-secondary/30">
+                        {tasksLoading ? (
+                          Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} className="p-4 flex items-center gap-3">
+                              <div className="w-8 h-8 bg-muted animate-pulse rounded-lg" />
+                              <div className="flex-1 space-y-2">
+                                <div className="h-3 w-1/2 bg-muted animate-pulse rounded" />
+                                <div className="h-2 w-1/3 bg-muted animate-pulse rounded" />
+                              </div>
+                            </div>
+                          ))
+                        ) : localTasks.length > 0 ? (
+                          <SortableContext items={localTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                            {localTasks.map((task) => (
+                              <SortableTaskItem 
+                                key={task.id} 
+                                task={task} 
+                                onToggle={(id, val) => updateTaskStatus(firestore, user!.uid, id, val)}
+                                onDelete={(id) => deleteTask(firestore, user!.uid, id)}
+                              />
+                            ))}
+                          </SortableContext>
+                        ) : (
+                          <div className="py-20 text-center space-y-4 px-6">
+                            <div className="bg-secondary/50 w-12 h-12 rounded-full flex items-center justify-center mx-auto">
+                                <Zap className="h-6 w-6 text-muted-foreground/30" />
+                            </div>
+                            <h3 className="text-sm font-black tracking-tighter uppercase text-muted-foreground">Empty Roadmap</h3>
+                            <p className="text-[10px] text-muted-foreground font-medium">Select a date and add objectives to begin tracking.</p>
+                          </div>
+                        )}
+                      </div>
+                    </DndContext>
+                  </ScrollArea>
+                </Card>
+
               </div>
             </div>
           </ProfileSetupGate>
@@ -489,60 +509,64 @@ function SortableTaskItem({ task, onToggle, onDelete }: {
   const formatDuration = (mins: number) => {
     const h = Math.floor(mins / 60);
     const m = mins % 60;
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
   };
 
   return (
-    <Card ref={setNodeRef} style={style} className={cn(
-      "transition-all border shadow-sm overflow-hidden rounded-[1.25rem] group",
-      task.completed ? "bg-secondary/20" : "bg-card hover:shadow-md",
-      isDragging && "shadow-2xl scale-[1.02] border-primary/50"
-    )}>
-      <div className="flex flex-row items-center p-4 gap-4">
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      className={cn(
+        "flex items-center justify-between p-3 sm:p-4 hover:bg-primary/[0.03] transition-all group", 
+        task.completed && "bg-secondary/10"
+      )}
+    >
+      <div className="flex items-center gap-3 min-w-0">
         <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground/20 hover:text-primary transition-colors p-1">
-          <GripVertical className="h-5 w-5" />
+          <GripVertical className="h-4 w-4" />
         </div>
         
         <Checkbox 
           checked={task.completed} 
           onCheckedChange={() => onToggle(task.id, task.completed)} 
-          className="h-6 w-6 rounded-full border-primary shrink-0 transition-transform active:scale-90" 
+          className="h-5 w-5 rounded-full border-primary shrink-0" 
         />
         
-        <div className="flex-1 min-w-0 space-y-1">
-          <div className="flex items-center gap-2">
+        <div className="min-w-0 space-y-0.5">
+          <div className="flex items-center gap-1.5">
             <h4 className={cn(
-              "text-lg font-bold truncate font-headline leading-tight", 
+              "font-bold text-[11px] sm:text-sm truncate transition-colors tracking-tight", 
               task.completed && "line-through text-muted-foreground"
             )}>
               {task.chapterName}
             </h4>
             {task.source === 'group' && (
-              <Badge className="text-[7px] font-black uppercase px-1.5 h-3.5 bg-primary text-white border-none animate-pulse">GUILD</Badge>
+              <Badge className="text-[6px] font-black uppercase px-1 h-3 bg-primary text-white border-none">GUILD</Badge>
             )}
           </div>
           
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div className="flex flex-wrap items-center gap-2">
              <div className="flex items-center gap-1 text-primary">
-                <BookOpen className="h-3 w-3" />
-                <span className="text-[10px] font-black uppercase tracking-tight">{task.subjectName}</span>
+                <BookOpen className="h-2 w-2" />
+                <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-tight">{task.subjectName}</span>
              </div>
              <div className="flex items-center gap-1 text-muted-foreground">
-                <Clock className="h-3 w-3" />
-                <span className="text-[10px] font-bold uppercase tracking-tight">{formatDuration(task.duration)}</span>
+                <Clock className="h-2 w-2" />
+                <span className="text-[7px] sm:text-[8px] font-bold uppercase tracking-tight">{formatDuration(task.duration)}</span>
              </div>
           </div>
         </div>
-
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button variant="ghost" size="icon" asChild className="text-primary rounded-full hover:bg-primary/10 h-9 w-9">
-                <Link href="/dashboard"><Play className="h-4 w-4 fill-current" /></Link>
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => onDelete(task.id)} className="text-destructive rounded-full hover:bg-destructive/10 h-9 w-9">
-                <Trash2 className="h-4 w-4" />
-            </Button>
-        </div>
       </div>
-    </Card>
+
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button variant="ghost" size="icon" asChild className="text-primary rounded-full hover:bg-primary/10 h-7 w-7">
+          <Link href="/dashboard"><Play className="h-3 w-3 fill-current" /></Link>
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => onDelete(task.id)} className="text-destructive rounded-full hover:bg-destructive/10 h-7 w-7">
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      </div>
+    </div>
   );
 }
