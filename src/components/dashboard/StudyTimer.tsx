@@ -190,19 +190,7 @@ export function StudyTimer() {
   const handleSkip = async () => {
     if (!user) return;
     
-    if (!isBreak) {
-      // Skip Study: Finish time tracking for current and go to break
-      if (profile?.currentSession?.startTime) {
-        const now = Date.now();
-        const totalElapsed = Math.floor((now - profile.currentSession.startTime) / 1000);
-        const alreadySynced = Math.floor((lastSyncTimestampRef.current - profile.currentSession.startTime) / 1000);
-        const remaining = Math.max(0, totalElapsed - (alreadySynced > 0 ? alreadySynced : 0));
-        if (remaining > 0) await performSync(remaining);
-      }
-      
-      toast({ title: "Session Skipped", description: "Progress saved. Moving to Rest Cycle." });
-      startBreak();
-    } else {
+    if (isBreak) {
       // Skip Break: Go back to idle/next task
       setIsActive(false);
       setIsBreak(false);
@@ -495,14 +483,16 @@ export function StudyTimer() {
               {isActive ? 'Pause' : 'Engage'}
             </Button>
             
-            <Button 
-              variant="outline" 
-              size="icon" 
-              className="h-14 w-14 rounded-2xl bg-white/10 border-white/20 text-white hover:bg-white/20"
-              onClick={handleSkip}
-            >
-              <FastForward className="h-6 w-6" />
-            </Button>
+            {isBreak && (
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-14 w-14 rounded-2xl bg-white/10 border-white/20 text-white hover:bg-white/20"
+                onClick={handleSkip}
+              >
+                <FastForward className="h-6 w-6" />
+              </Button>
+            )}
           </div>
           
           {!isBreak && activeTask && (
