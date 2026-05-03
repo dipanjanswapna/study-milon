@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -108,8 +107,6 @@ export default function LeaderboardPage() {
       let currentVal = u[getSortField(timeFilter)] || 0;
       
       // --- VIRTUAL RESET LOGIC ---
-      // If the period has changed but the user hasn't studied yet (data in DB is old),
-      // we display 0 to ensure the leaderboard is live according to the user's local clock.
       if (timeFilter === 'daily' && u.last_study_day !== todayStr) currentVal = 0;
       if (timeFilter === 'weekly' && u.last_study_week !== weekStr) currentVal = 0;
       if (timeFilter === 'monthly' && u.last_study_month !== monthStr) currentVal = 0;
