@@ -104,7 +104,7 @@ export function StudyTimer() {
   }, [user, activeTask, isBreak, firestore]);
 
   const handleStart = async () => {
-    if (!isActive && user && activeTask) {
+    if (!isActive && user && (activeTask || isBreak)) {
       const now = Date.now();
       setIsActive(true);
       lastSyncTimestampRef.current = now;
@@ -115,9 +115,9 @@ export function StudyTimer() {
         lastSyncTime: now,
         duration: timeLeft, 
         status: 'active',
-        taskId: activeTask.id,
-        subjectId: activeTask.subjectId,
-        chapterId: activeTask.chapterId,
+        taskId: isBreak ? null : activeTask!.id,
+        subjectId: isBreak ? null : activeTask!.subjectId,
+        chapterId: isBreak ? null : activeTask!.chapterId,
         isBreak: isBreak
       };
       
@@ -139,7 +139,7 @@ export function StudyTimer() {
       setIsActive(false);
       audioRef.current?.pause();
 
-      if (remainingToSync > 0) {
+      if (remainingToSync > 0 && !isBreak) {
         await performSync(remainingToSync);
       }
 
@@ -506,32 +506,19 @@ export function StudyTimer() {
           </div>
           
           {!isBreak && activeTask && (
-            <div className="grid grid-cols-2 gap-3">
-              <Button 
-                variant="secondary" 
-                className="h-12 rounded-xl font-bold text-[10px] uppercase tracking-widest bg-blue-400/20 text-blue-100 hover:bg-blue-400/30 border border-blue-400/20"
-                onClick={markTaskDone}
-              >
-                <CheckCircle2 className="mr-1.5 h-4 w-4" /> Secure
-              </Button>
-              <Button 
-                variant="secondary" 
-                className="h-12 rounded-xl font-bold text-[10px] uppercase tracking-widest bg-orange-400/20 text-orange-100 hover:bg-orange-400/30 border border-orange-400/20"
-                onClick={startBreak}
-              >
-                <Coffee className="mr-1.5 h-4 w-4" /> Engage Rest
-              </Button>
-            </div>
+            <Button 
+              variant="secondary" 
+              className="w-full h-12 rounded-xl font-bold text-[10px] uppercase tracking-widest bg-blue-400/20 text-blue-100 hover:bg-blue-400/30 border border-blue-400/20"
+              onClick={markTaskDone}
+            >
+              <CheckCircle2 className="mr-1.5 h-4 w-4" /> Secure Objective
+            </Button>
           )}
 
           {isBreak && (
-             <Button 
-                variant="secondary" 
-                className="h-12 rounded-xl font-bold text-xs uppercase tracking-widest bg-white/10 text-white hover:bg-white/20 border border-white/10"
-                onClick={handleSkip}
-              >
-                End Rest Cycle
-              </Button>
+             <p className="text-center text-[10px] font-black uppercase tracking-widest text-blue-100/40">
+                Next task will be ready after rest.
+             </p>
           )}
 
           {!isBreak && upcomingTasks.length > 0 && (
