@@ -131,7 +131,10 @@ export async function updateChapterStatus(
 
 /**
  * Precision logging system with automated Daily/Weekly/Monthly/Yearly resets.
- * Weekly Reset Logic: Friday to Thursday cycle.
+ * - Daily: Reset at 12:00 AM
+ * - Weekly: Friday to Thursday cycle (Reset Friday 12:00 AM)
+ * - Monthly: Reset at 1st Day 12:00 AM
+ * - Yearly: Reset at Jan 1st 12:00 AM
  */
 export async function logStudyTime(
     db: Firestore,

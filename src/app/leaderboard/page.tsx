@@ -2,8 +2,8 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { collection, query, orderBy, limit, getDocs, doc } from 'firebase/firestore';
-import { useFirestore, useCollection, useUser, useDoc } from '@/firebase';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { useFirestore, useCollection, useUser } from '@/firebase';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Header } from '@/components/dashboard/Header';
 import {
@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Trophy, Medal, Crown, Clock, Users2, ArrowRight, Zap, List, Filter } from 'lucide-react';
+import { Trophy, Medal, Crown, Users2, ArrowRight, Zap, List, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -185,9 +185,9 @@ export default function LeaderboardPage() {
 
           {/* Filters */}
           <Card className="rounded-xl border-none shadow-sm bg-card overflow-hidden">
-            <CardContent className="p-2 md:p-3 flex flex-col md:flex-row items-center justify-between gap-3">
-              <div className="grid grid-cols-2 gap-2 w-full md:w-auto">
-                  <div className="bg-secondary/50 p-0.5 rounded-lg flex items-center">
+            <CardContent className="p-2 md:p-3 flex flex-col md:flex-row items-center justify-between gap-1 md:gap-3">
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                  <div className="bg-secondary/50 p-0.5 rounded-lg flex items-center flex-1 md:flex-none">
                     <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as any)}>
                         <SelectTrigger className="h-8 w-full sm:w-[140px] rounded-md border-none bg-transparent font-bold text-[9px]">
                             <Filter className="h-3 w-3 mr-1.5 text-primary shrink-0" />
@@ -205,7 +205,7 @@ export default function LeaderboardPage() {
                     </Select>
                   </div>
 
-                  <div className="bg-secondary/50 p-0.5 rounded-lg flex items-center">
+                  <div className="bg-secondary/50 p-0.5 rounded-lg flex items-center flex-1 md:flex-none">
                     <Select value={batchFilter} onValueChange={setBatchFilter}>
                         <SelectTrigger className="h-8 w-full sm:w-[90px] rounded-md border-none bg-transparent font-bold text-[9px]">
                             <SelectValue placeholder="Batch" />
@@ -220,7 +220,7 @@ export default function LeaderboardPage() {
                   </div>
               </div>
 
-              <Tabs value={timeFilter} onValueChange={(v) => setTimeFilter(v as any)} className="w-full md:w-auto">
+              <Tabs value={timeFilter} onValueChange={(v) => setTimeFilter(v as any)} className="w-full md:w-auto mt-2 md:mt-0">
                 <TabsList className="grid grid-cols-4 bg-secondary/50 p-1 rounded-xl h-9 w-full md:min-w-[300px]">
                   <TabsTrigger value="daily" className="rounded-lg font-black text-[8px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Daily</TabsTrigger>
                   <TabsTrigger value="weekly" className="rounded-lg font-black text-[8px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Weekly</TabsTrigger>
