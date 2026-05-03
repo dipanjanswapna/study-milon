@@ -142,9 +142,12 @@ export async function logStudyTime(
 ) {
     if (seconds <= 0) return;
 
+    const isGroupTask = subjectId === 'group-task';
     const userRef = doc(db, 'users', userId);
-    const chapterRef = doc(db, 'users', userId, 'subjects', subjectId, 'chapters', chapterId);
-    const subjectRef = doc(db, 'users', userId, 'subjects', subjectId);
+    
+    // For group tasks, these documents don't exist in the hierarchy
+    const chapterRef = !isGroupTask ? doc(db, 'users', userId, 'subjects', subjectId, 'chapters', chapterId) : null;
+    const subjectRef = !isGroupTask ? doc(db, 'users', userId, 'subjects', subjectId) : null;
     
     const now = new Date();
     const dateStr = format(now, 'yyyy-MM-dd');
@@ -158,10 +161,12 @@ export async function logStudyTime(
     const batch = writeBatch(db);
 
     try {
-        const [userSnap, subjectSnap] = await Promise.all([
-          getDoc(userRef),
-          getDoc(subjectRef)
-        ]);
+        const promises = [getDoc(userRef)];
+        if (subjectRef) promises.push(getDoc(subjectRef));
+        
+        const snaps = await Promise.all(promises);
+        const userSnap = snaps[0];
+        const subjectSnap = snaps[1] || null;
 
         if (!userSnap.exists()) {
             throw new Error("User profile not found.");
@@ -199,11 +204,13 @@ export async function logStudyTime(
             userUpdate.last_study_week = weekStr;
             userUpdate.last_study_month = monthStr;
 
-            batch.update(chapterRef, {
-                time_spent: increment(minutesToAdd)
-            });
+            if (chapterRef) {
+                batch.update(chapterRef, {
+                    time_spent: increment(minutesToAdd)
+                });
+            }
 
-            const subjectName = subjectSnap.exists() ? subjectSnap.data().name : 'Unknown';
+            const subjectName = subjectSnap && subjectSnap.exists() ? subjectSnap.data().name : (isGroupTask ? 'Guild Task' : 'Unknown');
             
             batch.set(sessionRef, {
               duration: increment(minutesToAdd),
