@@ -129,9 +129,8 @@ export async function updateChapterStatus(
 }
 
 /**
- * Precision logging system that handles seconds to prevent any time gaps.
- * Implements physical reset on first sync of a new day/week/month/year.
- * This is the CORE system for Daily/Weekly/Monthly/Yearly Leaderboards.
+ * Precision logging system with automated Daily/Weekly/Monthly/Yearly resets.
+ * Weekly Reset Logic: Friday to Thursday cycle.
  */
 export async function logStudyTime(
     db: Firestore,
@@ -154,7 +153,9 @@ export async function logStudyTime(
     const dateStr = format(now, 'yyyy-MM-dd');
     const monthStr = format(now, 'yyyy-MM');
     const yearStr = format(now, 'yyyy');
-    const weekStart = startOfWeek(now, { weekStartsOn: 5 }); // Custom Study Week: Starts on Friday
+    
+    // Custom Study Week: Starts on Friday (weekStartsOn: 5)
+    const weekStart = startOfWeek(now, { weekStartsOn: 5 }); 
     const weekStr = `Friday_${format(weekStart, 'yyyy-MM-dd')}`;
     
     const hour = now.getHours().toString();
@@ -165,7 +166,7 @@ export async function logStudyTime(
 
     try {
         const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) throw new Error("User profile not found.");
+        if (!userSnap.exists()) return;
         
         let subjectName = 'Guild Task';
         if (!isGroupTask && subjectRef) {
@@ -189,17 +190,17 @@ export async function logStudyTime(
             "currentSession.lastSyncTime": Date.now() 
         };
 
-        // --- HARD RESET LOGIC (Physical Reset in DB) ---
-        // If the date keys have changed since the last study update, 
-        // it means we are in a new period. Reset those values.
+        // --- PHYSICAL RESET LOGIC ---
         
+        // 1. Daily Reset
         if (userData.last_study_day !== dateStr) {
-            userUpdate.daily_study_minutes = minutesToAdd; // Hard Reset to current session mins
+            userUpdate.daily_study_minutes = minutesToAdd;
             userUpdate.last_study_day = dateStr;
         } else if (minutesToAdd > 0) {
             userUpdate.daily_study_minutes = increment(minutesToAdd);
         }
 
+        // 2. Weekly Reset (Friday to Thursday)
         if (userData.last_study_week !== weekStr) {
             userUpdate.weekly_study_minutes = minutesToAdd;
             userUpdate.last_study_week = weekStr;
@@ -207,6 +208,7 @@ export async function logStudyTime(
             userUpdate.weekly_study_minutes = increment(minutesToAdd);
         }
 
+        // 3. Monthly Reset
         if (userData.last_study_month !== monthStr) {
             userUpdate.monthly_study_minutes = minutesToAdd;
             userUpdate.last_study_month = monthStr;
@@ -214,6 +216,7 @@ export async function logStudyTime(
             userUpdate.monthly_study_minutes = increment(minutesToAdd);
         }
 
+        // 4. Yearly Reset
         if (userData.last_study_year !== yearStr) {
             userUpdate.yearly_study_minutes = minutesToAdd;
             userUpdate.last_study_year = yearStr;
@@ -221,7 +224,7 @@ export async function logStudyTime(
             userUpdate.yearly_study_minutes = increment(minutesToAdd);
         }
 
-        // --- TOTAL & PROGRESS ---
+        // --- TOTALS & ANALYTICS ---
         if (minutesToAdd > 0) {
             userUpdate.total_study_minutes = increment(minutesToAdd);
 
@@ -231,7 +234,6 @@ export async function logStudyTime(
                 });
             }
             
-            // Log session for analytics
             batch.set(sessionRef, {
               duration: increment(minutesToAdd),
               [`hourlyBreakdown.${hour}`]: increment(minutesToAdd),

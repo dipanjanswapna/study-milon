@@ -84,8 +84,8 @@ export async function createUserProfile(
     const createdAt = serverTimestamp();
     const now = new Date();
     
-    // Custom Week Logic: Friday to Thursday
-    const weekStart = startOfWeek(now, { weekStartsOn: 5 }); // Friday is 5
+    // Custom Week Logic: Starts on Friday
+    const weekStart = startOfWeek(now, { weekStartsOn: 5 }); 
     
     const todayStr = format(now, 'yyyy-MM-dd');
     const weekStr = `Friday_${format(weekStart, 'yyyy-MM-dd')}`;
