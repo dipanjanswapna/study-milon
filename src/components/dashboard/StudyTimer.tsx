@@ -312,7 +312,6 @@ export function StudyTimer() {
             performSync(elapsed);
           }
           todayStrRef.current = currentDayStr;
-          // Note: logStudyTime handles the reset of daily counters upon detecting new dayStr
           return;
         }
 

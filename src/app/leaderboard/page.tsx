@@ -162,7 +162,7 @@ export default function LeaderboardPage() {
           </Card>
 
           {/* Podium Section */}
-          <div className="w-full flex justify-center pt-4 pb-2 overflow-visible relative z-20">
+          <div className="w-full flex justify-center pt-8 pb-4 overflow-visible relative z-20">
             {loading ? (
               <div className="flex items-end justify-center gap-8">
                 <Skeleton className="h-20 w-20 rounded-full" />
@@ -183,10 +183,10 @@ export default function LeaderboardPage() {
           {/* Filters */}
           <Card className="rounded-xl border-none shadow-sm bg-card overflow-hidden">
             <CardContent className="p-2 md:p-3 flex flex-col md:flex-row items-center justify-between gap-1 md:gap-3">
-              <div className="flex items-center gap-2 w-full md:w-auto">
-                  <div className="bg-secondary/50 p-0.5 rounded-lg flex items-center flex-1 md:flex-none">
+              <div className="flex items-center gap-2 w-full">
+                  <div className="bg-secondary/50 p-0.5 rounded-lg flex items-center flex-1">
                     <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as any)}>
-                        <SelectTrigger className="h-8 w-full sm:w-[140px] rounded-md border-none bg-transparent font-bold text-[9px]">
+                        <SelectTrigger className="h-8 w-full rounded-md border-none bg-transparent font-bold text-[9px]">
                             <Filter className="h-3 w-3 mr-1.5 text-primary shrink-0" />
                             <SelectValue placeholder="Category" />
                         </SelectTrigger>
@@ -202,9 +202,9 @@ export default function LeaderboardPage() {
                     </Select>
                   </div>
 
-                  <div className="bg-secondary/50 p-0.5 rounded-lg flex items-center flex-1 md:flex-none">
+                  <div className="bg-secondary/50 p-0.5 rounded-lg flex items-center flex-1">
                     <Select value={batchFilter} onValueChange={setBatchFilter}>
-                        <SelectTrigger className="h-8 w-full sm:w-[90px] rounded-md border-none bg-transparent font-bold text-[9px]">
+                        <SelectTrigger className="h-8 w-full rounded-md border-none bg-transparent font-bold text-[9px]">
                             <SelectValue placeholder="Batch" />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl">
@@ -217,8 +217,8 @@ export default function LeaderboardPage() {
                   </div>
               </div>
 
-              <Tabs value={timeFilter} onValueChange={(v) => setTimeFilter(v as any)} className="w-full md:w-auto mt-2 md:mt-0">
-                <TabsList className="grid grid-cols-4 bg-secondary/50 p-1 rounded-xl h-9 w-full md:min-w-[300px]">
+              <Tabs value={timeFilter} onValueChange={(v) => setTimeFilter(v as any)} className="w-full mt-2 md:mt-0">
+                <TabsList className="grid grid-cols-4 bg-secondary/50 p-1 rounded-xl h-9 w-full">
                   <TabsTrigger value="daily" className="rounded-lg font-black text-[8px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Daily</TabsTrigger>
                   <TabsTrigger value="weekly" className="rounded-lg font-black text-[8px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Weekly</TabsTrigger>
                   <TabsTrigger value="monthly" className="rounded-lg font-black text-[8px] uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-white">Monthly</TabsTrigger>

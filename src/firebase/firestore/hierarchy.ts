@@ -196,8 +196,6 @@ export async function logStudyTime(
 
         if (isNewDay) {
             // MIDNIGHT RESET: If day changed, we discard previous partial seconds for the new day's counter
-            // but we still count them for the overall 'total_study_minutes' if they reach a full minute.
-            // For the daily/weekly/etc counters, we start fresh with the 'seconds' provided in this sync call.
             minutesToAdd = Math.floor(seconds / 60);
             finalPartialSeconds = seconds % 60;
             
