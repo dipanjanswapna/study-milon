@@ -32,6 +32,7 @@ export type FocusSettings = {
 
 export type CurrentSession = {
   startTime: number | null;
+  lastSyncTime: number | null; // Track exactly when the last DB commit happened
   duration: number;
   status: 'active' | 'paused' | 'idle';
   subjectId: string | null;
@@ -110,6 +111,7 @@ export async function createUserProfile(
         isStudying: false,
         currentSession: {
           startTime: null,
+          lastSyncTime: null,
           duration: 25,
           status: 'idle',
           subjectId: null,

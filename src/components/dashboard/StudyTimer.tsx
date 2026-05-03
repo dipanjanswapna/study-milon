@@ -24,7 +24,7 @@ import { format } from 'date-fns';
 const BREAK_MINUTES = 5;
 const SILENT_AUDIO_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
 const ALARM_AUDIO_PATH = "/WhatsApp Audio 2026-05-02 at 4.38.00 PM.mp3";
-const SYNC_INTERVAL_SECONDS = 10; // High frequency sync for "Live" status
+const SYNC_INTERVAL_SECONDS = 10; 
 
 export function StudyTimer() {
   const { user } = useUser();
@@ -63,11 +63,10 @@ export function StudyTimer() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const alarmRef = useRef<HTMLAudioElement | null>(null);
   
-  // Tracking refs for absolute precision heartbeat
   const lastSyncTimestampRef = useRef<number>(0);
   const initializedFromCloud = useRef(false);
 
-  // Sync timeLeft with activeTask ONLY if idle or if this is the first task
+  // Sync timeLeft with activeTask ONLY if idle
   useEffect(() => {
     if (activeTask && !isActive && !isBreak && profile?.currentSession?.status === 'idle') {
       setTimeLeft(activeTask.duration * 60);
@@ -79,13 +78,10 @@ export function StudyTimer() {
     return ((originalTotal - timeLeft) / originalTotal) * 100;
   }, [timeLeft, isBreak, activeTask]);
 
-  // POWERFUL LIVE CALCULATION: Combines DB stats + current uncommitted seconds
   const dailyStudyProgress = useMemo(() => {
     if (!profile) return 0;
-    
     let currentSeconds = (profile.daily_study_minutes || 0) * 60 + (profile.partial_study_seconds || 0);
     
-    // Add time that hasn't been synced to DB yet for "True Live" visual
     if (isActive && !isBreak && profile.currentSession?.startTime) {
       const now = Date.now();
       const sessionElapsed = Math.floor((now - profile.currentSession.startTime) / 1000);
@@ -98,44 +94,14 @@ export function StudyTimer() {
     return Math.min(100, (currentSeconds / goalSeconds) * 100);
   }, [profile, isActive, isBreak, timeLeft]); 
 
-  const handleResetInternal = useCallback(async () => {
-    if (user) {
-      setIsActive(false);
-      setIsBreak(false);
-      audioRef.current?.pause();
-      
-      const duration = activeTask?.duration || 25;
-      setTimeLeft(duration * 60);
-      lastSyncTimestampRef.current = 0;
-      
-      updateUserProfile(firestore, user.uid, { 
-        isStudying: false,
-        currentSession: {
-          startTime: null,
-          duration: duration * 60,
-          status: 'idle',
-          subjectId: activeTask?.subjectId || null,
-          chapterId: activeTask?.chapterId || null,
-          isBreak: false
-        } as any
-      });
-    }
-  }, [activeTask, user, firestore]);
-
-  const playAlarm = useCallback(() => {
-    if (alarmRef.current) {
-      alarmRef.current.currentTime = 0;
-      alarmRef.current.play().catch(e => console.error("Alarm play error:", e));
-    }
-  }, []);
-
-  /**
-   * Syncs specific amount of seconds to Firestore precisely.
-   */
   const performSync = useCallback(async (secondsToSync: number) => {
     if (!user || !activeTask || isBreak || secondsToSync <= 0) return;
     try {
       await logStudyTime(firestore, user.uid, activeTask.subjectId, activeTask.chapterId, secondsToSync);
+      // Also update the lastSyncTime in the session profile to keep DB in sync
+      updateUserProfile(firestore, user.uid, { 
+        "currentSession.lastSyncTime": Date.now() 
+      });
     } catch (e) {
       console.error("Precision sync failed:", e);
     }
@@ -143,16 +109,15 @@ export function StudyTimer() {
 
   const handleStart = async () => {
     if (!isActive && user && activeTask) {
-      const startTime = Date.now();
+      const now = Date.now();
       setIsActive(true);
-      lastSyncTimestampRef.current = startTime;
+      lastSyncTimestampRef.current = now;
       audioRef.current?.play().catch(() => {});
       
-      const currentRemaining = timeLeft;
-      
       const newSession: CurrentSession = {
-        startTime,
-        duration: currentRemaining, 
+        startTime: now,
+        lastSyncTime: now,
+        duration: timeLeft, 
         status: 'active',
         subjectId: activeTask.subjectId,
         chapterId: activeTask.chapterId,
@@ -177,7 +142,6 @@ export function StudyTimer() {
       setIsActive(false);
       audioRef.current?.pause();
 
-      // Ensure every last second is committed before pausing
       if (remainingToSync > 0) {
         await performSync(remainingToSync);
       }
@@ -186,6 +150,7 @@ export function StudyTimer() {
         isStudying: false,
         "currentSession.status": "paused",
         "currentSession.startTime": null,
+        "currentSession.lastSyncTime": null,
         "currentSession.duration": timeLeft 
       });
     }
@@ -193,7 +158,6 @@ export function StudyTimer() {
 
   const markTaskDone = async () => {
     if (user && activeTask) {
-       // Commit remaining seconds before clearing
        if (isActive && profile?.currentSession?.startTime) {
          const now = Date.now();
          const totalElapsed = Math.floor((now - profile.currentSession.startTime) / 1000);
@@ -204,15 +168,20 @@ export function StudyTimer() {
        
        await updateTaskStatus(firestore, user.uid, activeTask.id, true);
        toast({ title: "Objective Secured!", description: `${activeTask.chapterName} has been completed.` });
-       handleResetInternal();
+       
+       setIsActive(false);
+       setIsBreak(false);
+       updateUserProfile(firestore, user.uid, { 
+         isStudying: false,
+         "currentSession.status": "idle",
+         "currentSession.startTime": null,
+         "currentSession.lastSyncTime": null
+       });
     }
   };
 
   const startBreak = useCallback(async () => {
     if (user && activeTask) {
-      playAlarm();
-      
-      // Final sync for the task
       if (profile?.currentSession?.startTime) {
         const now = Date.now();
         const totalElapsed = Math.floor((now - profile.currentSession.startTime) / 1000);
@@ -222,19 +191,18 @@ export function StudyTimer() {
       }
 
       await updateTaskStatus(firestore, user.uid, activeTask.id, true);
-      toast({ title: "Objective Secured!", description: `${activeTask.chapterName} is complete.` });
-
-      setIsBreak(true);
       const breakSeconds = BREAK_MINUTES * 60;
-      const startTime = Date.now();
+      const now = Date.now();
       setTimeLeft(breakSeconds);
+      setIsBreak(true);
       setIsActive(true);
-      lastSyncTimestampRef.current = startTime;
+      lastSyncTimestampRef.current = now;
       
       updateUserProfile(firestore, user.uid, {
         isStudying: false,
         currentSession: {
-          startTime,
+          startTime: now,
+          lastSyncTime: now,
           duration: breakSeconds,
           status: 'active',
           subjectId: activeTask.subjectId,
@@ -242,33 +210,55 @@ export function StudyTimer() {
           isBreak: true
         } as any
       });
+      if (alarmRef.current) alarmRef.current.play().catch(() => {});
     }
-  }, [user, activeTask, firestore, toast, playAlarm, profile, performSync]);
+  }, [user, activeTask, firestore, profile, performSync]);
 
-  useEffect(() => {
-    audioRef.current = new Audio(SILENT_AUDIO_URI);
-    audioRef.current.loop = true;
-    alarmRef.current = new Audio(ALARM_AUDIO_PATH);
-  }, []);
-
-  // Hydrate from Cloud
+  // RECONCILER: The heart of the "Screen Off / Refresh" fix
   useEffect(() => {
     if (profile?.currentSession && !initializedFromCloud.current) {
-      const { startTime, duration, status, isBreak: cloudIsBreak } = profile.currentSession;
+      const { startTime, lastSyncTime, duration, status, isBreak: cloudIsBreak } = profile.currentSession;
       
       if (status === 'active' && startTime) {
         const now = Date.now();
-        const elapsedSeconds = Math.floor((now - startTime) / 1000);
-        const calculatedTimeLeft = Math.max(0, duration - elapsedSeconds);
-
-        if (calculatedTimeLeft > 0) {
-          setTimeLeft(calculatedTimeLeft);
+        const elapsedSinceStart = Math.floor((now - startTime) / 1000);
+        
+        // 1. Calculate how many seconds passed while the tab was closed/inactive
+        const effectiveLastSync = lastSyncTime || startTime;
+        const totalElapsedSinceLastSync = Math.floor((now - effectiveLastSync) / 1000);
+        
+        // 2. Determine if the session is still within its allotted time
+        if (elapsedSinceStart < duration) {
+          // Still running!
+          setTimeLeft(duration - elapsedSinceStart);
           setIsBreak(cloudIsBreak);
           setIsActive(true);
-          lastSyncTimestampRef.current = startTime + (Math.floor(elapsedSeconds / SYNC_INTERVAL_SECONDS) * SYNC_INTERVAL_SECONDS * 1000);
+          
+          // CRITICAL: Catch up the DB totals for the time missed while away
+          if (totalElapsedSinceLastSync > 0 && !cloudIsBreak) {
+            logStudyTime(firestore, user!.uid, profile.currentSession.subjectId, profile.currentSession.chapterId, totalElapsedSinceLastSync);
+          }
+          
+          lastSyncTimestampRef.current = now;
+          updateUserProfile(firestore, user!.uid, { "currentSession.lastSyncTime": now });
           audioRef.current?.play().catch(() => {});
         } else {
-          handleResetInternal();
+          // Finished while away! 
+          // Sync only the remaining part of the session
+          const totalUnsyncedSessionTime = Math.max(0, Math.floor((startTime + duration * 1000 - effectiveLastSync) / 1000));
+          if (totalUnsyncedSessionTime > 0 && !cloudIsBreak) {
+            logStudyTime(firestore, user!.uid, profile.currentSession.subjectId, profile.currentSession.chapterId, totalUnsyncedSessionTime);
+          }
+          
+          // Reset to idle
+          setIsActive(false);
+          setIsBreak(false);
+          updateUserProfile(firestore, user!.uid, { 
+            isStudying: false,
+            "currentSession.status": "idle",
+            "currentSession.startTime": null,
+            "currentSession.lastSyncTime": null
+          });
         }
       } else if (status === 'paused') {
         setTimeLeft(duration);
@@ -277,9 +267,15 @@ export function StudyTimer() {
       }
       initializedFromCloud.current = true;
     }
-  }, [profile?.currentSession, handleResetInternal]);
+  }, [profile, firestore, user]);
 
-  // HEARTBEAT TIMER EFFECT: Absolute Precision
+  useEffect(() => {
+    audioRef.current = new Audio(SILENT_AUDIO_URI);
+    audioRef.current.loop = true;
+    alarmRef.current = new Audio(ALARM_AUDIO_PATH);
+  }, []);
+
+  // Precise Heartbeat
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
@@ -288,29 +284,23 @@ export function StudyTimer() {
         const totalDuration = profile.currentSession!.duration;
         const now = Date.now();
         
-        // 1. Calculate precise time left based on absolute timestamp
         const elapsedSinceStart = Math.floor((now - startTime) / 1000);
         const newTimeLeft = Math.max(0, totalDuration - elapsedSinceStart);
         setTimeLeft(newTimeLeft);
 
-        // 2. Periodic High-Frequency Sync (10s)
         const elapsedSinceLastSync = Math.floor((now - lastSyncTimestampRef.current) / 1000);
         if (elapsedSinceLastSync >= SYNC_INTERVAL_SECONDS && !isBreak) {
           performSync(elapsedSinceLastSync);
           lastSyncTimestampRef.current = now;
         }
 
-        // 3. Keep "Live" status updated every 30s
-        if (elapsedSinceStart % 30 === 0 && !isBreak) {
-          updateUserProfile(firestore, user!.uid, { last_active_date: serverTimestamp() });
-        }
-
-        // 4. Session completion logic
         if (newTimeLeft === 0) {
           clearInterval(interval!);
           if (isBreak) {
-            playAlarm();
-            handleResetInternal();
+            if (alarmRef.current) alarmRef.current.play().catch(() => {});
+            setIsActive(false);
+            setIsBreak(false);
+            updateUserProfile(firestore, user!.uid, { "currentSession.status": "idle", isStudying: false });
           } else {
             startBreak();
           }
@@ -318,7 +308,7 @@ export function StudyTimer() {
       }, 1000);
     }
     return () => { if (interval) clearInterval(interval); };
-  }, [isActive, isBreak, activeTask, profile?.currentSession, user, firestore, handleResetInternal, startBreak, performSync, playAlarm]);
+  }, [isActive, isBreak, activeTask, profile?.currentSession, user, firestore, startBreak, performSync]);
 
   const minutesDisplay = Math.floor(timeLeft / 60);
   const secondsDisplay = timeLeft % 60;
@@ -370,7 +360,7 @@ export function StudyTimer() {
             <CardTitle className="font-headline uppercase text-white">{isBreak ? 'Rest Cycle' : 'Elite Focus'}</CardTitle>
           </div>
           <CardDescription className="text-blue-100/80 truncate font-bold text-[11px] uppercase tracking-wide">
-            {isBreak ? 'Time to recharge.' : `Active: ${activeTask?.subjectName} | ${activeTask?.chapterName}${activeTask?.note ? ` | ${activeTask.note}` : ''}`}
+            {isBreak ? 'Time to recharge.' : `Active: ${activeTask?.subjectName} | ${activeTask?.chapterName}`}
           </CardDescription>
         </div>
         {isActive && !isBreak && (
@@ -441,14 +431,6 @@ export function StudyTimer() {
                     fill="#8866FF"
                     className="transition-all duration-1000 ease-linear shadow-lg"
                  />
-                 <circle
-                    cx={130 * Math.cos(((progress * 3.6 - 90) * Math.PI) / 180)}
-                    cy={130 * Math.sin(((progress * 3.6 - 90) * Math.PI) / 180)}
-                    r="12"
-                    fill="#8866FF"
-                    fillOpacity="0.2"
-                    className="transition-all duration-1000 ease-linear animate-pulse"
-                 />
               </g>
            </svg>
 
@@ -501,7 +483,7 @@ export function StudyTimer() {
               </div>
               <div className="space-y-2">
                 {upcomingTasks.map((task) => (
-                  <div key={task.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 group/task transition-all hover:bg-white/10">
+                  <div key={task.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 transition-all hover:bg-white/10">
                     <div className="flex flex-col gap-0.5 overflow-hidden">
                       <span className="text-[11px] font-black text-white/90 leading-none truncate">{task.chapterName}</span>
                       <span className="text-[9px] font-bold text-blue-100/40 uppercase tracking-tighter truncate">{task.subjectName}</span>
