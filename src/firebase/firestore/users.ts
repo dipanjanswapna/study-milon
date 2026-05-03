@@ -1,4 +1,3 @@
-
 import {
   doc,
   setDoc,
@@ -11,7 +10,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
-import { format, getISOWeek } from 'date-fns';
+import { format, startOfWeek } from 'date-fns';
 
 export type AcademicCategory = 'SSC' | 'HSC' | 'Admission 1st' | 'Admission 2nd' | 'Job Prep' | 'University';
 export type Religion = 'Muslim' | 'Hindu';
@@ -32,7 +31,7 @@ export type FocusSettings = {
 
 export type CurrentSession = {
   startTime: number | null;
-  lastSyncTime: number | null; // Track exactly when the last DB commit happened
+  lastSyncTime: number | null;
   duration: number;
   status: 'active' | 'paused' | 'idle';
   taskId: string | null;
@@ -53,12 +52,14 @@ export type UserProfile = {
   daily_study_minutes?: number;
   weekly_study_minutes?: number;
   monthly_study_minutes?: number;
-  partial_study_seconds?: number; // Precision tracking (0-59)
+  yearly_study_minutes?: number;
+  partial_study_seconds?: number;
   daily_goal_minutes?: number;
   last_active_date?: any;
   last_study_day?: string; // Format: YYYY-MM-DD
-  last_study_week?: string; // Format: YYYY-WW
+  last_study_week?: string; // Format: Friday_YYYY-MM-DD
   last_study_month?: string; // Format: YYYY-MM
+  last_study_year?: string; // Format: YYYY
   category?: AcademicCategory;
   batch?: string;
   institution?: string;
@@ -81,10 +82,15 @@ export async function createUserProfile(
   if (!userSnap.exists()) {
     const { uid, email, displayName, photoURL } = user;
     const createdAt = serverTimestamp();
-    const today = new Date();
-    const todayStr = format(today, 'yyyy-MM-dd');
-    const weekStr = `${today.getFullYear()}-W${getISOWeek(today)}`;
-    const monthStr = format(today, 'yyyy-MM');
+    const now = new Date();
+    
+    // Custom Week Logic: Friday to Thursday
+    const weekStart = startOfWeek(now, { weekStartsOn: 5 }); // Friday is 5
+    
+    const todayStr = format(now, 'yyyy-MM-dd');
+    const weekStr = `Friday_${format(weekStart, 'yyyy-MM-dd')}`;
+    const monthStr = format(now, 'yyyy-MM');
+    const yearStr = format(now, 'yyyy');
 
     try {
       await setDoc(userRef, {
@@ -99,12 +105,14 @@ export async function createUserProfile(
         daily_study_minutes: 0,
         weekly_study_minutes: 0,
         monthly_study_minutes: 0,
+        yearly_study_minutes: 0,
         partial_study_seconds: 0,
         daily_goal_minutes: 360, 
         last_active_date: serverTimestamp(),
         last_study_day: todayStr,
         last_study_week: weekStr,
         last_study_month: monthStr,
+        last_study_year: yearStr,
         institution: '',
         phoneNumber: '',
         focusPoints: 0,

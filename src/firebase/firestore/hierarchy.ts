@@ -11,7 +11,7 @@ import {
   getDoc,
   increment,
 } from 'firebase/firestore';
-import { format, getISOWeek } from 'date-fns';
+import { format, startOfWeek } from 'date-fns';
 
 // Subject CRUD
 export async function addSubject(db: Firestore, userId: string, name: string) {
@@ -131,6 +131,7 @@ export async function updateChapterStatus(
 /**
  * Precision logging system that handles seconds to prevent any time gaps.
  * Rollover logic ensures minutes are only incremented when full 60 seconds are reached.
+ * Implements auto-resetting for Daily, Weekly (Fri-Thu), Monthly, and Yearly leaderboards.
  */
 export async function logStudyTime(
     db: Firestore,
@@ -148,11 +149,16 @@ export async function logStudyTime(
     const subjectRef = !isGroupTask ? doc(db, 'users', userId, 'subjects', subjectId) : null;
     
     const now = new Date();
+    
+    // --- TIME PERIOD KEYS ---
     const dateStr = format(now, 'yyyy-MM-dd');
-    const weekStr = `${now.getFullYear()}-W${getISOWeek(now)}`;
     const monthStr = format(now, 'yyyy-MM');
+    const yearStr = format(now, 'yyyy');
+    // Custom Week: Friday to Thursday
+    const weekStart = startOfWeek(now, { weekStartsOn: 5 }); 
+    const weekStr = `Friday_${format(weekStart, 'yyyy-MM-dd')}`;
+    
     const hour = now.getHours().toString();
-
     const sessionDocId = `${dateStr}_${subjectId}`;
     const sessionRef = doc(db, 'users', userId, 'studySessions', sessionDocId);
 
@@ -185,21 +191,22 @@ export async function logStudyTime(
         };
 
         if (minutesToAdd > 0) {
-            const lastStudyDay = userData.last_study_day;
-            const lastStudyWeek = userData.last_study_week;
-            const lastStudyMonth = userData.last_study_month;
-            
-            const dailyUpdate = lastStudyDay === dateStr ? increment(minutesToAdd) : minutesToAdd;
-            const weeklyUpdate = lastStudyWeek === weekStr ? increment(minutesToAdd) : minutesToAdd;
-            const monthlyUpdate = lastStudyMonth === monthStr ? increment(minutesToAdd) : minutesToAdd;
+            // Check for resets by comparing keys
+            const dailyUpdate = userData.last_study_day === dateStr ? increment(minutesToAdd) : minutesToAdd;
+            const weeklyUpdate = userData.last_study_week === weekStr ? increment(minutesToAdd) : minutesToAdd;
+            const monthlyUpdate = userData.last_study_month === monthStr ? increment(minutesToAdd) : minutesToAdd;
+            const yearlyUpdate = userData.last_study_year === yearStr ? increment(minutesToAdd) : minutesToAdd;
 
             userUpdate.total_study_minutes = increment(minutesToAdd);
             userUpdate.daily_study_minutes = dailyUpdate;
             userUpdate.weekly_study_minutes = weeklyUpdate;
             userUpdate.monthly_study_minutes = monthlyUpdate;
+            userUpdate.yearly_study_minutes = yearlyUpdate;
+            
             userUpdate.last_study_day = dateStr;
             userUpdate.last_study_week = weekStr;
             userUpdate.last_study_month = monthStr;
+            userUpdate.last_study_year = yearStr;
 
             if (chapterRef) {
                 batch.update(chapterRef, {
