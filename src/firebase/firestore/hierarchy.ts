@@ -1,4 +1,3 @@
-
 'use client';
 import {
   collection,
@@ -142,10 +141,11 @@ export async function logStudyTime(
 ) {
     if (seconds <= 0) return;
 
-    const isGroupTask = subjectId === 'group-task';
+    // Check if this is a group task. Group tasks don't exist in the subjects/chapters hierarchy.
+    const isGroupTask = subjectId === 'group-task' || chapterId.startsWith('group-task');
     const userRef = doc(db, 'users', userId);
     
-    // For group tasks, these documents don't exist in the hierarchy
+    // Only create refs if it's not a group task to avoid "No document to update" errors
     const chapterRef = !isGroupTask ? doc(db, 'users', userId, 'subjects', subjectId, 'chapters', chapterId) : null;
     const subjectRef = !isGroupTask ? doc(db, 'users', userId, 'subjects', subjectId) : null;
     
@@ -155,6 +155,7 @@ export async function logStudyTime(
     const monthStr = format(now, 'yyyy-MM');
     const hour = now.getHours().toString();
 
+    // Use a unique session ID per day and subject
     const sessionDocId = `${dateStr}_${subjectId}`;
     const sessionRef = doc(db, 'users', userId, 'studySessions', sessionDocId);
 
@@ -162,6 +163,7 @@ export async function logStudyTime(
 
     try {
         const promises = [getDoc(userRef)];
+        // Only fetch subject info if it's not a group task
         if (subjectRef) promises.push(getDoc(subjectRef));
         
         const snaps = await Promise.all(promises);
@@ -204,13 +206,20 @@ export async function logStudyTime(
             userUpdate.last_study_week = weekStr;
             userUpdate.last_study_month = monthStr;
 
+            // Only update chapter document if it exists (Personal Task)
             if (chapterRef) {
                 batch.update(chapterRef, {
                     time_spent: increment(minutesToAdd)
                 });
             }
 
-            const subjectName = subjectSnap && subjectSnap.exists() ? subjectSnap.data().name : (isGroupTask ? 'Guild Task' : 'Unknown');
+            // Determine Subject Name for Analytics
+            let subjectName = 'Unknown';
+            if (isGroupTask) {
+              subjectName = 'Guild Task';
+            } else if (subjectSnap && subjectSnap.exists()) {
+              subjectName = subjectSnap.data().name;
+            }
             
             batch.set(sessionRef, {
               duration: increment(minutesToAdd),
