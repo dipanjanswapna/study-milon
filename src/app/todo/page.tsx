@@ -140,9 +140,6 @@ export default function TodoPage() {
     }
   }, [rawTasks]);
 
-  const personalTasks = useMemo(() => localTasks.filter(t => t.source !== 'group'), [localTasks]);
-  const guildTasks = useMemo(() => localTasks.filter(t => t.source === 'group'), [localTasks]);
-
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<string | null>(null);
   const [taskNote, setTaskNote] = useState<string>('');
@@ -284,19 +281,13 @@ export default function TodoPage() {
         <main className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-4">
           <ProfileSetupGate>
             
-            {/* Hero Banner (Leaderboard Style) */}
+            {/* Hero Banner */}
             <Card className="rounded-xl border-none shadow-xl overflow-hidden bg-[#1A1C3D] text-white relative group">
               <div className="absolute top-0 right-0 p-8 opacity-5">
                 <CalendarIcon className="h-20 w-20 transition-transform group-hover:scale-110 duration-1000" />
               </div>
               <CardContent className="p-4 md:p-6 relative z-10 space-y-1">
                 <div className="space-y-0.5 text-center md:text-left">
-                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-                    <div className="inline-flex items-center gap-1 bg-primary/20 backdrop-blur-lg px-2 py-0.5 rounded-full border border-white/10 text-[8px] font-black text-primary-foreground uppercase tracking-widest">
-                       <Zap className="h-2 w-2 fill-current" />
-                       Hustle Execution
-                    </div>
-                  </div>
                   <h1 className="text-lg md:text-xl font-black tracking-tighter leading-none">Study Roadmap</h1>
                   <p className="text-white/60 font-medium max-w-xl text-[9px] md:text-xs">
                     Plan your sessions, track chapter progress, and synchronize with your goals.
@@ -332,7 +323,7 @@ export default function TodoPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               
-              {/* Left Column: Calendar (Leaderboard Filter Style) */}
+              {/* Left Column: Calendar */}
               <div className="lg:col-span-7 xl:col-span-8">
                 <Card className="bg-[#1A1C3D] border-none shadow-xl rounded-xl p-4 md:p-6">
                   <div className="flex justify-between items-center mb-6">
@@ -365,7 +356,7 @@ export default function TodoPage() {
                 </Card>
               </div>
 
-              {/* Right Column: Task List (Leaderboard Directory Style) */}
+              {/* Right Column: Task List */}
               <div className="lg:col-span-5 xl:col-span-4 space-y-4">
                 
                 <div className="flex items-center justify-between gap-2 px-1">
