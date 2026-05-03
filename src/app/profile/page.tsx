@@ -74,6 +74,7 @@ import {
   Info,
   Sparkles,
   Settings,
+  Settings2,
   BookOpen,
   Calendar,
   CheckCircle2,
@@ -286,7 +287,19 @@ export default function ProfilePage() {
                     <CardTitle className="text-sm font-black flex items-center gap-2 tracking-tight uppercase">
                       <Settings className="h-4 w-4 text-primary" /> Identity Settings
                     </CardTitle>
-                    <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest text-primary border-primary/20">Edit Mode</Badge>
+                    <div className="flex items-center gap-2">
+                       <Button 
+                         variant="outline" 
+                         size="sm" 
+                         className="h-7 px-3 rounded-lg font-black uppercase tracking-widest text-[8px] bg-background shadow-sm hover:bg-primary hover:text-white transition-all" 
+                         asChild
+                       >
+                          <Link href="/profile/settings">
+                             <Settings2 className="mr-1 h-3 w-3" /> Focus Mode
+                          </Link>
+                       </Button>
+                       <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest text-primary border-primary/20">Edit Mode</Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-6">
