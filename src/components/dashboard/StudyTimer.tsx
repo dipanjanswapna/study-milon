@@ -66,7 +66,7 @@ export function StudyTimer() {
   const alarmRef = useRef<HTMLAudioElement | null>(null);
   const lastRTDBSyncRef = useRef<number>(0);
 
-  // RTDB Live Sync: Multi-Period Paths with Auto-Reset Logic
+  // RTDB Live Sync: Multi-Period Paths with Auto-Reset Logic (Monthly & Yearly included)
   const updateRTDBLiveStats = useCallback(async (isStudying: boolean, studyMins: { daily: number, weekly: number, monthly: number, yearly: number }) => {
     if (!user || !profile) return;
     
@@ -74,8 +74,6 @@ export function StudyTimer() {
     const currentDateStr = format(now, 'yyyy-MM-dd');
     const monthStr = format(now, 'yyyy-MM');
     const yearStr = format(now, 'yyyy');
-    
-    // Friday-to-Thursday logic
     const weekStart = startOfWeek(now, { weekStartsOn: 5 }); 
     const weekStr = `Friday_${format(weekStart, 'yyyy-MM-dd')}`;
     
@@ -98,7 +96,6 @@ export function StudyTimer() {
     update(ref(database), updates);
   }, [user, profile, database]);
 
-  // Persistent Unix Timestamp Logic
   useEffect(() => {
     if (profile?.currentSession?.status === 'active' && profile.currentSession.startTime) {
       const now = Date.now();
@@ -188,7 +185,6 @@ export function StudyTimer() {
     });
   };
 
-  // Main Ticker Interval
   useEffect(() => {
     let ticker: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
@@ -200,7 +196,7 @@ export function StudyTimer() {
         
         setTimeLeft(remaining);
 
-        // Period Reset Detection (Midnight Handover)
+        // Midnight/Period Reset Detection
         const currentTodayStr = format(new Date(), 'yyyy-MM-dd');
         if (currentTodayStr !== sessionDate) {
           clearInterval(ticker!);
@@ -208,7 +204,7 @@ export function StudyTimer() {
           return;
         }
 
-        // Heartbeat Sync to RTDB for Live Leaderboard
+        // Live Heartbeat Sync
         if (elapsed > 0 && elapsed % RTDB_HEARTBEAT_INTERVAL === 0 && elapsed !== lastRTDBSyncRef.current) {
            lastRTDBSyncRef.current = elapsed;
            const currentMins = Math.floor(elapsed / 60);
@@ -232,7 +228,6 @@ export function StudyTimer() {
   const handleMidnightReset = async (elapsedSeconds: number) => {
     if (!user || !profile?.currentSession) return;
     
-    // Save partial progress to Firestore before reload
     if (!isBreak && elapsedSeconds > 0) {
       await logStudyTime(firestore, user.uid, profile.currentSession.subjectId, profile.currentSession.chapterId, elapsedSeconds);
     }
@@ -247,11 +242,11 @@ export function StudyTimer() {
     setIsActive(false);
     toast({ 
       title: "New Period Started", 
-      description: "Hustle cycles have been reset. Your progress is secured.",
+      description: "Daily, Weekly, and Monthly cycles have been synchronized.",
       duration: 5000
     });
     
-    setTimeout(() => window.location.reload(), 2000);
+    setTimeout(() => window.location.reload(), 1500);
   };
 
   const handleSessionComplete = async () => {
@@ -286,7 +281,7 @@ export function StudyTimer() {
     
     toast({ 
       title: isBreak ? "Break Over!" : "Objective Secured!", 
-      description: isBreak ? "Time to resume deep focus." : "Roadmap task marked as Done.",
+      description: isBreak ? "Time to resume deep focus." : "Hustle points added to leaderboard.",
     });
   };
 
@@ -453,7 +448,7 @@ export function StudyTimer() {
                   monthly: (profile?.monthly_study_minutes || 0) + Math.floor(elapsedSeconds / 60),
                   yearly: (profile?.yearly_study_minutes || 0) + Math.floor(elapsedSeconds / 60)
                 });
-                toast({ title: "Objective Secured!", description: "Progress synced to global standings." });
+                toast({ title: "Objective Secured!", description: "Progress synced across all leaderboards." });
               }}
             >
               <CheckCircle2 className="mr-2 h-4 w-4" /> Finish Early

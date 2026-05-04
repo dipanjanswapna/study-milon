@@ -172,7 +172,7 @@ export async function logStudyTime(
             isStudying: false,
         };
 
-        // Determine if resets are needed for permanent Firestore counters
+        // Resets for permanent Firestore counters based on period handover
         const isNewDay = userData.last_study_day !== dateStr;
         const isNewWeek = userData.last_study_week !== weekStr;
         const isNewMonth = userData.last_study_month !== monthStr;
@@ -185,41 +185,21 @@ export async function logStudyTime(
         minutesToAdd = Math.floor(totalSeconds / 60);
         finalPartialSeconds = totalSeconds % 60;
 
-        // Daily Update
-        if (isNewDay) {
-            userUpdate.daily_study_minutes = minutesToAdd;
-            userUpdate.last_study_day = dateStr;
-        } else if (minutesToAdd > 0) {
-            userUpdate.daily_study_minutes = increment(minutesToAdd);
-        }
+        // Reset logic for each period in Firestore Profile
+        userUpdate.daily_study_minutes = isNewDay ? minutesToAdd : increment(minutesToAdd);
+        userUpdate.last_study_day = dateStr;
+        
+        userUpdate.weekly_study_minutes = isNewWeek ? minutesToAdd : increment(minutesToAdd);
+        userUpdate.last_study_week = weekStr;
+
+        userUpdate.monthly_study_minutes = isNewMonth ? minutesToAdd : increment(minutesToAdd);
+        userUpdate.last_study_month = monthStr;
+
+        userUpdate.yearly_study_minutes = isNewYear ? minutesToAdd : increment(minutesToAdd);
+        userUpdate.last_study_year = yearStr;
 
         userUpdate.partial_study_seconds = finalPartialSeconds;
 
-        // Weekly Update
-        if (isNewWeek) {
-            userUpdate.weekly_study_minutes = minutesToAdd;
-            userUpdate.last_study_week = weekStr;
-        } else if (minutesToAdd > 0) {
-            userUpdate.weekly_study_minutes = increment(minutesToAdd);
-        }
-
-        // Monthly Update
-        if (isNewMonth) {
-            userUpdate.monthly_study_minutes = minutesToAdd;
-            userUpdate.last_study_month = monthStr;
-        } else if (minutesToAdd > 0) {
-            userUpdate.monthly_study_minutes = increment(minutesToAdd);
-        }
-
-        // Yearly Update
-        if (isNewYear) {
-            userUpdate.yearly_study_minutes = minutesToAdd;
-            userUpdate.last_study_year = yearStr;
-        } else if (minutesToAdd > 0) {
-            userUpdate.yearly_study_minutes = increment(minutesToAdd);
-        }
-
-        // Apply shared increments if minutes are earned
         if (minutesToAdd > 0) {
             userUpdate.total_study_minutes = increment(minutesToAdd);
             batch.update(chapterRef, { time_spent: increment(minutesToAdd) });

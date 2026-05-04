@@ -39,7 +39,7 @@ export default function LeaderboardPage() {
   const myRef = useMemo(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: myProfile } = useDoc<any>(myRef as any);
 
-  // RTDB: Fetch rankings with Date-Based paths for Automatic Resets
+  // RTDB: Fetch rankings with Period-Based paths for Automatic Resets
   useEffect(() => {
     setLoading(true);
     
@@ -58,11 +58,13 @@ export default function LeaderboardPage() {
     }
 
     const leaderboardRef = ref(database, path);
+    // Use RTDB query to get top 100 based on minutes
     const topRankingsQuery = rtdbQuery(leaderboardRef, orderByChild('minutes'), limitToLast(100));
 
     const unsubscribe = onValue(topRankingsQuery, (snapshot) => {
       const data = snapshot.val();
       if (data) {
+        // Convert object to sorted array
         const sortedData = Object.entries(data)
           .map(([uid, val]: [string, any]) => ({
             uid,
@@ -118,10 +120,10 @@ export default function LeaderboardPage() {
                     </div>
                     <h1 className="text-3xl md:text-5xl font-black tracking-tighter leading-none">Global Contenders</h1>
                     <p className="text-white/60 font-medium text-xs md:text-sm max-w-md">
-                      {timeFilter === 'daily' && "Resets every night at 12:00 AM."}
-                      {timeFilter === 'weekly' && "New weeks begin every Friday morning."}
-                      {timeFilter === 'monthly' && "Monthly cycle resets on the 1st day."}
-                      {timeFilter === 'yearly' && "Annual hustle cycle reset on Jan 1st."}
+                      {timeFilter === 'daily' && "Today's ranks reset tonight at 12:00 AM."}
+                      {timeFilter === 'weekly' && "Weekly cycles reset every Friday morning."}
+                      {timeFilter === 'monthly' && "Monthly standings reset on the 1st of each month."}
+                      {timeFilter === 'yearly' && "Annual hustle cycle resets on Jan 1st."}
                     </p>
                   </div>
                   <div className="flex flex-col items-center md:items-end gap-2">
@@ -133,7 +135,7 @@ export default function LeaderboardPage() {
                     </div>
                     <div className="flex items-center gap-1.5 bg-red-600/10 px-3 py-1 rounded-full border border-red-600/20">
                        <Wifi className="h-2.5 w-2.5 text-red-500 animate-pulse" />
-                       <span className="text-[8px] font-black text-red-500 uppercase tracking-widest">Live Updates</span>
+                       <span className="text-[8px] font-black text-red-500 uppercase tracking-widest">Live Feed</span>
                     </div>
                   </div>
                 </div>
@@ -213,10 +215,10 @@ export default function LeaderboardPage() {
                    <h3 className="text-sm font-black flex items-center gap-2 uppercase tracking-tight">
                      <Medal className="h-4 w-4 text-primary" /> Rankings Queue
                    </h3>
-                   <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Based on active focus time</p>
+                   <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Sorted by active minutes</p>
                 </div>
                 <Badge variant="outline" className="font-black text-[10px] uppercase tracking-[0.2em] border-primary/20 text-primary h-7 px-4 rounded-full bg-primary/5">
-                  {filteredRankings.length} Contenders
+                  {filteredRankings.length} Active
                 </Badge>
               </div>
               <ScrollArea className="h-[550px]">
@@ -284,7 +286,7 @@ export default function LeaderboardPage() {
                        </Avatar>
                        <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-white/60">Your Position</p>
-                          <p className="font-black text-sm">Not in Top 100</p>
+                          <p className="font-black text-sm">Outside Top 100</p>
                        </div>
                     </div>
                     <div className="text-right">
