@@ -16,7 +16,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, ArrowRight, ListTodo, CheckCircle2, Target, Zap, Wifi, FastForward, Clock, SkipForward } from 'lucide-react';
+import { Play, Pause, ArrowRight, ListTodo, CheckCircle2, Target, Zap, Wifi, Clock, SkipForward } from 'lucide-react';
 import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { format, startOfWeek } from 'date-fns';
@@ -25,7 +25,7 @@ import { useCollection } from '@/firebase';
 const BREAK_MINUTES = 5;
 const SILENT_AUDIO_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
 const ALARM_AUDIO_PATH = "/WhatsApp Audio 2026-05-02 at 4.38.00 PM.mp3";
-const RTDB_HEARTBEAT_INTERVAL = 60; // Sync every 60s for quota efficiency
+const RTDB_HEARTBEAT_INTERVAL = 60; 
 
 export function StudyTimer() {
   const { user } = useUser();
@@ -34,11 +34,9 @@ export function StudyTimer() {
   const { toast } = useToast();
   const router = useRouter();
 
-  // Get user profile to check existing session status
   const userRef = useMemo(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: profile } = useDoc<any>(userRef as any);
 
-  // Fetch today's tasks to auto-link the first one
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const tasksQuery = useMemo(() => {
     if (!user) return null;
@@ -57,7 +55,7 @@ export function StudyTimer() {
       .sort((a, b) => (a.order || 0) - (b.order || 0));
   }, [rawTasks]);
 
-  // Elite Focus Logic: Auto-grab the first incomplete task from today's roadmap
+  // Elite Focus: Auto-link the first incomplete task
   const activeTask = incompleteTasks[0] || null;
 
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -69,7 +67,6 @@ export function StudyTimer() {
   const alarmRef = useRef<HTMLAudioElement | null>(null);
   const lastRTDBSyncRef = useRef<number>(0);
 
-  // RTDB Multi-Period Sync: Daily, Weekly, Monthly, Yearly
   const updateRTDBLiveStats = useCallback(async (isStudying: boolean, studyMins: { daily: number, weekly: number, monthly: number, yearly: number }) => {
     if (!user || !profile) return;
     
@@ -99,7 +96,7 @@ export function StudyTimer() {
     update(ref(database), updates);
   }, [user, profile, database]);
 
-  // Unix Timestamp Recovery Logic (The "Unstoppable" part)
+  // Persistent Unix Timestamp Logic
   useEffect(() => {
     if (profile?.currentSession?.status === 'active' && profile.currentSession.startTime) {
       const now = Date.now();
@@ -112,7 +109,6 @@ export function StudyTimer() {
         setTimeLeft(remaining);
         setSessionDate(profile.last_study_day || todayStr);
       } else {
-        // If app was closed and timer finished while closed, handle completion now
         handleSessionComplete();
       }
     } else if (profile?.currentSession?.status === 'paused') {
@@ -120,7 +116,6 @@ export function StudyTimer() {
       setTimeLeft(profile.currentSession.duration);
       setIsBreak(profile.currentSession.isBreak);
     } else {
-      // Idle state: Auto-prime the timer with the first incomplete task duration
       if (activeTask && !isActive && !isBreak) {
         setTimeLeft(activeTask.duration * 60);
       }
@@ -191,7 +186,6 @@ export function StudyTimer() {
     });
   };
 
-  // Main Unstoppable Ticker Loop
   useEffect(() => {
     let ticker: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
@@ -211,7 +205,6 @@ export function StudyTimer() {
           return;
         }
 
-        // Live Heartbeat Sync (every 60s)
         if (elapsed > 0 && elapsed % RTDB_HEARTBEAT_INTERVAL === 0 && elapsed !== lastRTDBSyncRef.current) {
            lastRTDBSyncRef.current = elapsed;
            const currentMins = Math.floor(elapsed / 60);
@@ -260,10 +253,8 @@ export function StudyTimer() {
     if (!user || !profile?.currentSession) return;
     const { subjectId, chapterId, taskId, isBreak: cloudIsBreak, duration } = profile.currentSession;
 
-    // Log the planned duration (since timer finished)
     if (!cloudIsBreak && subjectId && chapterId) {
        await logStudyTime(firestore, user.uid, subjectId, chapterId, duration);
-       // Auto-Task Completion Logic
        if (taskId) await updateTaskStatus(firestore, user.uid, taskId, true);
     }
 
@@ -310,7 +301,6 @@ export function StudyTimer() {
 
   if (tasksLoading) return <Card className="w-full h-80 animate-pulse rounded-xl bg-secondary/20" />;
 
-  // Display standby mode if no tasks for today
   if (!activeTask && !isBreak) {
     return (
       <Card className="rounded-xl border-none shadow-xl bg-[#1A1C3D] text-white overflow-hidden">
@@ -442,9 +432,6 @@ export function StudyTimer() {
                 
                 if (isActive && elapsedSeconds > 0) {
                    await logStudyTime(firestore, user!.uid, activeTask.subjectId, activeTask.chapterId, elapsedSeconds);
-                } else if (!isActive) {
-                   // If paused, we still log what was studied before pausing
-                   // But the handlePause already logs it. So here we just mark as complete.
                 }
                 
                 await updateTaskStatus(firestore, user!.uid, activeTask.id, true);

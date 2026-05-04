@@ -9,7 +9,7 @@ import { SubjectDistributionChart } from './SubjectDistributionChart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Clock, PieChart, BarChart, Trophy, Zap, TrendingUp, Activity, Calendar, History, BookOpen } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { subDays, format, isAfter, startOfMonth, eachDayOfInterval, isSameMonth, startOfDay, eachMonthOfInterval } from 'date-fns';
+import { subDays, format, isAfter, startOfMonth, eachDayOfInterval, isSameMonth, startOfDay, eachMonthOfInterval, startOfWeek } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -73,8 +73,9 @@ export function AnalyticsDashboard() {
       chartData = Object.values(hourlyData);
     } 
     else if (filter === 'weekly') {
-      const sevenDaysAgo = startOfDay(subDays(now, 6));
-      const interval = eachDayOfInterval({ start: sevenDaysAgo, end: now });
+      // Logic for Friday start week
+      const currentWeekStart = startOfWeek(now, { weekStartsOn: 5 });
+      const interval = eachDayOfInterval({ start: currentWeekStart, end: now });
       
       const dailyAgg: Record<string, any> = {};
       interval.forEach(day => {
@@ -82,7 +83,7 @@ export function AnalyticsDashboard() {
         dailyAgg[key] = { date: format(day, 'EEE'), key };
       });
 
-      filteredSessions = sessions.filter(s => s.date && isAfter(new Date(s.date), subDays(now, 7)));
+      filteredSessions = sessions.filter(s => s.date && isAfter(new Date(s.date), subDays(currentWeekStart, 1)));
       
       filteredSessions.forEach(s => {
         if (dailyAgg[s.date]) {
@@ -253,7 +254,6 @@ export function AnalyticsDashboard() {
         </Card>
 
         <div className="md:col-span-6 space-y-6">
-          {/* Daily Hustle Insights Chart */}
           <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between pb-2 bg-secondary/10 border-b">
               <div>
@@ -261,13 +261,13 @@ export function AnalyticsDashboard() {
                   <BarChart className="h-4 w-4 text-primary" /> Session Mapping
                 </CardTitle>
                 <CardDescription className="text-[10px] font-bold uppercase tracking-widest mt-1">
-                  {filter === 'daily' ? 'Hourly Activity Log' : `${filter} Progress Bar`}
+                  {filter === 'daily' ? 'Hourly Focus Analysis' : `${filter} Progress Log`}
                 </CardDescription>
               </div>
               {filter === 'daily' && (
                 <div className="flex items-center gap-1.5 bg-red-600/10 px-2 py-1 rounded-full border border-red-600/20">
                    <Activity className="h-2.5 w-2.5 text-red-600 animate-pulse" />
-                   <span className="text-[8px] font-black uppercase text-red-600">Live Tracker</span>
+                   <span className="text-[8px] font-black uppercase text-red-600">Live Heatmap</span>
                 </div>
               )}
             </CardHeader>
