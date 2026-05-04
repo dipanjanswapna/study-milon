@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useFirestore, useCollection, useUser, useDoc } from '@/firebase';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { ProfileSetupGate } from '@/components/dashboard/ProfileSetupGate';
 import { Header } from '@/components/dashboard/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,10 +23,7 @@ export default function ExamsPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // The filename contains '#' which is a special character in URLs. 
-    // We must ensure the browser requests it correctly by encoding the filename.
     const filename = "Eiii tomra kmn acho #exam #helicopter #milon #education #study #ssc26 #sscexam #ssc #tenthclass.mp3";
-    // Encode # as %23 for URL safety
     const audioPath = "/" + filename.split('#').join('%23');
 
     if (!audioRef.current) {
@@ -41,14 +39,12 @@ export default function ExamsPage() {
           audioRef.current?.pause();
         }
       } catch (err) {
-        console.log("Autoplay was blocked by browser. User must interact first.", err);
-        // If blocked, we keep the state as is, but visually the user might need to click toggle
+        console.log("Autoplay blocked", err);
       }
     };
 
     playAudio();
 
-    // Cleanup: Stop music when leaving the page
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -72,61 +68,63 @@ export default function ExamsPage() {
       <div className="min-h-screen bg-background text-foreground">
         <Header />
         <main className="p-4 md:p-8 max-w-5xl mx-auto space-y-8 pb-24">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="space-y-1 text-center md:text-left">
-              <div className="flex items-center justify-center md:justify-start gap-4">
-                <h1 className="text-3xl md:text-5xl font-black tracking-tighter flex items-center gap-3">
-                  <Timer className="h-10 w-10 text-primary" />
-                  Exam Countdown
-                </h1>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className={cn(
-                    "rounded-full h-12 w-12 transition-all shadow-lg",
-                    isMusicOn ? "bg-primary text-white hover:bg-primary/90" : "bg-secondary text-muted-foreground"
-                  )}
-                  onClick={toggleMusic}
-                >
-                  {isMusicOn ? <Volume2 className="h-6 w-6" /> : <VolumeX className="h-6 w-6" />}
-                </Button>
+          <ProfileSetupGate>
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="space-y-1 text-center md:text-left">
+                <div className="flex items-center justify-center md:justify-start gap-4">
+                  <h1 className="text-3xl md:text-5xl font-black tracking-tighter flex items-center gap-3">
+                    <Timer className="h-10 w-10 text-primary" />
+                    Exam Countdown
+                  </h1>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className={cn(
+                      "rounded-full h-12 w-12 transition-all shadow-lg",
+                      isMusicOn ? "bg-primary text-white hover:bg-primary/90" : "bg-secondary text-muted-foreground"
+                    )}
+                    onClick={toggleMusic}
+                  >
+                    {isMusicOn ? <Volume2 className="h-6 w-6" /> : <VolumeX className="h-6 w-6" />}
+                  </Button>
+                </div>
+                <p className="text-muted-foreground text-sm font-medium">Synchronize your hustle with the academic clock.</p>
               </div>
-              <p className="text-muted-foreground text-sm font-medium">Synchronize your hustle with the academic clock.</p>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {loading ? (
-              Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-64 rounded-[2.5rem]" />)
-            ) : exams && exams.length > 0 ? (
-              exams.map((exam) => (
-                <ExamCountdownCard 
-                  key={exam.id} 
-                  exam={exam} 
-                  isPinned={profile?.pinnedExamId === exam.id}
-                  uid={user?.uid}
-                />
-              ))
-            ) : (
-              <div className="col-span-full py-20 text-center space-y-4 bg-secondary/20 rounded-[2.5rem] border-2 border-dashed">
-                <Calendar className="h-12 w-12 mx-auto text-muted-foreground/30" />
-                <h3 className="text-xl font-bold">No Exams Scheduled</h3>
-                <p className="text-muted-foreground">Check back later for upcoming academic schedules.</p>
-              </div>
-            )}
-          </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+              {loading ? (
+                Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-64 rounded-[2.5rem]" />)
+              ) : exams && exams.length > 0 ? (
+                exams.map((exam) => (
+                  <ExamCountdownCard 
+                    key={exam.id} 
+                    exam={exam} 
+                    isPinned={profile?.pinnedExamId === exam.id}
+                    uid={user?.uid}
+                  />
+                ))
+              ) : (
+                <div className="col-span-full py-20 text-center space-y-4 bg-secondary/20 rounded-[2.5rem] border-2 border-dashed">
+                  <Calendar className="h-12 w-12 mx-auto text-muted-foreground/30" />
+                  <h3 className="text-xl font-bold">No Exams Scheduled</h3>
+                  <p className="text-muted-foreground">Check back later for upcoming academic schedules.</p>
+                </div>
+              )}
+            </div>
 
-          <Card className="rounded-[2.5rem] border-none shadow-xl bg-primary/5 p-8 flex flex-col md:flex-row items-center gap-6">
-             <div className="p-4 bg-primary/10 rounded-full shrink-0">
-                <Zap className="h-10 w-10 text-primary" />
-             </div>
-             <div className="text-center md:text-left space-y-2">
-                <h4 className="text-xl font-black tracking-tight">The Final Stretch</h4>
-                <p className="text-sm font-medium text-muted-foreground leading-relaxed">
-                   যখন পরীক্ষার ঘড়ি টিকটিক করতে শুরু করে, তখন প্রতিটি minute মূল্যবান। আপনার পড়াশোনার প্ল্যানটি এই তারিখগুলোর সাথে সামঞ্জস্যপূর্ণ করুন।
-                </p>
-             </div>
-          </Card>
+            <Card className="rounded-[2.5rem] border-none shadow-xl bg-primary/5 p-8 flex flex-col md:flex-row items-center gap-6 mt-8">
+               <div className="p-4 bg-primary/10 rounded-full shrink-0">
+                  <Zap className="h-10 w-10 text-primary" />
+               </div>
+               <div className="text-center md:text-left space-y-2">
+                  <h4 className="text-xl font-black tracking-tight">The Final Stretch</h4>
+                  <p className="text-sm font-medium text-muted-foreground leading-relaxed">
+                     যখন পরীক্ষার ঘড়ি টিকটিক করতে শুরু করে, তখন প্রতিটি minute মূল্যবান। আপনার পড়াশোনার প্ল্যানটি এই তারিখগুলোর সাথে সামঞ্জস্যপূর্ণ করুন।
+                  </p>
+               </div>
+            </Card>
+          </ProfileSetupGate>
         </main>
       </div>
     </ProtectedRoute>
@@ -143,32 +141,21 @@ function ExamCountdownCard({ exam, isPinned, uid }: { exam: any; isPinned: boole
 
   useEffect(() => {
     if (!examSeconds) return;
-
     const examDate = new Date(examSeconds * 1000);
-
     const updateTimer = () => {
       const now = new Date();
       if (isAfter(now, examDate)) {
         setTimeLeft({ d: 0, h: 0, m: 0, s: 0 });
         return;
       }
-
       const d = differenceInDays(examDate, now);
       const h = differenceInHours(examDate, now) % 24;
       const m = differenceInMinutes(examDate, now) % 60;
       const s = differenceInSeconds(examDate, now) % 60;
-
-      setTimeLeft((prev) => {
-        if (prev && prev.d === d && prev.h === h && prev.m === m && prev.s === s) {
-          return prev;
-        }
-        return { d, h, m, s };
-      });
+      setTimeLeft({ d, h, m, s });
     };
-
     updateTimer();
     const timer = setInterval(updateTimer, 1000);
-
     return () => clearInterval(timer);
   }, [examSeconds]);
 
@@ -180,8 +167,8 @@ function ExamCountdownCard({ exam, isPinned, uid }: { exam: any; isPinned: boole
       toast({
         title: isPinned ? "Exam Unpinned" : "Exam Pinned",
         description: isPinned 
-          ? "The ticker has been removed from your dashboard." 
-          : `${exam.title} ticker is now active on your dashboard.`,
+          ? "Removed from your dashboard." 
+          : `${exam.title} is now active on your dashboard.`,
       });
     } catch (e: any) {
       toast({ variant: 'destructive', title: "Error", description: e.message });
@@ -191,7 +178,6 @@ function ExamCountdownCard({ exam, isPinned, uid }: { exam: any; isPinned: boole
   };
 
   if (!examSeconds || !timeLeft) return null;
-
   const displayDate = new Date(examSeconds * 1000);
 
   return (
@@ -204,7 +190,6 @@ function ExamCountdownCard({ exam, isPinned, uid }: { exam: any; isPinned: boole
           <Badge className="bg-primary text-white font-black text-[10px] animate-pulse">PINNED</Badge>
         </div>
       )}
-      
       <CardHeader className="bg-secondary/30 pb-4">
         <div className="flex justify-between items-start mb-2">
            <Badge className="bg-primary text-white border-none font-black text-[10px] uppercase px-3">
@@ -225,7 +210,6 @@ function ExamCountdownCard({ exam, isPinned, uid }: { exam: any; isPinned: boole
           <CountdownUnit value={timeLeft.m} label="Mins" />
           <CountdownUnit value={timeLeft.s} label="Secs" />
         </div>
-
         <Button 
           variant={isPinned ? "outline" : "default"} 
           className={cn("w-full rounded-xl font-bold h-11", isPinned && "text-destructive hover:bg-destructive/10")}
@@ -233,11 +217,7 @@ function ExamCountdownCard({ exam, isPinned, uid }: { exam: any; isPinned: boole
           disabled={loading}
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-            isPinned ? (
-              <><PinOff className="h-4 w-4 mr-2" /> Unpin from Dashboard</>
-            ) : (
-              <><Pin className="h-4 w-4 mr-2" /> Pin to Dashboard</>
-            )
+            isPinned ? <><PinOff className="h-4 w-4 mr-2" /> Unpin</> : <><Pin className="h-4 w-4 mr-2" /> Pin to Dashboard</>
           )}
         </Button>
       </CardContent>
@@ -249,12 +229,11 @@ function CountdownUnit({ value, label }: { value: number; label: string }) {
   return (
     <div className="flex flex-col items-center">
        <div className="w-full aspect-square bg-slate-900 rounded-2xl flex items-center justify-center shadow-inner relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-10" />
           <span className="text-2xl md:text-4xl font-black text-white font-mono tracking-tighter">
             {String(value).padStart(2, '0')}
           </span>
        </div>
-       <span className="text-[9px] md:text-[10px] font-black uppercase text-muted-foreground mt-2 tracking-widest">{label}</span>
+       <span className="text-[9px] font-black uppercase text-muted-foreground mt-2 tracking-widest">{label}</span>
     </div>
   );
 }
