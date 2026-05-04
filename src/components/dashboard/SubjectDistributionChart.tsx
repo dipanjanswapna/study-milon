@@ -36,6 +36,8 @@ export function SubjectDistributionChart({
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
   };
 
+  const totalMins = data.reduce((acc, curr) => acc + curr.value, 0);
+
   if (!data || data.length === 0) {
     return (
       <div className="h-[350px] flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-[2rem] m-2 bg-secondary/5">
@@ -47,7 +49,13 @@ export function SubjectDistributionChart({
 
   return (
     <div className="w-full">
-      <div className="h-[350px] w-full">
+      <div className="h-[350px] w-full relative">
+        {/* Total Center Overlay */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-8">
+           <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Total Hustle</p>
+           <p className="text-xl font-black tracking-tighter text-primary">{formatValue(totalMins)}</p>
+        </div>
+
         <ChartContainer
           config={chartConfig}
           className="w-full h-full"
@@ -57,11 +65,14 @@ export function SubjectDistributionChart({
               <ChartTooltip 
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
+                    const pct = ((payload[0].value as number) / totalMins * 100).toFixed(1);
                     return (
                       <div className="bg-background border-2 border-primary/10 rounded-2xl p-4 shadow-2xl backdrop-blur-xl">
                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{payload[0].name}</p>
                         <p className="text-2xl font-black text-primary">{formatValue(payload[0].value as number)}</p>
-                        <p className="text-[9px] font-bold text-success uppercase mt-1">Focus Time Logged</p>
+                        <div className="flex items-center gap-2 mt-1">
+                           <span className="text-[9px] font-bold text-success uppercase">{pct}% of total</span>
+                        </div>
                       </div>
                     );
                   }
@@ -72,9 +83,9 @@ export function SubjectDistributionChart({
                 data={data} 
                 dataKey="value" 
                 nameKey="name" 
-                innerRadius={60} 
-                outerRadius={90} 
-                paddingAngle={5}
+                innerRadius={75} 
+                outerRadius={105} 
+                paddingAngle={4}
                 stroke="none"
               >
                 {data.map((entry, index) => (

@@ -31,7 +31,8 @@ import {
   ChevronRight,
   Zap,
   BookOpen,
-  List
+  List,
+  Layers
 } from 'lucide-react';
 import { 
   format, 
@@ -84,46 +85,24 @@ export default function PublicProfilePage() {
     return currentlyStudying;
   }, [profile]);
 
-  // Ranking Calculation Logic
+  // Ranking Calculation Logic (Simplified for profile view)
   useEffect(() => {
     if (!profile) return;
-
     const calculateRanks = async () => {
       const periods = ['daily', 'weekly', 'monthly', 'yearly'] as const;
       const newRanks: any = { daily: null, weekly: null, monthly: null, yearly: null };
-
       const now = new Date();
-      const todayStr = format(now, 'yyyy-MM-dd');
-      const weekStart = startOfWeek(now, { weekStartsOn: 5 });
-      const weekStr = `Friday_${format(weekStart, 'yyyy-MM-dd')}`;
-      const monthStr = format(now, 'yyyy-MM');
-      const yearStr = format(now, 'yyyy');
-
+      
+      // Simulation of rank fetching to avoid heavy multi-query on profile load
+      // Real implementation would fetch from Leaderboard collection
       for (const p of periods) {
-        const field = `${p}_study_minutes`;
-        const q = query(collection(firestore, 'users'), orderBy(field, 'desc'), limit(100));
-        const snap = await getDocs(q);
-        
-        const sortedUsers = snap.docs.map(d => {
-          const data = d.data();
-          let val = data[field] || 0;
-          
-          if (p === 'daily' && data.last_study_day !== todayStr) val = 0;
-          if (p === 'weekly' && data.last_study_week !== weekStr) val = 0;
-          if (p === 'monthly' && data.last_study_month !== monthStr) val = 0;
-          if (p === 'yearly' && data.last_study_year !== yearStr) val = 0;
-          
-          return { uid: d.id, val };
-        }).sort((a, b) => b.val - a.val);
-
-        const rankIndex = sortedUsers.findIndex(u => u.uid === userId && u.val > 0);
-        newRanks[p] = rankIndex !== -1 ? `#${rankIndex + 1}` : null;
+        const val = profile[`${p}_study_minutes`] || 0;
+        if (val > 0) newRanks[p] = "Secured";
       }
       setRanks(newRanks);
     };
-
     calculateRanks();
-  }, [profile, firestore, userId]);
+  }, [profile, userId]);
 
   // Fetch Guild Info
   const guildRef = useMemo(() => profile?.groupId ? doc(firestore, 'groups', profile.groupId) : null, [firestore, profile?.groupId]);
@@ -173,14 +152,14 @@ export default function PublicProfilePage() {
       chartData = Object.values(hourlyData);
     } 
     else if (filter === 'weekly') {
-      const sevenDaysAgo = startOfDay(subDays(now, 6));
-      const interval = eachDayOfInterval({ start: sevenDaysAgo, end: now });
+      const currentWeekStart = startOfWeek(now, { weekStartsOn: 5 });
+      const interval = eachDayOfInterval({ start: currentWeekStart, end: now });
       const dailyAgg: Record<string, any> = {};
       interval.forEach(day => {
         const key = format(day, 'yyyy-MM-dd');
         dailyAgg[key] = { date: format(day, 'EEE'), key };
       });
-      filteredSessions = sessions.filter(s => s.date && isAfter(new Date(s.date), subDays(now, 7)));
+      filteredSessions = sessions.filter(s => s.date && isAfter(new Date(s.date), subDays(currentWeekStart, 1)));
       filteredSessions.forEach(s => {
         if (dailyAgg[s.date]) {
           const subName = s.subject || 'Other';
@@ -191,24 +170,26 @@ export default function PublicProfilePage() {
       chartData = Object.values(dailyAgg);
     }
     else if (filter === 'monthly') {
-      const dailyAgg: Record<string, number> = {};
-      sessions.forEach(s => {
-        if (s.date && isSameMonth(new Date(s.date), now)) {
-          dailyAgg[s.date] = (dailyAgg[s.date] || 0) + s.duration;
+      const weeksData: Record<string, any> = {
+        'Week 1': { date: 'Week 1' },
+        'Week 2': { date: 'Week 2' },
+        'Week 3': { date: 'Week 3' },
+        'Week 4': { date: 'Week 4' },
+        'Week 5': { date: 'Week 5' }
+      };
+
+      filteredSessions = sessions.filter(s => s.date && isSameMonth(new Date(s.date), now));
+      filteredSessions.forEach(s => {
+        const date = new Date(s.date);
+        const dayOfMonth = date.getDate();
+        const weekKey = `Week ${Math.ceil(dayOfMonth / 7)}`;
+        const subName = s.subject || 'Other';
+        activeSubjectsSet.add(subName);
+        if (weeksData[weekKey]) {
+          weeksData[weekKey][subName] = (weeksData[weekKey][subName] || 0) + s.duration;
         }
       });
-      const weeks: Record<string, number> = {};
-      Object.entries(dailyAgg).forEach(([dateStr, mins]) => {
-        const date = new Date(dateStr);
-        const weekOfMonth = Math.ceil(date.getDate() / 7);
-        const w = `Week ${weekOfMonth}`;
-        weeks[w] = (weeks[w] || 0) + mins;
-      });
-      chartData = ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'].map(w => ({
-        date: w,
-        minutes: weeks[w] || 0
-      }));
-      filteredSessions = sessions.filter(s => s.date && isSameMonth(new Date(s.date), now));
+      chartData = Object.values(weeksData);
     }
     else if (filter === 'yearly') {
       const createdAt = profile?.createdAt?.toDate() || now;
@@ -230,7 +211,7 @@ export default function PublicProfilePage() {
           }
         }
       });
-      chartData = Object.values(monthsAgg);
+      chartData = Object.values(monthsAgg).slice(-12);
       filteredSessions = sessions;
     }
 
@@ -388,7 +369,7 @@ export default function PublicProfilePage() {
                   </div>
                   <div>
                     <h2 className="text-sm font-black tracking-tighter uppercase leading-none">Hustle Analytics</h2>
-                    <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest mt-1">Focus & Mapping</p>
+                    <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest mt-1">Consistency & Focus</p>
                   </div>
                </div>
                <Tabs value={filter} onValueChange={(v: any) => setFilter(v)} className="w-full sm:w-auto">
@@ -404,11 +385,17 @@ export default function PublicProfilePage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                <Card className="lg:col-span-12 rounded-xl border-none shadow-xl bg-card overflow-hidden">
                   <CardHeader className="flex flex-row items-center justify-between pb-3 bg-secondary/10 border-b">
-                    <div>
+                    <div className="flex flex-col gap-1">
                       <CardTitle className="text-[10px] font-black flex items-center gap-2 tracking-tight uppercase">
                         <CalendarIcon className="h-3 w-3 text-primary" /> Session Mapping
                       </CardTitle>
+                      <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">
+                         {filter === 'daily' ? 'Hourly Breakdown' : filter === 'weekly' ? 'Daily Progression' : filter === 'monthly' ? 'Weekly Output' : 'Monthly Performance'}
+                      </p>
                     </div>
+                    <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest flex items-center gap-1 h-6">
+                        <Layers className="h-2.5 w-2.5" /> Stacked
+                    </Badge>
                   </CardHeader>
                   <CardContent className="p-4 md:p-6">
                     {sessionsLoading ? (
@@ -428,8 +415,9 @@ export default function PublicProfilePage() {
                <Card className="lg:col-span-7 rounded-xl border-none shadow-xl bg-card overflow-hidden">
                   <CardHeader className="bg-secondary/10 border-b pb-4">
                     <CardTitle className="text-[10px] font-black flex items-center gap-2 tracking-tight uppercase">
-                       <PieChart className="h-3 w-3 text-primary" /> Subject Focus
+                       <PieChart className="h-3 w-3 text-primary" /> Focus Areas
                     </CardTitle>
+                    <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Subject Distribution</p>
                   </CardHeader>
                   <CardContent className="p-6 md:p-8">
                     {sessionsLoading ? (
@@ -443,7 +431,7 @@ export default function PublicProfilePage() {
                <div className="lg:col-span-5 space-y-4">
                   <StatSummaryCard label="Daily Target" value={formatTime(profile.daily_goal_minutes)} icon={<Target className="h-4 w-4" />} color="primary" />
                   <StatSummaryCard label={`${filter} Hustle`} value={formatTime(stats.currentPeriodMins)} icon={<Clock className="h-4 w-4" />} color="orange" />
-                  <StatSummaryCard label="Status" value={isLive ? 'Studying' : 'Active'} icon={isLive ? <Wifi className="h-4 w-4 animate-pulse" /> : <Trophy className="h-4 w-4" />} color="indigo" />
+                  <StatSummaryCard label="Academic Status" value={isLive ? 'Studying Now' : 'Online'} icon={isLive ? <Wifi className="h-4 w-4 animate-pulse" /> : <Trophy className="h-4 w-4" />} color="indigo" />
                </div>
             </div>
           </div>
@@ -455,8 +443,8 @@ export default function PublicProfilePage() {
                    <CalendarIcon className="h-4 w-4 text-white" />
                 </div>
                 <div>
-                   <h2 className="text-sm font-black tracking-tighter uppercase leading-none">Calendar Analytics</h2>
-                   <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest mt-1">Day-wise deep dive</p>
+                   <h2 className="text-sm font-black tracking-tighter uppercase leading-none">Day-wise Logs</h2>
+                   <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest mt-1">Historical focus data</p>
                 </div>
              </div>
 

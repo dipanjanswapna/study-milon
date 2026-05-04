@@ -7,9 +7,9 @@ import type { UserProfile } from '@/firebase/firestore/users';
 import { StudyActivityChart } from './StudyActivityChart';
 import { SubjectDistributionChart } from './SubjectDistributionChart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Clock, PieChart, BarChart, Trophy, Zap, TrendingUp, Activity, Calendar, History, BookOpen } from 'lucide-react';
+import { Clock, PieChart, BarChart, Trophy, Zap, TrendingUp, Activity, Calendar, History, BookOpen, Layers } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { subDays, format, isAfter, startOfMonth, eachDayOfInterval, isSameMonth, startOfDay, eachMonthOfInterval, startOfWeek } from 'date-fns';
+import { subDays, format, isAfter, startOfMonth, eachDayOfInterval, isSameMonth, startOfDay, eachMonthOfInterval, startOfWeek, endOfMonth, endOfWeek, addDays, differenceInDays } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -52,10 +52,7 @@ export function AnalyticsDashboard() {
       for (let i = 0; i < 24; i++) {
         const dateObj = new Date();
         dateObj.setHours(i, 0, 0, 0);
-        hourlyData[i] = { 
-          date: format(dateObj, 'h a'), 
-          hour: i 
-        };
+        hourlyData[i] = { date: format(dateObj, 'h a'), hour: i };
       }
 
       for (const session of todaySessions) {
@@ -73,7 +70,7 @@ export function AnalyticsDashboard() {
       chartData = Object.values(hourlyData);
     } 
     else if (filter === 'weekly') {
-      // Logic for Friday start week
+      // Weekly: Starts on Friday as per "Study Milon" custom cycle
       const currentWeekStart = startOfWeek(now, { weekStartsOn: 5 });
       const interval = eachDayOfInterval({ start: currentWeekStart, end: now });
       
@@ -96,29 +93,37 @@ export function AnalyticsDashboard() {
       chartData = Object.values(dailyAgg);
     }
     else if (filter === 'monthly') {
-      const dailyAgg: Record<string, number> = {};
-      sessions.forEach(s => {
-        if (s.date && isSameMonth(new Date(s.date), now)) {
-          dailyAgg[s.date] = (dailyAgg[s.date] || 0) + s.duration;
+      // Monthly: Grouped by Weeks (Week 1, Week 2...)
+      const monthStart = startOfMonth(now);
+      const monthEnd = endOfMonth(now);
+      
+      const weeksData: Record<string, any> = {
+        'Week 1': { date: 'Week 1' },
+        'Week 2': { date: 'Week 2' },
+        'Week 3': { date: 'Week 3' },
+        'Week 4': { date: 'Week 4' },
+        'Week 5': { date: 'Week 5' }
+      };
+
+      filteredSessions = sessions.filter(s => s.date && isSameMonth(new Date(s.date), now));
+      
+      filteredSessions.forEach(s => {
+        const date = new Date(s.date);
+        const dayOfMonth = date.getDate();
+        const weekKey = `Week ${Math.ceil(dayOfMonth / 7)}`;
+        const subName = s.subject || 'Other';
+        activeSubjectsSet.add(subName);
+        
+        if (weeksData[weekKey]) {
+          weeksData[weekKey][subName] = (weeksData[weekKey][subName] || 0) + s.duration;
         }
       });
 
-      const weeks: Record<string, number> = {};
-      Object.entries(dailyAgg).forEach(([dateStr, mins]) => {
-        const date = new Date(dateStr);
-        const weekOfMonth = Math.ceil(date.getDate() / 7);
-        const w = `Week ${weekOfMonth}`;
-        weeks[w] = (weeks[w] || 0) + mins;
-      });
-
-      chartData = ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'].map(w => ({
-        date: w,
-        minutes: weeks[w] || 0
-      }));
-      filteredSessions = sessions.filter(s => s.date && isSameMonth(new Date(s.date), now));
+      chartData = Object.values(weeksData);
     }
     else if (filter === 'yearly') {
-      const createdAt = profile?.createdAt?.toDate() || now;
+      // Yearly: Grouped by Months
+      const createdAt = profile?.createdAt?.toDate() || subDays(now, 365);
       const startOfJoinMonth = startOfMonth(createdAt);
       const monthsInterval = eachMonthOfInterval({ start: startOfJoinMonth, end: now });
 
@@ -128,6 +133,7 @@ export function AnalyticsDashboard() {
         monthsAgg[mKey] = { date: mKey };
       });
 
+      filteredSessions = sessions;
       sessions.forEach(s => {
         if (s.date) {
           const date = new Date(s.date);
@@ -140,8 +146,7 @@ export function AnalyticsDashboard() {
         }
       });
 
-      chartData = Object.values(monthsAgg);
-      filteredSessions = sessions;
+      chartData = Object.values(monthsAgg).slice(-12); // Show last 12 months
     }
 
     const currentPeriodMins = filteredSessions.reduce((acc, curr) => acc + curr.duration, 0);
@@ -153,8 +158,10 @@ export function AnalyticsDashboard() {
     }
     const subjectData = Object.entries(subjectMinutes).map(([name, value]) => ({ name, value }));
 
+    // Consistency logic
     const uniqueDays = new Set(filteredSessions.map(s => s.date)).size;
-    const consistencyFactor = (uniqueDays / Math.max(1, chartData.length));
+    const periodDays = filter === 'daily' ? 1 : filter === 'weekly' ? 7 : filter === 'monthly' ? 30 : 365;
+    const consistencyFactor = (uniqueDays / Math.max(1, Math.min(periodDays, differenceInDays(now, profile?.createdAt?.toDate() || now) + 1)));
     const goalMins = profile?.daily_goal_minutes || 360;
     const volumeFactor = Math.min(1.2, (profile?.daily_study_minutes || 0) / goalMins);
     const hustleScore = Math.round(consistencyFactor * volumeFactor * 100);
@@ -222,7 +229,7 @@ export function AnalyticsDashboard() {
             </div>
             <div className="pt-1">
               <div className="flex justify-between text-[9px] font-black uppercase tracking-widest mb-1.5">
-                 <span>Hustle Score</span>
+                 <span>Consistency Score</span>
                  <span>{stats.hustleScore}%</span>
               </div>
               <Progress value={stats.hustleScore} className="h-1.5 bg-white/20" />
@@ -245,7 +252,7 @@ export function AnalyticsDashboard() {
             </div>
             <div className="pt-1">
               <div className="flex justify-between text-[9px] font-black uppercase tracking-widest mb-1.5 text-primary">
-                 <span>Progress</span>
+                 <span>Lifetime Progress</span>
                  <span>{((profile?.total_study_minutes || 0) / 1000000 * 100).toFixed(4)}%</span>
               </div>
               <Progress value={((profile?.total_study_minutes || 0) / 1000000 * 100)} className="h-1.5 bg-secondary" />
@@ -261,15 +268,14 @@ export function AnalyticsDashboard() {
                   <BarChart className="h-4 w-4 text-primary" /> Session Mapping
                 </CardTitle>
                 <CardDescription className="text-[10px] font-bold uppercase tracking-widest mt-1">
-                  {filter === 'daily' ? 'Hourly Focus Analysis' : `${filter} Progress Log`}
+                  {filter === 'daily' ? 'Hourly Focus Analysis' : 
+                   filter === 'weekly' ? 'Daily Consistency (Fri-Thu)' : 
+                   filter === 'monthly' ? 'Weekly Output Breakdown' : 'Monthly Performance Tracking'}
                 </CardDescription>
               </div>
-              {filter === 'daily' && (
-                <div className="flex items-center gap-1.5 bg-red-600/10 px-2 py-1 rounded-full border border-red-600/20">
-                   <Activity className="h-2.5 w-2.5 text-red-600 animate-pulse" />
-                   <span className="text-[8px] font-black uppercase text-red-600">Live Heatmap</span>
-                </div>
-              )}
+              <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
+                 <Layers className="h-2.5 w-2.5" /> Stacked Subjects
+              </Badge>
             </CardHeader>
             <CardContent className="p-4 pt-4">
               <StudyActivityChart 
@@ -288,6 +294,9 @@ export function AnalyticsDashboard() {
                 <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-tight">
                   <PieChart className="h-4 w-4 text-primary" /> Focus Areas
                 </CardTitle>
+                <CardDescription className="text-[10px] font-bold uppercase tracking-widest">
+                  Subject Distribution for this {filter}
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-4">
                 <SubjectDistributionChart data={stats.subjectData} />
@@ -297,7 +306,7 @@ export function AnalyticsDashboard() {
             <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
                <CardHeader className="bg-secondary/10 border-b pb-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-tight">
-                  <History className="h-4 w-4 text-primary" /> Session Logs
+                  <History className="h-4 w-4 text-primary" /> Recent Logs
                 </CardTitle>
                 <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest">{stats.filteredSessions.length} Logs</Badge>
               </CardHeader>
@@ -305,7 +314,7 @@ export function AnalyticsDashboard() {
                 <ScrollArea className="h-[350px]">
                   {stats.filteredSessions.length > 0 ? (
                     <div className="divide-y">
-                      {stats.filteredSessions.map((session, idx) => (
+                      {stats.filteredSessions.slice(0, 20).map((session, idx) => (
                         <div key={idx} className="p-4 hover:bg-secondary/10 transition-colors flex items-center justify-between gap-4">
                           <div className="flex items-center gap-3">
                              <div className="w-10 h-10 rounded-lg bg-primary/5 flex items-center justify-center text-primary shadow-sm border border-primary/10">
@@ -320,7 +329,7 @@ export function AnalyticsDashboard() {
                           </div>
                           <div className="text-right">
                              <p className="text-sm font-black text-primary tabular-nums">{formatStudyTime(session.duration)}</p>
-                             <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Logged</p>
+                             <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Focused</p>
                           </div>
                         </div>
                       ))}
