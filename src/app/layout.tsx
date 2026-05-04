@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description: 'Join the elite community of students tracking their way to success. Set goals, join guilds, and conquer the leaderboard with Study Milon.',
   keywords: ['study tracking', 'student productivity', 'academic goals', 'study guilds', 'study milon', 'study timer', 'hustle tracking'],
   manifest: '/manifest.json',
-  metadataBase: new URL('https://study-milon.vercel.app'),
+  metadataBase: new URL('https://studymilon.vercel.app'),
   openGraph: {
     title: 'Study Milon | The Ultimate Study Tracker',
     description: 'Track your hustle to success. Join study guilds and rank globally.',

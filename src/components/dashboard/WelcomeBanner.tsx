@@ -29,7 +29,8 @@ export function WelcomeBanner() {
           src={welcomeImage.imageUrl}
           alt={welcomeImage.description}
           fill
-          className="object-cover transition-transform duration-[2000ms] group-hover:scale-110"
+          className="object-cover transition-transform group-hover:scale-110"
+          style={{ transitionDuration: '2000ms' }}
           data-ai-hint={welcomeImage.imageHint}
           priority
         />
