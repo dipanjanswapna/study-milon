@@ -32,16 +32,17 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  // RTDB: Fetch rankings with optimized subscription
+  // RTDB: Fetch rankings with optimized subscription (Quota Optimized)
   useEffect(() => {
     setLoading(true);
-    // Quota Protection: RTDB path for daily standings
+    // RTDB path for standings (bandwidth based, saves Firestore read/write quota)
     const leaderboardRef = ref(database, `leaderboards/${timeFilter}`);
     const topRankingsQuery = rtdbQuery(leaderboardRef, orderByChild('minutes'), limitToLast(100));
 
     const unsubscribe = onValue(topRankingsQuery, (snapshot) => {
       const data = snapshot.val();
       if (data) {
+        // RTDB data is an object, convert to sorted array
         const sortedData = Object.entries(data)
           .map(([uid, val]: [string, any]) => ({
             uid,
@@ -91,10 +92,10 @@ export default function LeaderboardPage() {
                   <div className="space-y-0.5 text-center md:text-left">
                     <div className="inline-flex items-center gap-1 bg-primary/20 backdrop-blur-lg px-2 py-0.5 rounded-full border border-white/10 text-[8px] font-black text-primary-foreground uppercase tracking-widest">
                        <Zap className="h-2 w-2 fill-current" />
-                       Real-time Quota Optimized STANDINGS
+                       Real-time Standings
                     </div>
                     <h1 className="text-xl md:text-2xl font-black tracking-tighter leading-none">Global Contenders</h1>
-                    <p className="text-white/60 font-medium text-[10px] md:text-xs">Live updates powered by RTDB (Saves Firestore Quota).</p>
+                    <p className="text-white/60 font-medium text-[10px] md:text-xs">Live updates powered by Realtime Database.</p>
                   </div>
                   <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
                      <RefreshCw className={cn("h-3 w-3 text-primary", loading && "animate-spin")} />

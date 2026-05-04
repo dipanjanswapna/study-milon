@@ -27,7 +27,7 @@ const SILENT_AUDIO_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEA
 const ALARM_AUDIO_PATH = "/WhatsApp Audio 2026-05-02 at 4.38.00 PM.mp3";
 
 // QUOTA PROTECTION LIMITS
-const RTDB_HEARTBEAT_INTERVAL = 60; // Update RTDB every 60s (Low cost)
+const RTDB_HEARTBEAT_INTERVAL = 60; // Update RTDB every 60s (Low cost, high speed)
 const FIRESTORE_SYNC_THRESHOLD = 300; // Only force Firestore sync every 5 mins or on Pause/End
 
 export function StudyTimer() {
@@ -68,7 +68,7 @@ export function StudyTimer() {
   const alarmRef = useRef<HTMLAudioElement | null>(null);
   const lastRTDBSyncRef = useRef<number>(0);
 
-  // RTDB Update: Optimized for high-frequency live leaderboard
+  // RTDB Update: Optimized for high-frequency live leaderboard (Uses bandwidth, not ops)
   const updateRTDBLiveStats = useCallback(async (isStudying: boolean, currentMinutes: number) => {
     if (!user || !profile) return;
     
@@ -94,7 +94,7 @@ export function StudyTimer() {
       setIsActive(true);
       audioRef.current?.play().catch(() => {});
       
-      // Firestore: Anchor start time once
+      // Firestore: Anchor start time once. Total writes: 1
       const newSession: CurrentSession = {
         startTime: now,
         lastSyncTime: now,
@@ -127,7 +127,7 @@ export function StudyTimer() {
       setIsActive(false);
       audioRef.current?.pause();
 
-      // Firestore: Batch sync final time on pause
+      // Firestore: Final sync on pause. Total writes for session: 2
       if (elapsedTotalSeconds > 0 && !isBreak) {
         await logStudyTime(firestore, user.uid, profile.currentSession.subjectId, profile.currentSession.chapterId, elapsedTotalSeconds);
       }
@@ -144,7 +144,7 @@ export function StudyTimer() {
     }
   };
 
-  // TICKER & RTDB HEARTBEAT
+  // TICKER & RTDB HEARTBEAT (No Firestore writes here)
   useEffect(() => {
     let ticker: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
@@ -156,7 +156,7 @@ export function StudyTimer() {
         
         setTimeLeft(remaining);
 
-        // QUOTA PROTECTOR: RTDB Heartbeat every 60s
+        // QUOTA PROTECTOR: RTDB Heartbeat every 60s for Leaderboard sync
         if (elapsed > 0 && elapsed % RTDB_HEARTBEAT_INTERVAL === 0 && elapsed !== lastRTDBSyncRef.current) {
            lastRTDBSyncRef.current = elapsed;
            const currentTotalMins = (profile?.daily_study_minutes || 0) + Math.floor(elapsed / 60);
@@ -176,7 +176,7 @@ export function StudyTimer() {
     if (!user || !profile?.currentSession) return;
     const { subjectId, chapterId, taskId, isBreak: cloudIsBreak, duration } = profile.currentSession;
 
-    // Firestore: Final batch write for the whole session
+    // Firestore: Final batch write. Total writes for full session: 2
     if (!cloudIsBreak && subjectId && chapterId) {
        await logStudyTime(firestore, user.uid, subjectId, chapterId, duration);
        if (taskId) await updateTaskStatus(firestore, user.uid, taskId, true);
@@ -323,7 +323,7 @@ export function StudyTimer() {
               className="w-full h-10 rounded-xl font-black text-[9px] uppercase tracking-widest bg-white/10 text-white hover:bg-white/20 border border-white/10"
               onClick={async () => {
                 const now = Date.now();
-                const elapsedSeconds = Math.floor((now - profile.currentSession?.startTime) / 1000);
+                const elapsedSeconds = Math.floor((now - (profile.currentSession?.startTime || now)) / 1000);
                 
                 if (isActive && elapsedSeconds > 0) {
                    await logStudyTime(firestore, user!.uid, activeTask.subjectId, activeTask.chapterId, elapsedSeconds);

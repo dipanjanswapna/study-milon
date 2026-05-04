@@ -131,12 +131,13 @@ export async function updateChapterStatus(
 /**
  * Optimized precision logging system.
  * Uses increments to save Firebase writes and handles time overflows.
+ * Only called on session pause/end to minimize Firestore writes.
  */
 export async function logStudyTime(
     db: Firestore,
     userId: string,
-    subjectId: string,
-    chapterId: string,
+    subjectId: string | null,
+    chapterId: string | null,
     seconds: number
 ) {
     if (seconds <= 0 || !subjectId || !chapterId) return;
@@ -170,8 +171,7 @@ export async function logStudyTime(
 
         const userUpdate: any = {
             last_active_date: serverTimestamp(),
-            isStudying: true,
-            "currentSession.lastSyncTime": Date.now() 
+            isStudying: false, // Ensure state reset
         };
 
         const isNewDay = userData.last_study_day !== dateStr;
@@ -182,7 +182,7 @@ export async function logStudyTime(
         let minutesToAdd = 0;
         let finalPartialSeconds = 0;
 
-        // Calculate total seconds to handle fractional minutes
+        // Calculate total seconds to handle fractional minutes across sessions
         const totalSeconds = currentPartialSeconds + seconds;
         minutesToAdd = Math.floor(totalSeconds / 60);
         finalPartialSeconds = totalSeconds % 60;
