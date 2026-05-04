@@ -6,12 +6,14 @@ import { collection, query, orderBy, doc } from 'firebase/firestore';
 import type { UserProfile } from '@/firebase/firestore/users';
 import { StudyActivityChart } from './StudyActivityChart';
 import { SubjectDistributionChart } from './SubjectDistributionChart';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, PieChart, BarChart, Trophy, Zap, TrendingUp, Activity } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Clock, PieChart, BarChart, Trophy, Zap, TrendingUp, Activity, Calendar, History, BookOpen } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { subDays, format, isAfter, startOfMonth, eachDayOfInterval, isSameMonth, startOfDay, eachMonthOfInterval } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 
 type FilterType = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
@@ -34,7 +36,7 @@ export function AnalyticsDashboard() {
   const { data: sessions, loading: sessionsLoading } = useCollection<any>(sessionsQuery);
 
   const stats = useMemo(() => {
-    if (!sessions) return { chartData: [], subjectData: [], hustleScore: 0, currentPeriodMins: 0, activeSubjects: [] };
+    if (!sessions) return { chartData: [], subjectData: [], hustleScore: 0, currentPeriodMins: 0, activeSubjects: [], filteredSessions: [] };
 
     const now = new Date();
     let chartData: any[] = [];
@@ -161,7 +163,8 @@ export function AnalyticsDashboard() {
       subjectData, 
       hustleScore, 
       currentPeriodMins, 
-      activeSubjects: Array.from(activeSubjectsSet) 
+      activeSubjects: Array.from(activeSubjectsSet),
+      filteredSessions
     };
   }, [sessions, filter, profile]);
 
@@ -250,17 +253,21 @@ export function AnalyticsDashboard() {
         </Card>
 
         <div className="md:col-span-6 space-y-6">
+          {/* Daily Hustle Insights Chart */}
           <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between pb-2 bg-secondary/10 border-b">
               <div>
                 <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-tight">
                   <BarChart className="h-4 w-4 text-primary" /> Session Mapping
                 </CardTitle>
+                <CardDescription className="text-[10px] font-bold uppercase tracking-widest mt-1">
+                  {filter === 'daily' ? 'Hourly Activity Log' : `${filter} Progress Bar`}
+                </CardDescription>
               </div>
               {filter === 'daily' && (
                 <div className="flex items-center gap-1.5 bg-red-600/10 px-2 py-1 rounded-full border border-red-600/20">
                    <Activity className="h-2.5 w-2.5 text-red-600 animate-pulse" />
-                   <span className="text-[8px] font-black uppercase text-red-600">Live</span>
+                   <span className="text-[8px] font-black uppercase text-red-600">Live Tracker</span>
                 </div>
               )}
             </CardHeader>
@@ -275,16 +282,59 @@ export function AnalyticsDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
-            <CardHeader className="bg-secondary/10 border-b pb-3">
-              <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-tight">
-                <PieChart className="h-4 w-4 text-primary" /> Focus Areas
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <SubjectDistributionChart data={stats.subjectData} />
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
+              <CardHeader className="bg-secondary/10 border-b pb-3">
+                <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-tight">
+                  <PieChart className="h-4 w-4 text-primary" /> Focus Areas
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <SubjectDistributionChart data={stats.subjectData} />
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
+               <CardHeader className="bg-secondary/10 border-b pb-3 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-tight">
+                  <History className="h-4 w-4 text-primary" /> Session Logs
+                </CardTitle>
+                <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest">{stats.filteredSessions.length} Logs</Badge>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ScrollArea className="h-[350px]">
+                  {stats.filteredSessions.length > 0 ? (
+                    <div className="divide-y">
+                      {stats.filteredSessions.map((session, idx) => (
+                        <div key={idx} className="p-4 hover:bg-secondary/10 transition-colors flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                             <div className="w-10 h-10 rounded-lg bg-primary/5 flex items-center justify-center text-primary shadow-sm border border-primary/10">
+                                <BookOpen className="h-5 w-5" />
+                             </div>
+                             <div className="min-w-0">
+                                <p className="text-sm font-bold truncate">{session.subject || 'Focus Session'}</p>
+                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">
+                                   <Calendar className="h-2.5 w-2.5" /> {session.date}
+                                </div>
+                             </div>
+                          </div>
+                          <div className="text-right">
+                             <p className="text-sm font-black text-primary tabular-nums">{formatStudyTime(session.duration)}</p>
+                             <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Logged</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
+                       <Zap className="h-10 w-10 text-muted-foreground/20" />
+                       <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">No Sessions Found</p>
+                    </div>
+                  )}
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

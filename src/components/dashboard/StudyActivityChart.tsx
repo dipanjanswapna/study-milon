@@ -32,7 +32,7 @@ export function StudyActivityChart({ data, showTargetLine, targetValue = 360, sc
       return (
         <div className="bg-background/95 backdrop-blur-xl border-2 border-primary/10 rounded-2xl p-4 shadow-2xl">
           <div className="flex flex-col mb-3">
-             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Session Log</p>
+             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Focus Mapping</p>
              <p className="text-sm font-black text-primary">{label}</p>
           </div>
           <div className="space-y-2">
@@ -47,7 +47,7 @@ export function StudyActivityChart({ data, showTargetLine, targetValue = 360, sc
             ))}
             <div className="pt-2 border-t border-primary/10 mt-2">
                <div className="flex items-center justify-between gap-6 text-primary">
-                  <span className="text-[10px] font-black uppercase tracking-widest">Total Focus:</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">Total Focused:</span>
                   <span className="text-sm font-black">{total} mins</span>
                </div>
             </div>
@@ -108,7 +108,7 @@ export function StudyActivityChart({ data, showTargetLine, targetValue = 360, sc
                 stackId="a"
                 fill={`hsl(var(--chart-${(i % 5) + 1}))`}
                 radius={i === subjects.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-                barSize={scrollable ? 32 : undefined}
+                barSize={scrollable ? 40 : undefined}
                 animationDuration={500}
               />
             ))
@@ -117,7 +117,7 @@ export function StudyActivityChart({ data, showTargetLine, targetValue = 360, sc
               dataKey="minutes" 
               fill="var(--color-minutes)" 
               radius={[6, 6, 0, 0]} 
-              barSize={scrollable ? 32 : undefined}
+              barSize={scrollable ? 40 : undefined}
               animationDuration={500}
             />
           )}
@@ -127,7 +127,7 @@ export function StudyActivityChart({ data, showTargetLine, targetValue = 360, sc
   );
 
   if (scrollable) {
-    // Dynamic width based on data points to ensure bars don't get too thin
+    // Dynamic width based on data points to ensure bars don't get too thin (24h mapping)
     const minWidth = Math.max(800, data.length * 60);
     return (
       <div className="w-full">

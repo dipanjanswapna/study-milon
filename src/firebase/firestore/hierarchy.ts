@@ -130,7 +130,7 @@ export async function updateChapterStatus(
 
 /**
  * Robust precision logging system with full period boundary protection (Daily, Weekly, Monthly, Yearly).
- * Saves to users/{uid} and creates session maps in users/{uid}/studySessions.
+ * Saves to users/{uid} and creates session maps in users/{uid}/studySessions with hourly breakdown.
  */
 export async function logStudyTime(
     db: Firestore,
@@ -201,6 +201,8 @@ export async function logStudyTime(
         if (minutesToAdd > 0) {
             userUpdate.total_study_minutes = increment(minutesToAdd);
             batch.update(chapterRef, { time_spent: increment(minutesToAdd) });
+            
+            // Precision Session Logging with Hourly Breakdown for the Insights Graph
             batch.set(sessionRef, {
               duration: increment(minutesToAdd),
               [`hourlyBreakdown.${hour}`]: increment(minutesToAdd),

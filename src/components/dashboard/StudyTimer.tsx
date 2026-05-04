@@ -16,7 +16,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, ArrowRight, ListTodo, CheckCircle2, Target, Zap, Wifi, FastForward, Clock } from 'lucide-react';
+import { Play, Pause, ArrowRight, ListTodo, CheckCircle2, Target, Zap, Wifi, FastForward, Clock, SkipForward } from 'lucide-react';
 import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { format, startOfWeek } from 'date-fns';
@@ -57,7 +57,7 @@ export function StudyTimer() {
       .sort((a, b) => (a.order || 0) - (b.order || 0));
   }, [rawTasks]);
 
-  // Elite Focus Logic: Auto-grab the first incomplete task
+  // Elite Focus Logic: Auto-grab the first incomplete task from today's roadmap
   const activeTask = incompleteTasks[0] || null;
 
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -99,7 +99,7 @@ export function StudyTimer() {
     update(ref(database), updates);
   }, [user, profile, database]);
 
-  // Unix Timestamp Recovery Logic
+  // Unix Timestamp Recovery Logic (The "Unstoppable" part)
   useEffect(() => {
     if (profile?.currentSession?.status === 'active' && profile.currentSession.startTime) {
       const now = Date.now();
@@ -112,6 +112,7 @@ export function StudyTimer() {
         setTimeLeft(remaining);
         setSessionDate(profile.last_study_day || todayStr);
       } else {
+        // If app was closed and timer finished while closed, handle completion now
         handleSessionComplete();
       }
     } else if (profile?.currentSession?.status === 'paused') {
@@ -119,7 +120,7 @@ export function StudyTimer() {
       setTimeLeft(profile.currentSession.duration);
       setIsBreak(profile.currentSession.isBreak);
     } else {
-      // Idle state: set timer to active task duration
+      // Idle state: Auto-prime the timer with the first incomplete task duration
       if (activeTask && !isActive && !isBreak) {
         setTimeLeft(activeTask.duration * 60);
       }
@@ -128,7 +129,7 @@ export function StudyTimer() {
 
   const handleStart = async () => {
     if (!user || (!activeTask && !isBreak)) {
-      if (!isBreak) toast({ variant: 'destructive', title: "Roadmap Empty", description: "Please add a task to begin focus." });
+      if (!isBreak) toast({ variant: 'destructive', title: "Roadmap Empty", description: "আজকের জন্য কোনো টাস্ক নেই। নতুন টাস্ক যোগ করুন।" });
       return;
     }
 
@@ -190,7 +191,7 @@ export function StudyTimer() {
     });
   };
 
-  // Main Ticker Loop
+  // Main Unstoppable Ticker Loop
   useEffect(() => {
     let ticker: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
@@ -247,8 +248,8 @@ export function StudyTimer() {
     
     setIsActive(false);
     toast({ 
-      title: "New Period Started", 
-      description: "Hustle cycles have been synchronized.",
+      title: "New Day Started", 
+      description: "রাত ১২টা বাজার কারণে সেশনটি আগের দিনের জন্য ক্লোজ করা হয়েছে।",
       duration: 5000
     });
     
@@ -259,9 +260,10 @@ export function StudyTimer() {
     if (!user || !profile?.currentSession) return;
     const { subjectId, chapterId, taskId, isBreak: cloudIsBreak, duration } = profile.currentSession;
 
+    // Log the planned duration (since timer finished)
     if (!cloudIsBreak && subjectId && chapterId) {
        await logStudyTime(firestore, user.uid, subjectId, chapterId, duration);
-       // Auto-Task Completion
+       // Auto-Task Completion Logic
        if (taskId) await updateTaskStatus(firestore, user.uid, taskId, true);
     }
 
@@ -287,8 +289,8 @@ export function StudyTimer() {
     });
     
     toast({ 
-      title: isBreak ? "Break Over!" : "Objective Secured!", 
-      description: isBreak ? "Time to resume deep focus." : "Task marked as Done. Next objective loaded.",
+      title: isBreak ? "ব্রেক শেষ!" : "চ্যাপ্টার শেষ!", 
+      description: isBreak ? "এখন আবার পড়াশোনায় ফিরুন।" : "টাস্কটি 'Done' হিসেবে মার্ক করা হয়েছে। পরবর্তী টাস্ক রেডি।",
     });
   };
 
@@ -327,7 +329,7 @@ export function StudyTimer() {
           <div className="space-y-2">
              <h3 className="text-xl font-black tracking-tight">Standby Mode</h3>
              <p className="text-white/40 text-[10px] uppercase font-bold tracking-[0.2em] max-w-xs mx-auto leading-relaxed">
-               Your roadmap for today is empty. Add a study objective to initialize the focus sequence.
+               আজকের রোডম্যাপ খালি। পড়াশোনা শুরু করতে আগে একটি টাস্ক যোগ করুন।
              </p>
           </div>
           <Button onClick={() => router.push('/todo')} className="rounded-xl px-8 h-12 font-black gap-2 bg-white text-indigo-900 shadow-xl text-xs hover:scale-105 transition-all active:scale-95 group">
@@ -412,18 +414,20 @@ export function StudyTimer() {
               {isActive ? 'PAUSE' : 'START'}
             </Button>
             
-            {isBreak && (
+            {(isBreak || isActive) && (
               <Button 
                 variant="outline" 
                 size="icon" 
                 className="h-14 w-14 rounded-xl bg-white/5 border-white/10 text-white hover:bg-white/10"
-                onClick={() => {
+                onClick={async () => {
+                  if (isActive) await handlePause();
                   setIsActive(false);
                   setIsBreak(false);
                   updateUserProfile(firestore, user!.uid, { "currentSession.status": "idle", isStudying: false });
+                  toast({ title: "Session Skipped" });
                 }}
               >
-                <FastForward className="h-5 w-5" />
+                <SkipForward className="h-5 w-5" />
               </Button>
             )}
           </div>
@@ -438,6 +442,9 @@ export function StudyTimer() {
                 
                 if (isActive && elapsedSeconds > 0) {
                    await logStudyTime(firestore, user!.uid, activeTask.subjectId, activeTask.chapterId, elapsedSeconds);
+                } else if (!isActive) {
+                   // If paused, we still log what was studied before pausing
+                   // But the handlePause already logs it. So here we just mark as complete.
                 }
                 
                 await updateTaskStatus(firestore, user!.uid, activeTask.id, true);
@@ -449,7 +456,7 @@ export function StudyTimer() {
                   "currentSession.startTime": null
                 });
                 
-                toast({ title: "Objective Secured!", description: "Next task will be automatically loaded." });
+                toast({ title: "Objective Secured!", description: "স্বয়ংক্রিয়ভাবে পরবর্তী টাস্ক লোড হচ্ছে।" });
               }}
             >
               <CheckCircle2 className="mr-2 h-4 w-4" /> Finish Early
