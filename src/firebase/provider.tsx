@@ -2,12 +2,14 @@
 import type { FirebaseApp } from 'firebase/app';
 import type { Auth } from 'firebase/auth';
 import type { Firestore } from 'firebase/firestore';
+import type { Database } from 'firebase/database';
 import React, { createContext, useContext } from 'react';
 
 interface FirebaseContextValue {
   firebaseApp: FirebaseApp;
   auth: Auth;
   firestore: Firestore;
+  database: Database;
 }
 
 const FirebaseContext = createContext<FirebaseContextValue | null>(null);
@@ -34,3 +36,4 @@ export const useFirebase = () => {
 export const useFirebaseApp = () => useFirebase().firebaseApp;
 export const useAuth = () => useFirebase().auth;
 export const useFirestore = () => useFirebase().firestore;
+export const useDatabase = () => useFirebase().database;
