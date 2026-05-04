@@ -15,7 +15,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, Clock, ArrowRight, ListTodo, CheckCircle2, Target, Zap, Wifi, FastForward, Coffee } from 'lucide-react';
+import { Play, Pause, Clock, ArrowRight, ListTodo, CheckCircle2, Target, Zap, Wifi, FastForward } from 'lucide-react';
 import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -52,6 +52,7 @@ export function StudyTimer() {
       .sort((a, b) => (a.order || 0) - (b.order || 0));
   }, [rawTasks]);
 
+  // STRICT RULE: Timer always follows the FIRST incomplete task from the Roadmap
   const activeTask = incompleteTasks[0] || null;
   const upcomingTasks = incompleteTasks.slice(1, 3);
 
@@ -66,7 +67,7 @@ export function StudyTimer() {
   const initializedFromCloud = useRef(false);
   const todayStrRef = useRef<string>(format(new Date(), 'yyyy-MM-dd'));
 
-  // Sync timeLeft with activeTask ONLY if idle
+  // Ensure timer value is ALWAYS derived from the Focus Roadmap task duration when idle
   useEffect(() => {
     if (activeTask && !isActive && !isBreak && profile?.currentSession?.status === 'idle') {
       setTimeLeft(activeTask.duration * 60);
@@ -94,17 +95,26 @@ export function StudyTimer() {
     return Math.min(100, (currentSeconds / goalSeconds) * 100);
   }, [profile, isActive, isBreak]); 
 
+  // PRECISION SYNC: Only logs time if tied to a Focus Roadmap Task
   const performSync = useCallback(async (secondsToSync: number) => {
     if (!user || !activeTask || isBreak || secondsToSync <= 0) return;
+    
+    // Strict Guard: Prevent logging if no subject or chapter is identified in the roadmap
+    if (!activeTask.subjectId || !activeTask.chapterId) {
+      console.warn("Logging prevented: Missing roadmap identifiers.");
+      return;
+    }
+
     try {
       await logStudyTime(firestore, user.uid, activeTask.subjectId, activeTask.chapterId, secondsToSync);
       lastSyncTimestampRef.current = Date.now();
     } catch (e) {
-      console.error("Precision sync failed:", e);
+      console.error("Strict Roadmap Sync failed:", e);
     }
   }, [user, activeTask, isBreak, firestore]);
 
   const handleStart = async () => {
+    // Only allow starting if there's a Roadmap task or it's a break
     if (!isActive && user && (activeTask || isBreak)) {
       const now = Date.now();
       setIsActive(true);
@@ -126,6 +136,12 @@ export function StudyTimer() {
         currentSession: newSession as any, 
         isStudying: !isBreak,
         last_active_date: serverTimestamp()
+      });
+    } else if (!activeTask && !isBreak) {
+      toast({
+        variant: 'destructive',
+        title: "Roadmap Empty",
+        description: "Please add a task to your planner before engaging focus mode."
       });
     }
   };
@@ -190,7 +206,6 @@ export function StudyTimer() {
 
   const handleSkip = async () => {
     if (!user) return;
-    
     if (isBreak) {
       setIsActive(false);
       setIsBreak(false);
@@ -282,7 +297,7 @@ export function StudyTimer() {
       }
       initializedFromCloud.current = true;
     }
-  }, [profile, firestore, user, toast]);
+  }, [profile, firestore, user]);
 
   useEffect(() => {
     audioRef.current = new Audio(SILENT_AUDIO_URI);
@@ -303,10 +318,9 @@ export function StudyTimer() {
         const newTimeLeft = Math.max(0, totalDuration - elapsedSinceStart);
         setTimeLeft(newTimeLeft);
 
-        // AUTO-RESET PROTECTION: Detect Midnight Transition
+        // MIDNIGHT RESET PROTECTION
         const currentDayStr = format(now, 'yyyy-MM-dd');
         if (currentDayStr !== todayStrRef.current && !isBreak) {
-          // Boundary crossed! Force a sync for the time up to midnight
           const elapsed = Math.floor((nowTime - lastSyncTimestampRef.current) / 1000);
           if (elapsed > 0) {
             performSync(elapsed);
@@ -351,7 +365,7 @@ export function StudyTimer() {
               <CardTitle className="font-headline uppercase text-white">Focus Roadmap</CardTitle>
             </div>
             <CardDescription className="text-blue-100/70">
-              Deploy your sequence in the planner.
+              Your academic sequence is empty for today.
             </CardDescription>
           </div>
         </CardHeader>
@@ -360,13 +374,13 @@ export function StudyTimer() {
             <ListTodo className="h-10 w-10 text-white/40" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-xl font-bold font-headline">No Active Objectives</h3>
+            <h3 className="text-xl font-bold font-headline">No Active Roadmap</h3>
             <p className="text-blue-100/60 text-sm max-w-xs mx-auto">
-              Ready to hustle? Build your roadmap to begin tracking.
+              Time only logs when tied to a Focus Roadmap objective. Build yours to begin.
             </p>
           </div>
           <Button onClick={() => router.push('/todo')} className="rounded-xl px-8 h-12 font-bold gap-2 bg-white text-blue-600 hover:bg-white/90">
-            Build Roadmap <ArrowRight className="h-4 w-4" />
+            Deploy Roadmap <ArrowRight className="h-4 w-4" />
           </Button>
         </CardContent>
       </Card>
@@ -386,20 +400,20 @@ export function StudyTimer() {
             <CardTitle className="font-headline uppercase text-white">{isBreak ? 'Rest Cycle' : 'Elite Focus'}</CardTitle>
           </div>
           <CardDescription className="text-blue-100/80 truncate font-bold text-[11px] uppercase tracking-wide">
-            {isBreak ? 'Time to recharge.' : `Active: ${activeTask?.subjectName} | ${activeTask?.chapterName}`}
+            {isBreak ? 'Time to recharge.' : `Strict Log: ${activeTask?.subjectName} | ${activeTask?.chapterName}`}
           </CardDescription>
         </div>
         {isActive && !isBreak && (
           <div className="flex items-center gap-1.5 bg-red-500/20 px-3 py-1 rounded-full border border-red-500/30 animate-pulse shrink-0">
             <Wifi className="h-3 w-3 text-red-400" />
-            <span className="text-[9px] font-black uppercase text-red-400 tracking-widest">LIVE</span>
+            <span className="text-[9px] font-black uppercase text-red-400 tracking-widest">SYNCING</span>
           </div>
         )}
       </CardHeader>
 
       <div className="px-6 md:px-8 pt-4 relative z-10">
         <div className="flex justify-between items-center mb-1.5 text-[9px] font-black uppercase tracking-widest text-blue-100/60">
-           <span>Daily Study Goal Status</span>
+           <span>Daily Roadmap Progress</span>
            <span className="flex items-center gap-1">
               <span className={cn(isActive && !isBreak && "animate-pulse text-blue-300")}>
                 {Math.round(dailyStudyProgress)}%
@@ -469,7 +483,7 @@ export function StudyTimer() {
             </span>
             <div className="flex items-center gap-1 text-blue-100/50 mt-1">
               <Clock className="h-3 w-3" />
-              <span className="text-[10px] font-black uppercase tracking-widest">{isBreak ? 'Resting' : 'Focusing'}</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">{isBreak ? 'Resting' : 'Strict Focus'}</span>
             </div>
           </div>
         </div>
@@ -510,12 +524,6 @@ export function StudyTimer() {
             >
               <CheckCircle2 className="mr-1.5 h-4 w-4" /> Secure Objective
             </Button>
-          )}
-
-          {isBreak && (
-             <p className="text-center text-[10px] font-black uppercase tracking-widest text-blue-100/40">
-                Next task will be ready after rest.
-             </p>
           )}
 
           {!isBreak && upcomingTasks.length > 0 && (

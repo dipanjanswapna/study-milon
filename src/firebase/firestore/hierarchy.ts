@@ -129,8 +129,8 @@ export async function updateChapterStatus(
 }
 
 /**
- * Precision logging system with Auto-Reset Protection.
- * Handles midnight transitions and period boundaries (Friday start week, Monthly, Yearly).
+ * Precision logging system with Focus Roadmap Enforcement.
+ * Time is ONLY saved if valid subjectId and chapterId are provided from the roadmap.
  */
 export async function logStudyTime(
     db: Firestore,
@@ -139,7 +139,8 @@ export async function logStudyTime(
     chapterId: string,
     seconds: number
 ) {
-    if (seconds <= 0) return;
+    // Enforcement: Reject time if identifiers are missing
+    if (seconds <= 0 || !subjectId || !chapterId) return;
 
     const isGroupTask = subjectId === 'group-task' || chapterId.startsWith('group-task');
     const userRef = doc(db, 'users', userId);
@@ -171,7 +172,7 @@ export async function logStudyTime(
         const userData = userSnap.data();
         const currentPartialSeconds = userData.partial_study_seconds || 0;
         
-        let subjectName = 'Guild Task';
+        let subjectName = isGroupTask ? 'Guild Task' : 'Focus Session';
         if (!isGroupTask && subjectRef) {
           const subjectSnap = await getDoc(subjectRef);
           if (subjectSnap.exists()) {
@@ -195,10 +196,8 @@ export async function logStudyTime(
         let finalPartialSeconds = 0;
 
         if (isNewDay) {
-            // MIDNIGHT RESET: If day changed, we discard previous partial seconds for the new day's counter
             minutesToAdd = Math.floor(seconds / 60);
             finalPartialSeconds = seconds % 60;
-            
             userUpdate.daily_study_minutes = minutesToAdd;
             userUpdate.last_study_day = dateStr;
         } else {
@@ -260,6 +259,6 @@ export async function logStudyTime(
         await batch.commit();
 
     } catch (error) {
-        console.error("Error logging study time: ", error);
+        console.error("Strict Logging Error: ", error);
     }
 }
