@@ -6,7 +6,7 @@ import { useUser, useFirestore, useDoc, useDatabase } from '@/firebase';
 import { logStudyTime } from '@/firebase/firestore/hierarchy';
 import { updateUserProfile, type CurrentSession } from '@/firebase/firestore/users';
 import { updateTaskStatus, type StudyTask } from '@/firebase/firestore/todo';
-import { ref, update, set } from 'firebase/database';
+import { ref, update } from 'firebase/database';
 import { useToast } from '@/hooks/use-toast';
 import {
   Card,
@@ -20,12 +20,15 @@ import { Play, Pause, ArrowRight, ListTodo, CheckCircle2, Target, Zap, Wifi, Fas
 import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { useCollection } from '@/firebase';
 
 const BREAK_MINUTES = 5;
 const SILENT_AUDIO_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
 const ALARM_AUDIO_PATH = "/WhatsApp Audio 2026-05-02 at 4.38.00 PM.mp3";
-const HEARTBEAT_INTERVAL = 60; // Quota Protection: RTDB heartbeat every 60s
-const FIRESTORE_SYNC_INTERVAL = 300; // Deep Sync: Firestore every 5 mins
+
+// QUOTA PROTECTION LIMITS
+const RTDB_HEARTBEAT_INTERVAL = 60; // Update RTDB every 60s (Low cost)
+const FIRESTORE_SYNC_THRESHOLD = 300; // Only force Firestore sync every 5 mins or on Pause/End
 
 export function StudyTimer() {
   const { user } = useUser();
@@ -63,35 +66,24 @@ export function StudyTimer() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const alarmRef = useRef<HTMLAudioElement | null>(null);
-  const lastFirestoreSyncRef = useRef<number>(0);
-  const recoveryHandledRef = useRef(false);
+  const lastRTDBSyncRef = useRef<number>(0);
 
-  // RTDB Update: Low-cost real-time minutes for leaderboard
-  const updateLiveStats = useCallback(async (isStudying: boolean, minutesDelta: number = 0) => {
+  // RTDB Update: Optimized for high-frequency live leaderboard
+  const updateRTDBLiveStats = useCallback(async (isStudying: boolean, currentMinutes: number) => {
     if (!user || !profile) return;
-    const today = format(new Date(), 'yyyy-MM-dd');
+    
+    const rtdbRef = ref(database, `leaderboards/daily/${user.uid}`);
     const updatePayload: any = {
       isLive: isStudying,
       displayName: profile.displayName,
       photoURL: profile.photoURL,
       category: profile.category,
       batch: profile.batch,
+      minutes: currentMinutes,
       lastActive: Date.now()
     };
 
-    if (minutesDelta > 0) {
-      // In a real high-scale app, you'd use Server Value increment
-      // For this MVP, we'll push current local best to keep it simple but RTDB-friendly
-      const rtdbPath = `leaderboards/daily/${user.uid}`;
-      const rtdbRef = ref(database, rtdbPath);
-      // We don't await this to keep UI snappy
-      update(rtdbRef, {
-        ...updatePayload,
-        minutes: (profile.daily_study_minutes || 0) + minutesDelta
-      });
-    } else {
-      update(ref(database, `leaderboards/daily/${user.uid}`), updatePayload);
-    }
+    update(rtdbRef, updatePayload);
   }, [user, profile, database]);
 
   const handleStart = async () => {
@@ -102,6 +94,7 @@ export function StudyTimer() {
       setIsActive(true);
       audioRef.current?.play().catch(() => {});
       
+      // Firestore: Anchor start time once
       const newSession: CurrentSession = {
         startTime: now,
         lastSyncTime: now,
@@ -119,7 +112,8 @@ export function StudyTimer() {
         last_active_date: serverTimestamp()
       });
 
-      updateLiveStats(!isBreak);
+      // RTDB: Set initial live status
+      updateRTDBLiveStats(!isBreak, profile?.daily_study_minutes || 0);
     } else if (!activeTask && !isBreak) {
       toast({ variant: 'destructive', title: "Roadmap Empty", description: "Build your roadmap before starting focus mode." });
     }
@@ -133,6 +127,7 @@ export function StudyTimer() {
       setIsActive(false);
       audioRef.current?.pause();
 
+      // Firestore: Batch sync final time on pause
       if (elapsedTotalSeconds > 0 && !isBreak) {
         await logStudyTime(firestore, user.uid, profile.currentSession.subjectId, profile.currentSession.chapterId, elapsedTotalSeconds);
       }
@@ -144,11 +139,12 @@ export function StudyTimer() {
         "currentSession.duration": timeLeft 
       });
 
-      updateLiveStats(false);
+      // RTDB: Exit live state
+      updateRTDBLiveStats(false, (profile?.daily_study_minutes || 0) + Math.floor(elapsedTotalSeconds / 60));
     }
   };
 
-  // TICKER & HEARTBEAT
+  // TICKER & RTDB HEARTBEAT
   useEffect(() => {
     let ticker: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
@@ -160,9 +156,11 @@ export function StudyTimer() {
         
         setTimeLeft(remaining);
 
-        // Quota Protector: Firestore sync every 5 mins, RTDB every 1 min
-        if (elapsed > 0 && elapsed % HEARTBEAT_INTERVAL === 0) {
-           updateLiveStats(!isBreak, Math.floor(elapsed / 60));
+        // QUOTA PROTECTOR: RTDB Heartbeat every 60s
+        if (elapsed > 0 && elapsed % RTDB_HEARTBEAT_INTERVAL === 0 && elapsed !== lastRTDBSyncRef.current) {
+           lastRTDBSyncRef.current = elapsed;
+           const currentTotalMins = (profile?.daily_study_minutes || 0) + Math.floor(elapsed / 60);
+           updateRTDBLiveStats(!isBreak, currentTotalMins);
         }
 
         if (remaining === 0) {
@@ -172,12 +170,13 @@ export function StudyTimer() {
       }, 1000);
     }
     return () => { if (ticker) clearInterval(ticker); };
-  }, [isActive, isBreak, profile?.currentSession, user, firestore, updateLiveStats]);
+  }, [isActive, isBreak, profile?.currentSession, user, updateRTDBLiveStats, profile?.daily_study_minutes]);
 
   const handleSessionComplete = async () => {
     if (!user || !profile?.currentSession) return;
     const { subjectId, chapterId, taskId, isBreak: cloudIsBreak, duration } = profile.currentSession;
 
+    // Firestore: Final batch write for the whole session
     if (!cloudIsBreak && subjectId && chapterId) {
        await logStudyTime(firestore, user.uid, subjectId, chapterId, duration);
        if (taskId) await updateTaskStatus(firestore, user.uid, taskId, true);
@@ -188,7 +187,9 @@ export function StudyTimer() {
     setIsActive(false);
     setIsBreak(false);
     updateUserProfile(firestore, user.uid, { "currentSession.status": "idle", isStudying: false });
-    updateLiveStats(false);
+    
+    // RTDB: Final sync
+    updateRTDBLiveStats(false, (profile?.daily_study_minutes || 0) + Math.floor(duration / 60));
   };
 
   useEffect(() => {
@@ -209,26 +210,22 @@ export function StudyTimer() {
 
   if (!activeTask && !isBreak) {
     return (
-      <Card className="rounded-xl border-none shadow-xl bg-[#1A1C3D] text-white overflow-hidden group">
+      <Card className="rounded-xl border-none shadow-xl bg-[#1A1C3D] text-white overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-white/10 pb-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary" />
-              <CardTitle className="font-headline uppercase text-sm font-black tracking-tight">Focus Engine</CardTitle>
-            </div>
+          <div className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-primary" />
+            <CardTitle className="font-headline uppercase text-sm font-black tracking-tight">Focus Engine</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center p-10 text-center space-y-5">
           <div className="p-5 bg-white/5 rounded-full">
             <ListTodo className="h-8 w-8 text-white/20" />
           </div>
-          <div className="space-y-1">
-            <h3 className="text-lg font-black font-headline">Engine Locked</h3>
-            <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest max-w-xs mx-auto">
-              Deployment of an objective is mandatory to engage focus mode.
-            </p>
-          </div>
-          <Button onClick={() => router.push('/todo')} className="rounded-lg px-6 h-10 font-bold gap-2 bg-white text-indigo-900 hover:bg-white/90 shadow-lg text-xs">
+          <h3 className="text-lg font-black">Engine Locked</h3>
+          <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest max-w-xs mx-auto">
+            Deployment of an objective is mandatory to engage focus mode.
+          </p>
+          <Button onClick={() => router.push('/todo')} className="rounded-lg px-6 h-10 font-bold gap-2 bg-white text-indigo-900 shadow-lg text-xs">
             Build Roadmap <ArrowRight className="h-3.5 w-3.5" />
           </Button>
         </CardContent>
@@ -255,7 +252,7 @@ export function StudyTimer() {
         {isActive && !isBreak && (
           <div className="flex items-center gap-1 bg-red-500/20 px-2.5 py-1 rounded-full border border-red-500/30 animate-pulse shrink-0">
             <Wifi className="h-2.5 w-2.5 text-red-400" />
-            <span className="text-[8px] font-black uppercase text-red-400 tracking-widest">RTDB SYNC</span>
+            <span className="text-[8px] font-black uppercase text-red-400 tracking-widest">LIVE SYNC</span>
           </div>
         )}
       </CardHeader>
@@ -312,7 +309,7 @@ export function StudyTimer() {
                   setIsActive(false);
                   setIsBreak(false);
                   updateUserProfile(firestore, user!.uid, { "currentSession.status": "idle", isStudying: false });
-                  updateLiveStats(false);
+                  updateRTDBLiveStats(false, profile?.daily_study_minutes || 0);
                 }}
               >
                 <FastForward className="h-4 w-4" />
@@ -341,7 +338,7 @@ export function StudyTimer() {
                   "currentSession.status": "idle",
                   "currentSession.startTime": null
                 });
-                updateLiveStats(false);
+                updateRTDBLiveStats(false, (profile?.daily_study_minutes || 0) + Math.floor(elapsedSeconds / 60));
               }}
             >
               <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Secure Task

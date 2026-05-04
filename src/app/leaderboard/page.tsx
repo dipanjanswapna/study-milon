@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { ref, onValue, query as rtdbQuery, orderByChild, limitToLast } from 'firebase/database';
-import { useDatabase, useUser, useFirestore } from '@/firebase';
+import { useDatabase, useUser } from '@/firebase';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { ProfileSetupGate } from '@/components/dashboard/ProfileSetupGate';
 import { Header } from '@/components/dashboard/Header';
@@ -10,11 +10,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Trophy, Medal, Crown, Zap, Filter, Loader2 } from 'lucide-react';
+import { Trophy, Medal, Crown, Zap, Filter, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { format, startOfWeek } from 'date-fns';
 import Link from 'next/link';
 
 type TimeFilter = 'daily' | 'weekly' | 'monthly' | 'yearly';
@@ -31,9 +30,12 @@ export default function LeaderboardPage() {
   const [batchFilter, setBatchFilter] = useState<string>('All');
   const [rankings, setRankings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
+  // RTDB: Fetch rankings with optimized subscription
   useEffect(() => {
     setLoading(true);
+    // Quota Protection: RTDB path for daily standings
     const leaderboardRef = ref(database, `leaderboards/${timeFilter}`);
     const topRankingsQuery = rtdbQuery(leaderboardRef, orderByChild('minutes'), limitToLast(100));
 
@@ -51,6 +53,10 @@ export default function LeaderboardPage() {
       } else {
         setRankings([]);
       }
+      setLoading(false);
+      setLastUpdated(new Date());
+    }, (error) => {
+      console.error("RTDB Leaderboard Error:", error);
       setLoading(false);
     });
 
@@ -81,19 +87,27 @@ export default function LeaderboardPage() {
           <ProfileSetupGate>
             <Card className="rounded-xl border-none shadow-xl overflow-hidden bg-[#1A1C3D] text-white relative group">
               <CardContent className="p-4 md:p-6 relative z-10 space-y-1">
-                <div className="space-y-0.5 text-center md:text-left">
-                  <div className="inline-flex items-center gap-1 bg-primary/20 backdrop-blur-lg px-2 py-0.5 rounded-full border border-white/10 text-[8px] font-black text-primary-foreground uppercase tracking-widest">
-                     <Zap className="h-2 w-2 fill-current" />
-                     Real-time Quota Optimized STANDINGS
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                  <div className="space-y-0.5 text-center md:text-left">
+                    <div className="inline-flex items-center gap-1 bg-primary/20 backdrop-blur-lg px-2 py-0.5 rounded-full border border-white/10 text-[8px] font-black text-primary-foreground uppercase tracking-widest">
+                       <Zap className="h-2 w-2 fill-current" />
+                       Real-time Quota Optimized STANDINGS
+                    </div>
+                    <h1 className="text-xl md:text-2xl font-black tracking-tighter leading-none">Global Contenders</h1>
+                    <p className="text-white/60 font-medium text-[10px] md:text-xs">Live updates powered by RTDB (Saves Firestore Quota).</p>
                   </div>
-                  <h1 className="text-lg md:text-xl font-black tracking-tighter leading-none">Global Contenders</h1>
-                  <p className="text-white/60 font-medium text-[9px] md:text-xs">Live updates powered by Realtime Database.</p>
+                  <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
+                     <RefreshCw className={cn("h-3 w-3 text-primary", loading && "animate-spin")} />
+                     <span className="text-[9px] font-bold text-white/40 uppercase tracking-tighter tabular-nums">
+                        Sync: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                     </span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
             <div className="w-full flex justify-center pt-8 pb-4 relative z-20">
-              {loading ? (
+              {loading && rankings.length === 0 ? (
                 <div className="flex items-center justify-center py-10">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
@@ -106,8 +120,9 @@ export default function LeaderboardPage() {
               ) : <div className="py-10 text-center text-muted-foreground italic text-xs">Waiting for contenders to sync...</div>}
             </div>
 
+            {/* Filters */}
             <Card className="rounded-xl border-none shadow-sm bg-card overflow-hidden mt-4">
-              <CardContent className="p-2 md:p-3 flex flex-col md:flex-row items-center justify-between gap-1 md:gap-3">
+              <CardContent className="p-2 md:p-3 flex flex-col md:flex-row items-center justify-between gap-2">
                 <div className="flex items-center gap-2 w-full">
                   <div className="bg-secondary/50 p-0.5 rounded-lg flex items-center flex-1">
                     <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as any)}>
@@ -146,10 +161,11 @@ export default function LeaderboardPage() {
               </CardContent>
             </Card>
 
+            {/* Rankings List */}
             <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden mt-4">
               <div className="p-3 border-b bg-secondary/10 flex items-center justify-between">
                 <h3 className="text-xs font-black flex items-center gap-2">Hustle Rankings</h3>
-                <Badge variant="outline" className="font-black text-[8px] uppercase tracking-widest border-primary/20 text-primary h-5 px-1.5">{filteredRankings.length} Syncing</Badge>
+                <Badge variant="outline" className="font-black text-[8px] uppercase tracking-widest border-primary/20 text-primary h-5 px-1.5">{filteredRankings.length} Contenders</Badge>
               </div>
               <ScrollArea className="h-[450px]">
                 <div className="divide-y divide-secondary/30">
