@@ -66,38 +66,39 @@ export function StudyTimer() {
   const alarmRef = useRef<HTMLAudioElement | null>(null);
   const lastRTDBSyncRef = useRef<number>(0);
 
-  // RTDB Live Sync: Daily/Weekly/Monthly Leaderboards with Multi-Path Sync
-  const updateRTDBLiveStats = useCallback(async (isStudying: boolean, currentDailyMins: number) => {
+  // RTDB Live Sync: Multi-Period Paths with Auto-Reset Logic
+  const updateRTDBLiveStats = useCallback(async (isStudying: boolean, studyMins: { daily: number, weekly: number, monthly: number, yearly: number }) => {
     if (!user || !profile) return;
     
     const now = new Date();
     const currentDateStr = format(now, 'yyyy-MM-dd');
     const monthStr = format(now, 'yyyy-MM');
     const yearStr = format(now, 'yyyy');
-    const weekStart = startOfWeek(now, { weekStartsOn: 5 });
+    
+    // Friday-to-Thursday logic
+    const weekStart = startOfWeek(now, { weekStartsOn: 5 }); 
     const weekStr = `Friday_${format(weekStart, 'yyyy-MM-dd')}`;
     
-    // Construct paths for all timeframes
+    const baseData = {
+      isLive: isStudying,
+      displayName: profile.displayName,
+      photoURL: profile.photoURL,
+      category: profile.category,
+      batch: profile.batch,
+      lastActive: Date.now()
+    };
+
     const paths = {
-      [`leaderboards/daily/${currentDateStr}/${user.uid}`]: {
-        isLive: isStudying,
-        displayName: profile.displayName,
-        photoURL: profile.photoURL,
-        category: profile.category,
-        batch: profile.batch,
-        minutes: currentDailyMins,
-        lastActive: Date.now()
-      },
-      // Weekly/Monthly/Yearly can be updated less frequently if needed, but RTDB handles volume well
-      [`leaderboards/weekly/${weekStr}/${user.uid}/isLive`]: isStudying,
-      [`leaderboards/monthly/${monthStr}/${user.uid}/isLive`]: isStudying,
-      [`leaderboards/yearly/${yearStr}/${user.uid}/isLive`]: isStudying,
+      [`leaderboards/daily/${currentDateStr}/${user.uid}`]: { ...baseData, minutes: studyMins.daily },
+      [`leaderboards/weekly/${weekStr}/${user.uid}`]: { ...baseData, minutes: studyMins.weekly },
+      [`leaderboards/monthly/${monthStr}/${user.uid}`]: { ...baseData, minutes: studyMins.monthly },
+      [`leaderboards/yearly/${yearStr}/${user.uid}`]: { ...baseData, minutes: studyMins.yearly },
     };
 
     update(ref(database), paths);
   }, [user, profile, database]);
 
-  // Persistent Unix Timestamp Logic (Unstoppable Timer)
+  // Persistent Unix Timestamp Logic
   useEffect(() => {
     if (profile?.currentSession?.status === 'active' && profile.currentSession.startTime) {
       const now = Date.now();
@@ -150,7 +151,12 @@ export function StudyTimer() {
       last_active_date: serverTimestamp()
     });
 
-    updateRTDBLiveStats(!isBreak, profile?.daily_study_minutes || 0);
+    updateRTDBLiveStats(!isBreak, {
+      daily: profile?.daily_study_minutes || 0,
+      weekly: profile?.weekly_study_minutes || 0,
+      monthly: profile?.monthly_study_minutes || 0,
+      yearly: profile?.yearly_study_minutes || 0
+    });
   };
 
   const handlePause = async () => {
@@ -158,6 +164,7 @@ export function StudyTimer() {
     
     const now = Date.now();
     const elapsedSeconds = Math.floor((now - profile.currentSession.startTime) / 1000);
+    const elapsedMins = Math.floor(elapsedSeconds / 60);
     
     setIsActive(false);
     audioRef.current?.pause();
@@ -173,10 +180,15 @@ export function StudyTimer() {
       "currentSession.duration": timeLeft 
     });
 
-    updateRTDBLiveStats(false, (profile?.daily_study_minutes || 0) + Math.floor(elapsedSeconds / 60));
+    updateRTDBLiveStats(false, {
+      daily: (profile?.daily_study_minutes || 0) + elapsedMins,
+      weekly: (profile?.weekly_study_minutes || 0) + elapsedMins,
+      monthly: (profile?.monthly_study_minutes || 0) + elapsedMins,
+      yearly: (profile?.yearly_study_minutes || 0) + elapsedMins
+    });
   };
 
-  // Main Ticker Interval (1s) - Midnight Reset Protection & Heartbeat
+  // Main Ticker Interval
   useEffect(() => {
     let ticker: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
@@ -188,7 +200,7 @@ export function StudyTimer() {
         
         setTimeLeft(remaining);
 
-        // 12 AM Reset Detection (Crucial for Daily Leaderboard)
+        // Period Reset Detection
         const currentTodayStr = format(new Date(), 'yyyy-MM-dd');
         if (currentTodayStr !== sessionDate) {
           clearInterval(ticker!);
@@ -196,11 +208,16 @@ export function StudyTimer() {
           return;
         }
 
-        // RTDB Heartbeat (Sync every minute to save Firestore writes)
+        // Heartbeat Sync
         if (elapsed > 0 && elapsed % RTDB_HEARTBEAT_INTERVAL === 0 && elapsed !== lastRTDBSyncRef.current) {
            lastRTDBSyncRef.current = elapsed;
-           const currentTotalMins = (profile?.daily_study_minutes || 0) + Math.floor(elapsed / 60);
-           updateRTDBLiveStats(!isBreak, currentTotalMins);
+           const currentMins = Math.floor(elapsed / 60);
+           updateRTDBLiveStats(!isBreak, {
+             daily: (profile?.daily_study_minutes || 0) + currentMins,
+             weekly: (profile?.weekly_study_minutes || 0) + currentMins,
+             monthly: (profile?.monthly_study_minutes || 0) + currentMins,
+             yearly: (profile?.yearly_study_minutes || 0) + currentMins
+           });
         }
 
         if (remaining <= 0) {
@@ -215,28 +232,24 @@ export function StudyTimer() {
   const handleMidnightReset = async (elapsedSeconds: number) => {
     if (!user || !profile?.currentSession) return;
     
-    // 1. Log what was studied until 11:59:59 PM to yesterday's logs
     if (!isBreak && elapsedSeconds > 0) {
       await logStudyTime(firestore, user.uid, profile.currentSession.subjectId, profile.currentSession.chapterId, elapsedSeconds);
     }
 
-    // 2. Clear current session and studying status
     updateUserProfile(firestore, user.uid, { 
       "currentSession.status": "idle",
       "currentSession.startTime": null,
       isStudying: false,
-      daily_study_minutes: 0, // Reset local counter for UI
       last_study_day: format(new Date(), 'yyyy-MM-dd')
     });
     
     setIsActive(false);
     toast({ 
-      title: "New Day Started!", 
-      description: "Daily Leaderboard has been reset to zero. Your previous hustle is secured.",
+      title: "Period Handover", 
+      description: "Leaderboards are transitioning to the next cycle. Your progress is secured.",
       duration: 5000
     });
     
-    // Refresh to sync everything for the new day
     setTimeout(() => window.location.reload(), 2000);
   };
 
@@ -244,7 +257,6 @@ export function StudyTimer() {
     if (!user || !profile?.currentSession) return;
     const { subjectId, chapterId, taskId, isBreak: cloudIsBreak, duration } = profile.currentSession;
 
-    // Log final minutes to Firestore
     if (!cloudIsBreak && subjectId && chapterId) {
        await logStudyTime(firestore, user.uid, subjectId, chapterId, duration);
        if (taskId) await updateTaskStatus(firestore, user.uid, taskId, true);
@@ -263,7 +275,13 @@ export function StudyTimer() {
       isStudying: false 
     });
     
-    updateRTDBLiveStats(false, (profile?.daily_study_minutes || 0) + Math.floor(duration / 60));
+    const finalElapsedMins = Math.floor(duration / 60);
+    updateRTDBLiveStats(false, {
+      daily: (profile?.daily_study_minutes || 0) + finalElapsedMins,
+      weekly: (profile?.weekly_study_minutes || 0) + finalElapsedMins,
+      monthly: (profile?.monthly_study_minutes || 0) + finalElapsedMins,
+      yearly: (profile?.yearly_study_minutes || 0) + finalElapsedMins
+    });
     
     toast({ 
       title: isBreak ? "Break Over!" : "Session Complete!", 
@@ -285,11 +303,11 @@ export function StudyTimer() {
   const min = Math.floor(timeLeft / 60);
   const sec = timeLeft % 60;
 
-  if (tasksLoading) return <Card className="w-full h-80 animate-pulse rounded-[2rem] bg-secondary/20" />;
+  if (tasksLoading) return <Card className="w-full h-80 animate-pulse rounded-xl bg-secondary/20" />;
 
   if (!activeTask && !isBreak) {
     return (
-      <Card className="rounded-[2rem] border-none shadow-xl bg-[#1A1C3D] text-white overflow-hidden">
+      <Card className="rounded-xl border-none shadow-xl bg-[#1A1C3D] text-white overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-white/10 pb-6 p-8">
           <div className="flex items-center gap-3">
             <div className="bg-primary/20 p-2 rounded-xl">
@@ -308,7 +326,7 @@ export function StudyTimer() {
                Your roadmap for today is empty. Add a study objective to initialize the focus sequence.
              </p>
           </div>
-          <Button onClick={() => router.push('/todo')} className="rounded-2xl px-8 h-12 font-black gap-2 bg-white text-indigo-900 shadow-xl text-xs hover:scale-105 transition-all active:scale-95 group">
+          <Button onClick={() => router.push('/todo')} className="rounded-xl px-8 h-12 font-black gap-2 bg-white text-indigo-900 shadow-xl text-xs hover:scale-105 transition-all active:scale-95 group">
             Build Roadmap <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Button>
         </CardContent>
@@ -317,8 +335,7 @@ export function StudyTimer() {
   }
 
   return (
-    <Card className="rounded-[2.5rem] border-none shadow-2xl relative overflow-hidden transition-all bg-gradient-to-br from-indigo-600 via-blue-600 to-blue-800 text-white group/timer">
-      {/* Decorative Accents */}
+    <Card className="rounded-xl border-none shadow-2xl relative overflow-hidden transition-all bg-gradient-to-br from-indigo-600 via-blue-600 to-blue-800 text-white group/timer">
       <div className="absolute top-0 right-0 p-10 opacity-5 rotate-12 transition-transform group-hover/timer:rotate-45 duration-1000">
         <Zap className="h-48 w-48" />
       </div>
@@ -347,7 +364,6 @@ export function StudyTimer() {
       </CardHeader>
 
       <CardContent className="flex flex-col items-center justify-center gap-8 py-10 md:py-14 relative z-10">
-        {/* Progress Circle UI */}
         <div className="relative h-[240px] w-[240px] md:h-[280px] md:w-[280px] flex items-center justify-center">
            <div className="absolute inset-0 rounded-full bg-[#1A1C3D]/40 backdrop-blur-md shadow-2xl border-4 border-white/5" />
            <svg className="absolute inset-0" viewBox="0 0 300 300">
@@ -385,7 +401,7 @@ export function StudyTimer() {
             <Button 
               onClick={isActive ? handlePause : handleStart} 
               className={cn(
-                "flex-1 h-14 text-sm font-black rounded-2xl shadow-2xl active:scale-95 transition-all border-none",
+                "flex-1 h-14 text-sm font-black rounded-xl shadow-2xl active:scale-95 transition-all border-none",
                 isBreak ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-white text-indigo-900 hover:bg-blue-50"
               )} 
             >
@@ -397,7 +413,7 @@ export function StudyTimer() {
               <Button 
                 variant="outline" 
                 size="icon" 
-                className="h-14 w-14 rounded-2xl bg-white/5 border-white/10 text-white hover:bg-white/10"
+                className="h-14 w-14 rounded-xl bg-white/5 border-white/10 text-white hover:bg-white/10"
                 onClick={() => {
                   setIsActive(false);
                   setIsBreak(false);
@@ -412,7 +428,7 @@ export function StudyTimer() {
           {!isBreak && activeTask && (
             <Button 
               variant="secondary" 
-              className="w-full h-12 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-white/10 text-white hover:bg-white/20 border border-white/10 transition-all active:scale-95"
+              className="w-full h-12 rounded-xl font-black text-[10px] uppercase tracking-widest bg-white/10 text-white hover:bg-white/20 border border-white/10 transition-all active:scale-95"
               onClick={async () => {
                 const now = Date.now();
                 const elapsedSeconds = Math.floor((now - (profile.currentSession?.startTime || now)) / 1000);
@@ -429,7 +445,14 @@ export function StudyTimer() {
                   "currentSession.status": "idle",
                   "currentSession.startTime": null
                 });
-                updateRTDBLiveStats(false, (profile?.daily_study_minutes || 0) + Math.floor(elapsedSeconds / 60));
+                
+                const currentTotalMins = (profile?.daily_study_minutes || 0) + Math.floor(elapsedSeconds / 60);
+                updateRTDBLiveStats(false, {
+                  daily: (profile?.daily_study_minutes || 0) + Math.floor(elapsedSeconds / 60),
+                  weekly: (profile?.weekly_study_minutes || 0) + Math.floor(elapsedSeconds / 60),
+                  monthly: (profile?.monthly_study_minutes || 0) + Math.floor(elapsedSeconds / 60),
+                  yearly: (profile?.yearly_study_minutes || 0) + Math.floor(elapsedSeconds / 60)
+                });
                 toast({ title: "Objective Secured!", description: "Progress synced to global rankings." });
               }}
             >

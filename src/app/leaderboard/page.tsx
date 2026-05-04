@@ -46,20 +46,23 @@ export default function LeaderboardPage() {
     let path = `leaderboards/${timeFilter}`;
     const now = new Date();
 
-    // Logic for Daily/Weekly/Monthly/Yearly paths to enable auto-reset
+    // Reset Logic Implementation
     if (timeFilter === 'daily') {
+      // 12 AM Reset: Date specific path
       path = `leaderboards/daily/${format(now, 'yyyy-MM-dd')}`;
     } else if (timeFilter === 'weekly') {
-      // Friday-to-Friday week (Academic week start)
+      // Friday-to-Thursday Reset: Anchor to previous Friday
       const weekStart = startOfWeek(now, { weekStartsOn: 5 }); 
       path = `leaderboards/weekly/Friday_${format(weekStart, 'yyyy-MM-dd')}`;
     } else if (timeFilter === 'monthly') {
+      // 1st of Month Reset: Month specific path
       path = `leaderboards/monthly/${format(now, 'yyyy-MM')}`;
     } else if (timeFilter === 'yearly') {
       path = `leaderboards/yearly/${format(now, 'yyyy')}`;
     }
 
     const leaderboardRef = ref(database, path);
+    // Sort by minutes. RTDB gives ascending, so we handle reverse in state
     const topRankingsQuery = rtdbQuery(leaderboardRef, orderByChild('minutes'), limitToLast(100));
 
     const unsubscribe = onValue(topRankingsQuery, (snapshot) => {
@@ -110,7 +113,7 @@ export default function LeaderboardPage() {
           <ProfileSetupGate>
             
             {/* Header Card */}
-            <Card className="rounded-[2rem] border-none shadow-xl overflow-hidden bg-[#1A1C3D] text-white relative group">
+            <Card className="rounded-xl border-none shadow-xl overflow-hidden bg-[#1A1C3D] text-white relative group">
               <CardContent className="p-6 md:p-10 relative z-10">
                 <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                   <div className="space-y-2 text-center md:text-left">
@@ -120,9 +123,10 @@ export default function LeaderboardPage() {
                     </div>
                     <h1 className="text-3xl md:text-5xl font-black tracking-tighter leading-none">Global Contenders</h1>
                     <p className="text-white/60 font-medium text-xs md:text-sm max-w-md">
-                      {timeFilter === 'daily' 
-                        ? 'Today\'s hustle leaderboard. Resets automatically at 12:00 AM.' 
-                        : 'Compete with the top performers in the community.'}
+                      {timeFilter === 'daily' && "Resets every night at 12:00 AM."}
+                      {timeFilter === 'weekly' && "Resets every Friday morning."}
+                      {timeFilter === 'monthly' && "Resets on the 1st of every month."}
+                      {timeFilter === 'yearly' && "Annual hustle performance."}
                     </p>
                   </div>
                   <div className="flex flex-col items-center md:items-end gap-2">
@@ -155,7 +159,7 @@ export default function LeaderboardPage() {
                   {top3[2] && <PodiumMember user={top3[2]} rank={3} time={formatTime(top3[2].minutes)} />}
                 </div>
               ) : (
-                <div className="py-20 text-center space-y-4 bg-secondary/5 rounded-[2.5rem] border-2 border-dashed w-full max-w-lg mx-auto">
+                <div className="py-20 text-center space-y-4 bg-secondary/5 rounded-xl border-2 border-dashed w-full max-w-lg mx-auto">
                    <Zap className="h-10 w-10 mx-auto text-muted-foreground/20" />
                    <p className="text-xs font-black uppercase text-muted-foreground/40 tracking-[0.2em]">Waiting for today's hustle to begin...</p>
                 </div>
@@ -163,7 +167,7 @@ export default function LeaderboardPage() {
             </div>
 
             {/* Filters Navigation */}
-            <Card className="rounded-2xl border-none shadow-sm bg-card overflow-hidden">
+            <Card className="rounded-xl border-none shadow-sm bg-card overflow-hidden">
               <CardContent className="p-3 flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3 w-full md:w-auto">
                   <div className="bg-secondary/50 p-1 rounded-xl flex items-center flex-1 md:w-48">
@@ -172,7 +176,7 @@ export default function LeaderboardPage() {
                         <Filter className="h-3.5 w-3.5 mr-2 text-primary shrink-0" />
                         <SelectValue placeholder="Category" />
                       </SelectTrigger>
-                      <SelectContent className="rounded-2xl">
+                      <SelectContent className="rounded-xl">
                         <SelectItem value="All">All Categories</SelectItem>
                         <SelectItem value="SSC">SSC</SelectItem>
                         <SelectItem value="HSC">HSC</SelectItem>
@@ -188,7 +192,7 @@ export default function LeaderboardPage() {
                       <SelectTrigger className="h-9 w-full rounded-lg border-none bg-transparent font-black text-[10px] tracking-widest">
                         <SelectValue placeholder="Batch" />
                       </SelectTrigger>
-                      <SelectContent className="rounded-2xl">
+                      <SelectContent className="rounded-xl">
                         <SelectItem value="All">All Batches</SelectItem>
                         {YEARS.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
                       </SelectContent>
@@ -208,7 +212,7 @@ export default function LeaderboardPage() {
             </Card>
 
             {/* Rankings List */}
-            <Card className="rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
+            <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
               <div className="p-5 border-b bg-secondary/10 flex items-center justify-between px-8">
                 <div className="space-y-0.5">
                    <h3 className="text-sm font-black flex items-center gap-2 uppercase tracking-tight">
@@ -274,10 +278,10 @@ export default function LeaderboardPage() {
               </ScrollArea>
             </Card>
 
-            {/* My Rank Sticky (Optional Enhancement) */}
+            {/* My Rank Sticky */}
             {filteredRankings.some(u => u.uid === user?.uid) === false && myProfile && (
               <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-[95%] max-w-4xl z-50 animate-in slide-in-from-bottom-10 duration-700">
-                 <Card className="rounded-2xl bg-primary text-white shadow-2xl border-none p-4 flex items-center justify-between px-8">
+                 <Card className="rounded-xl bg-primary text-white shadow-2xl border-none p-4 flex items-center justify-between px-8">
                     <div className="flex items-center gap-4">
                        <Avatar className="h-10 w-10 border-2 border-white/20">
                           <AvatarImage src={myProfile.photoURL} />
@@ -289,8 +293,19 @@ export default function LeaderboardPage() {
                        </div>
                     </div>
                     <div className="text-right">
-                       <p className="text-[10px] font-black uppercase tracking-widest text-white/60">Today's Hustle</p>
-                       <p className="font-black text-xl tracking-tighter">{formatTime(myProfile.daily_study_minutes || 0)}</p>
+                       <p className="text-[10px] font-black uppercase tracking-widest text-white/60">
+                         {timeFilter === 'daily' ? "Today's Hustle" : 
+                          timeFilter === 'weekly' ? "Weekly Hustle" : 
+                          timeFilter === 'monthly' ? "Monthly Hustle" : "Yearly Hustle"}
+                       </p>
+                       <p className="font-black text-xl tracking-tighter">
+                         {formatTime(
+                           timeFilter === 'daily' ? myProfile.daily_study_minutes :
+                           timeFilter === 'weekly' ? myProfile.weekly_study_minutes :
+                           timeFilter === 'monthly' ? myProfile.monthly_study_minutes :
+                           myProfile.yearly_study_minutes
+                         )}
+                       </p>
                     </div>
                  </Card>
               </div>
