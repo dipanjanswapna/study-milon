@@ -14,6 +14,7 @@ import { Trophy, Medal, Crown, Zap, Filter, Loader2, RefreshCw } from 'lucide-re
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { format, startOfWeek } from 'date-fns';
 import Link from 'next/link';
 
 type TimeFilter = 'daily' | 'weekly' | 'monthly' | 'yearly';
@@ -32,17 +33,31 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  // RTDB: Fetch rankings with optimized subscription (Quota Optimized)
+  // RTDB: Fetch rankings with Date-Based paths for Daily Leaderboard
   useEffect(() => {
     setLoading(true);
-    // RTDB path for standings (bandwidth based, saves Firestore read/write quota)
-    const leaderboardRef = ref(database, `leaderboards/${timeFilter}`);
+    
+    let path = `leaderboards/${timeFilter}`;
+    const now = new Date();
+
+    // Custom path logic for automatic resets
+    if (timeFilter === 'daily') {
+      path = `leaderboards/daily/${format(now, 'yyyy-MM-dd')}`;
+    } else if (timeFilter === 'weekly') {
+      const weekStart = startOfWeek(now, { weekStartsOn: 5 }); // Friday-to-Friday
+      path = `leaderboards/weekly/Friday_${format(weekStart, 'yyyy-MM-dd')}`;
+    } else if (timeFilter === 'monthly') {
+      path = `leaderboards/monthly/${format(now, 'yyyy-MM')}`;
+    } else if (timeFilter === 'yearly') {
+      path = `leaderboards/yearly/${format(now, 'yyyy')}`;
+    }
+
+    const leaderboardRef = ref(database, path);
     const topRankingsQuery = rtdbQuery(leaderboardRef, orderByChild('minutes'), limitToLast(100));
 
     const unsubscribe = onValue(topRankingsQuery, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        // RTDB data is an object, convert to sorted array
         const sortedData = Object.entries(data)
           .map(([uid, val]: [string, any]) => ({
             uid,
@@ -92,10 +107,12 @@ export default function LeaderboardPage() {
                   <div className="space-y-0.5 text-center md:text-left">
                     <div className="inline-flex items-center gap-1 bg-primary/20 backdrop-blur-lg px-2 py-0.5 rounded-full border border-white/10 text-[8px] font-black text-primary-foreground uppercase tracking-widest">
                        <Zap className="h-2 w-2 fill-current" />
-                       Real-time Standings
+                       Hustle Standings
                     </div>
                     <h1 className="text-xl md:text-2xl font-black tracking-tighter leading-none">Global Contenders</h1>
-                    <p className="text-white/60 font-medium text-[10px] md:text-xs">Live updates powered by Realtime Database.</p>
+                    <p className="text-white/60 font-medium text-[10px] md:text-xs">
+                      {timeFilter === 'daily' ? 'Today\'s leaderboard resets at midnight.' : 'Compete with students globally.'}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
                      <RefreshCw className={cn("h-3 w-3 text-primary", loading && "animate-spin")} />
@@ -118,7 +135,7 @@ export default function LeaderboardPage() {
                   {top3[0] && <PodiumMember user={top3[0]} rank={1} time={formatTime(top3[0].minutes)} />}
                   {top3[2] && <PodiumMember user={top3[2]} rank={3} time={formatTime(top3[2].minutes)} />}
                 </div>
-              ) : <div className="py-10 text-center text-muted-foreground italic text-xs">Waiting for contenders to sync...</div>}
+              ) : <div className="py-10 text-center text-muted-foreground italic text-xs">Waiting for today's hustle to begin...</div>}
             </div>
 
             {/* Filters */}
@@ -165,7 +182,7 @@ export default function LeaderboardPage() {
             {/* Rankings List */}
             <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden mt-4">
               <div className="p-3 border-b bg-secondary/10 flex items-center justify-between">
-                <h3 className="text-xs font-black flex items-center gap-2">Hustle Rankings</h3>
+                <h3 className="text-xs font-black flex items-center gap-2">Rankings Queue</h3>
                 <Badge variant="outline" className="font-black text-[8px] uppercase tracking-widest border-primary/20 text-primary h-5 px-1.5">{filteredRankings.length} Contenders</Badge>
               </div>
               <ScrollArea className="h-[450px]">
