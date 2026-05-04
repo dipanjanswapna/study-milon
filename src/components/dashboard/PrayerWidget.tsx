@@ -99,7 +99,6 @@ export function PrayerWidget() {
             Isha: json.data.timings.Isha,
           };
         } else {
-          // Hindu timings based on Sunrise-Sunset for Dhaka
           const response = await fetch(
             'https://api.sunrise-sunset.org/json?lat=23.8103&lng=90.4125&formatted=0'
           );
@@ -150,10 +149,10 @@ export function PrayerWidget() {
 
   if (loading) {
     return (
-      <Card className="rounded-[2rem] border-none shadow-xl bg-card overflow-hidden">
+      <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
         <CardContent className="p-10 flex flex-col items-center justify-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Syncing Timings...</p>
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Syncing Timings...</p>
         </CardContent>
       </Card>
     );
@@ -162,31 +161,31 @@ export function PrayerWidget() {
   if (!timings) return null;
 
   return (
-    <Card className="rounded-[2rem] border-none shadow-xl bg-card overflow-hidden">
-      <CardHeader className="pb-4 flex flex-row items-center justify-between">
+    <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
+      <CardHeader className="pb-3 flex flex-row items-center justify-between bg-secondary/10 border-b">
         <div className="flex items-center gap-2">
           <div className={cn(
-            "p-2 rounded-xl",
+            "p-1.5 rounded-lg",
             religion === 'Muslim' ? "bg-indigo-500/10 text-indigo-500" : "bg-orange-500/10 text-orange-500"
           )}>
-             <Clock className="h-5 w-5" />
+             <Clock className="h-4 w-4" />
           </div>
           <div>
-            <CardTitle className="text-xl font-black">{religion === 'Muslim' ? 'Prayer Times' : 'Spiritual Timings'}</CardTitle>
-            <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
-              <MapPin className="h-2.5 w-2.5" /> Dhaka, BD
+            <CardTitle className="text-sm font-black uppercase tracking-tight">{religion === 'Muslim' ? 'Prayer Times' : 'Spiritual'}</CardTitle>
+            <div className="flex items-center gap-1 text-[8px] font-bold text-muted-foreground uppercase tracking-tighter">
+              <MapPin className="h-2 w-2" /> Dhaka, BD
             </div>
           </div>
         </div>
         <Badge variant="outline" className={cn(
-          "font-black text-[10px] uppercase",
-          religion === 'Muslim' ? "border-indigo-500/20 text-indigo-500" : "border-orange-500/20 text-orange-500"
+          "font-black text-[9px] uppercase border-none",
+          religion === 'Muslim' ? "bg-indigo-500/10 text-indigo-500" : "bg-orange-500/10 text-orange-500"
         )}>
-          {religion === 'Muslim' ? 'IFB Method' : 'Astro Method'}
+          {religion === 'Muslim' ? 'Muslim' : 'Hindu'}
         </Badge>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="divide-y">
+        <div className="divide-y divide-secondary/30">
           {(Object.keys(timings) as Array<keyof PrayerTimes>).map((name) => {
             const isNext = nextPrayer === name;
             const time24 = timings[name];
@@ -197,38 +196,35 @@ export function PrayerWidget() {
               <div 
                 key={name} 
                 className={cn(
-                  "flex items-center justify-between p-4 px-6 transition-all",
-                  isNext ? (religion === 'Muslim' ? "bg-indigo-500/5 ring-1 ring-inset ring-indigo-500/10" : "bg-orange-500/5 ring-1 ring-inset ring-orange-500/10") : ""
+                  "flex items-center justify-between p-4 transition-all",
+                  isNext ? "bg-primary/[0.03] ring-1 ring-inset ring-primary/10" : ""
                 )}
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <div className={cn(
-                    "p-2 rounded-full",
+                    "p-2 rounded-lg transition-all",
                     isNext 
-                      ? (religion === 'Muslim' ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 scale-110" : "bg-orange-500 text-white shadow-lg shadow-orange-500/20 scale-110") 
+                      ? "bg-primary text-white shadow-lg shadow-primary/20 scale-110" 
                       : "bg-secondary/50 text-muted-foreground"
                   )}>
                     {prayerIcons[name]}
                   </div>
                   <div>
                     <p className={cn(
-                      "text-sm font-black tracking-tight",
-                      isNext ? (religion === 'Muslim' ? "text-indigo-600" : "text-orange-600") : "text-foreground"
+                      "text-xs font-black tracking-tight uppercase",
+                      isNext ? "text-primary" : "text-foreground"
                     )}>
                       {name}
                     </p>
                     {isNext && (
-                      <span className={cn(
-                        "text-[9px] font-black uppercase animate-pulse",
-                        religion === 'Muslim' ? "text-indigo-400" : "text-orange-400"
-                      )}>Upcoming</span>
+                      <span className="text-[8px] font-black uppercase text-primary animate-pulse tracking-widest">Upcoming</span>
                     )}
                   </div>
                 </div>
                 <div className="text-right">
                   <p className={cn(
-                    "text-base font-black tracking-tighter",
-                    isNext ? (religion === 'Muslim' ? "text-indigo-600" : "text-orange-600") : "text-muted-foreground"
+                    "text-sm font-black tracking-tighter tabular-nums",
+                    isNext ? "text-primary" : "text-muted-foreground"
                   )}>
                     {time12}
                   </p>

@@ -23,21 +23,20 @@ export function WelcomeBanner() {
   }, []);
 
   return (
-    <Card className="relative w-full h-48 md:h-64 lg:h-72 overflow-hidden rounded-[2rem] md:rounded-[2.5rem] shadow-2xl border-none group">
+    <Card className="relative w-full h-48 md:h-64 lg:h-72 overflow-hidden rounded-xl shadow-xl border-none group">
       {welcomeImage && (
         <Image
           src={welcomeImage.imageUrl}
           alt={welcomeImage.description}
           fill
-          className="object-cover transition-transform group-hover:scale-110"
-          style={{ transitionDuration: '2000ms' }}
+          className="object-cover transition-transform group-hover:scale-105 duration-1000"
           data-ai-hint={welcomeImage.imageHint}
           priority
         />
       )}
       
       {/* Dynamic Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent p-5 md:p-12 flex flex-col justify-center">
+      <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent p-5 md:p-10 flex flex-col justify-center">
         <div className="flex flex-col gap-2 md:gap-4 max-w-2xl">
           
           {/* Status Badges */}
@@ -58,14 +57,14 @@ export function WelcomeBanner() {
              )}
           </div>
 
-          <div className="space-y-3 md:space-y-6">
-            <h2 className="text-xl md:text-4xl lg:text-6xl font-black text-white tracking-tighter font-headline leading-tight drop-shadow-md">
+          <div className="space-y-2 md:space-y-4">
+            <h2 className="text-xl md:text-4xl lg:text-5xl font-black text-white tracking-tighter font-headline leading-tight drop-shadow-md">
               Welcome back
               {user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}!
             </h2>
             
             <div className="flex flex-wrap gap-2 md:gap-3">
-              <Button asChild size="sm" className="rounded-full bg-white text-black hover:bg-primary hover:text-white font-black px-4 md:px-6 h-8 md:h-10 text-[9px] md:text-xs shadow-xl transition-all group/btn border-none">
+              <Button asChild size="sm" className="rounded-lg bg-white text-black hover:bg-primary hover:text-white font-black px-4 md:px-5 h-8 md:h-9 text-[9px] md:text-xs shadow-xl transition-all group/btn border-none">
                 <Link href="/resources">
                   <BookMarked className="mr-1.5 h-3.5 w-3.5 md:h-4 md:w-4" />
                   Resources
@@ -73,7 +72,7 @@ export function WelcomeBanner() {
                 </Link>
               </Button>
 
-              <Button asChild size="sm" variant="outline" className="rounded-full bg-black/40 backdrop-blur-md text-white border-white/20 hover:bg-primary/20 hover:border-primary font-black px-4 md:px-6 h-8 md:h-10 text-[9px] md:text-xs shadow-xl transition-all group/btn">
+              <Button asChild size="sm" variant="outline" className="rounded-lg bg-black/40 backdrop-blur-md text-white border-white/20 hover:bg-primary/20 hover:border-primary font-black px-4 md:px-5 h-8 md:h-9 text-[9px] md:text-xs shadow-xl transition-all group/btn">
                 <Link href="/exams">
                   <Timer className="mr-1.5 h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
                   Exams

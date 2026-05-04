@@ -115,7 +115,6 @@ export function AnalyticsDashboard() {
       filteredSessions = sessions.filter(s => s.date && isSameMonth(new Date(s.date), now));
     }
     else if (filter === 'yearly') {
-      // Logic: Start from account creation month to current month
       const createdAt = profile?.createdAt?.toDate() || now;
       const startOfJoinMonth = startOfMonth(createdAt);
       const monthsInterval = eachMonthOfInterval({ start: startOfJoinMonth, end: now });
@@ -176,95 +175,92 @@ export function AnalyticsDashboard() {
   if (profileLoading || sessionsLoading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-[200px] rounded-[2rem]" />
-        <Skeleton className="h-[400px] rounded-[2rem]" />
+        <Skeleton className="h-[200px] rounded-xl" />
+        <Skeleton className="h-[400px] rounded-xl" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-primary/10 rounded-xl">
-            <TrendingUp className="h-5 w-5 text-primary" />
+          <div className="p-1.5 bg-primary/10 rounded-lg">
+            <TrendingUp className="h-4 w-4 text-primary" />
           </div>
-          <h2 className="text-2xl font-black tracking-tight font-headline uppercase">Hustle Insights</h2>
+          <h2 className="text-xl font-black tracking-tight font-headline uppercase">Hustle Insights</h2>
         </div>
         <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)} className="w-full sm:w-auto">
-          <TabsList className="grid w-full grid-cols-4 bg-secondary/50 p-1 rounded-xl h-11">
-            <TabsTrigger value="daily" className="rounded-lg font-bold text-xs">Daily</TabsTrigger>
-            <TabsTrigger value="weekly" className="rounded-lg font-bold text-xs">Weekly</TabsTrigger>
-            <TabsTrigger value="monthly" className="rounded-lg font-bold text-xs">Monthly</TabsTrigger>
-            <TabsTrigger value="yearly" className="rounded-lg font-bold text-xs">Yearly</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 bg-secondary/50 p-1 rounded-lg h-9">
+            <TabsTrigger value="daily" className="rounded-md font-bold text-[10px]">Daily</TabsTrigger>
+            <TabsTrigger value="weekly" className="rounded-md font-bold text-[10px]">Weekly</TabsTrigger>
+            <TabsTrigger value="monthly" className="rounded-md font-bold text-[10px]">Monthly</TabsTrigger>
+            <TabsTrigger value="yearly" className="rounded-md font-bold text-[10px]">Yearly</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-        <Card className="md:col-span-3 rounded-[2rem] border-none shadow-xl bg-primary text-primary-foreground overflow-hidden group relative">
+        <Card className="md:col-span-3 rounded-xl border-none shadow-xl bg-primary text-primary-foreground overflow-hidden group relative">
           <div className="absolute top-0 right-0 p-8 opacity-10">
-            <Zap className="h-24 w-24" />
+            <Zap className="h-20 w-20" />
           </div>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-black uppercase tracking-[0.2em] text-primary-foreground/70">
+            <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-foreground/70">
               {filter} Hustle Total
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             <div className="flex items-baseline gap-2">
-              <h3 className="text-5xl font-black tracking-tighter">
+              <h3 className="text-4xl font-black tracking-tighter">
                 {formatStudyTime(stats.currentPeriodMins)}
               </h3>
             </div>
-            <div className="pt-2">
-              <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-1.5">
+            <div className="pt-1">
+              <div className="flex justify-between text-[9px] font-black uppercase tracking-widest mb-1.5">
                  <span>Hustle Score</span>
                  <span>{stats.hustleScore}%</span>
               </div>
-              <Progress value={stats.hustleScore} className="h-2 bg-white/20" />
+              <Progress value={stats.hustleScore} className="h-1.5 bg-white/20" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-3 rounded-[2rem] border-none shadow-xl bg-card overflow-hidden border">
+        <Card className="md:col-span-3 rounded-xl border-none shadow-xl bg-card overflow-hidden border">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">
-              <Trophy className="inline-block h-3.5 w-3.5 mr-1 text-primary" /> Million Minute Quest
+            <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+              <Trophy className="inline-block h-3 w-3 mr-1 text-primary" /> Million Quest
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             <div className="flex items-baseline gap-2">
-              <h3 className="text-4xl font-black tracking-tighter">
+              <h3 className="text-3xl font-black tracking-tighter">
                 {(profile?.total_study_minutes || 0).toLocaleString()}
               </h3>
-              <span className="text-[10px] font-black text-muted-foreground uppercase">Minutes</span>
+              <span className="text-[9px] font-black text-muted-foreground uppercase">Min</span>
             </div>
-            <div className="pt-2">
-              <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-1.5 text-primary">
-                 <span>Quest Progress</span>
+            <div className="pt-1">
+              <div className="flex justify-between text-[9px] font-black uppercase tracking-widest mb-1.5 text-primary">
+                 <span>Progress</span>
                  <span>{((profile?.total_study_minutes || 0) / 1000000 * 100).toFixed(4)}%</span>
               </div>
-              <Progress value={((profile?.total_study_minutes || 0) / 1000000 * 100)} className="h-2 bg-secondary" />
+              <Progress value={((profile?.total_study_minutes || 0) / 1000000 * 100)} className="h-1.5 bg-secondary" />
             </div>
           </CardContent>
         </Card>
 
-        <div className="md:col-span-6 space-y-8">
-          <Card className="rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <div className="md:col-span-6 space-y-6">
+          <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 bg-secondary/10 border-b">
               <div>
-                <CardTitle className="text-xl font-black flex items-center gap-2">
-                  <BarChart className="h-6 w-6 text-primary" /> Consistency Tracker
+                <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-tight">
+                  <BarChart className="h-4 w-4 text-primary" /> Session Mapping
                 </CardTitle>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">
-                  {filter === 'daily' ? 'Live Hourly Session Mapping' : filter === 'yearly' ? 'Full Hustle History' : `Activity Overview for ${filter}`}
-                </p>
               </div>
               {filter === 'daily' && (
-                <div className="flex items-center gap-2 bg-red-600/10 px-3 py-1.5 rounded-full border border-red-600/20 animate-pulse">
-                   <Activity className="h-3 w-3 text-red-600" />
-                   <span className="text-[8px] font-black uppercase text-red-600 tracking-widest">Live Sync</span>
+                <div className="flex items-center gap-1.5 bg-red-600/10 px-2 py-1 rounded-full border border-red-600/20">
+                   <Activity className="h-2.5 w-2.5 text-red-600 animate-pulse" />
+                   <span className="text-[8px] font-black uppercase text-red-600">Live</span>
                 </div>
               )}
             </CardHeader>
@@ -279,14 +275,13 @@ export function AnalyticsDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
-            <CardHeader>
-              <CardTitle className="text-xl font-black flex items-center gap-2">
-                <PieChart className="h-6 w-6 text-primary" /> Focus Areas
+          <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
+            <CardHeader className="bg-secondary/10 border-b pb-3">
+              <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-tight">
+                <PieChart className="h-4 w-4 text-primary" /> Focus Areas
               </CardTitle>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">Subject-wise Distribution for {filter}</p>
             </CardHeader>
-            <CardContent className="p-6 pt-0">
+            <CardContent className="p-4">
               <SubjectDistributionChart data={stats.subjectData} />
             </CardContent>
           </Card>

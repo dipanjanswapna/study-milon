@@ -52,7 +52,7 @@ export function StudyTimer() {
       .sort((a, b) => (a.order || 0) - (b.order || 0));
   }, [rawTasks]);
 
-  // STRICT RULE: Timer always follows the FIRST incomplete task from the Roadmap
+  // Timer always follows the FIRST incomplete task from the Roadmap
   const activeTask = incompleteTasks[0] || null;
   const upcomingTasks = incompleteTasks.slice(1, 3);
 
@@ -67,7 +67,6 @@ export function StudyTimer() {
   const initializedFromCloud = useRef(false);
   const todayStrRef = useRef<string>(format(new Date(), 'yyyy-MM-dd'));
 
-  // Ensure timer value is ALWAYS derived from the Focus Roadmap task duration when idle
   useEffect(() => {
     if (activeTask && !isActive && !isBreak && profile?.currentSession?.status === 'idle') {
       setTimeLeft(activeTask.duration * 60);
@@ -95,26 +94,20 @@ export function StudyTimer() {
     return Math.min(100, (currentSeconds / goalSeconds) * 100);
   }, [profile, isActive, isBreak]); 
 
-  // PRECISION SYNC: Only logs time if tied to a Focus Roadmap Task
   const performSync = useCallback(async (secondsToSync: number) => {
     if (!user || !activeTask || isBreak || secondsToSync <= 0) return;
     
-    // Strict Guard: Prevent logging if no subject or chapter is identified in the roadmap
-    if (!activeTask.subjectId || !activeTask.chapterId) {
-      console.warn("Logging prevented: Missing roadmap identifiers.");
-      return;
-    }
+    if (!activeTask.subjectId || !activeTask.chapterId) return;
 
     try {
       await logStudyTime(firestore, user.uid, activeTask.subjectId, activeTask.chapterId, secondsToSync);
       lastSyncTimestampRef.current = Date.now();
     } catch (e) {
-      console.error("Strict Roadmap Sync failed:", e);
+      console.error("Roadmap Sync failed:", e);
     }
   }, [user, activeTask, isBreak, firestore]);
 
   const handleStart = async () => {
-    // Only allow starting if there's a Roadmap task or it's a break
     if (!isActive && user && (activeTask || isBreak)) {
       const now = Date.now();
       setIsActive(true);
@@ -318,13 +311,10 @@ export function StudyTimer() {
         const newTimeLeft = Math.max(0, totalDuration - elapsedSinceStart);
         setTimeLeft(newTimeLeft);
 
-        // MIDNIGHT RESET PROTECTION
         const currentDayStr = format(now, 'yyyy-MM-dd');
         if (currentDayStr !== todayStrRef.current && !isBreak) {
           const elapsed = Math.floor((nowTime - lastSyncTimestampRef.current) / 1000);
-          if (elapsed > 0) {
-            performSync(elapsed);
-          }
+          if (elapsed > 0) performSync(elapsed);
           todayStrRef.current = currentDayStr;
           return;
         }
@@ -353,34 +343,31 @@ export function StudyTimer() {
   const minutesDisplay = Math.floor(timeLeft / 60);
   const secondsDisplay = timeLeft % 60;
 
-  if (tasksLoading) return <Card className="w-full h-96 animate-pulse rounded-[2.5rem]" />;
+  if (tasksLoading) return <Card className="w-full h-80 animate-pulse rounded-xl" />;
 
   if (!activeTask && !isBreak) {
     return (
-      <Card className="rounded-[2.5rem] border-none shadow-xl bg-gradient-to-br from-indigo-600 to-blue-700 text-white overflow-hidden group">
+      <Card className="rounded-xl border-none shadow-xl bg-[#1A1C3D] text-white overflow-hidden group">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-white/10 pb-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-blue-200" />
-              <CardTitle className="font-headline uppercase text-white">Focus Roadmap</CardTitle>
+              <Target className="h-5 w-5 text-primary" />
+              <CardTitle className="font-headline uppercase text-sm font-black tracking-tight">Focus Roadmap</CardTitle>
             </div>
-            <CardDescription className="text-blue-100/70">
-              Your academic sequence is empty for today.
-            </CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center p-12 text-center space-y-6">
-          <div className="p-6 bg-white/10 rounded-full">
-            <ListTodo className="h-10 w-10 text-white/40" />
+        <CardContent className="flex flex-col items-center justify-center p-10 text-center space-y-5">
+          <div className="p-5 bg-white/5 rounded-full">
+            <ListTodo className="h-8 w-8 text-white/20" />
           </div>
-          <div className="space-y-2">
-            <h3 className="text-xl font-bold font-headline">No Active Roadmap</h3>
-            <p className="text-blue-100/60 text-sm max-w-xs mx-auto">
-              Time only logs when tied to a Focus Roadmap objective. Build yours to begin.
+          <div className="space-y-1">
+            <h3 className="text-lg font-black font-headline">Empty Roadmap</h3>
+            <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest max-w-xs mx-auto">
+              Please build your sequence to begin logging.
             </p>
           </div>
-          <Button onClick={() => router.push('/todo')} className="rounded-xl px-8 h-12 font-bold gap-2 bg-white text-blue-600 hover:bg-white/90">
-            Deploy Roadmap <ArrowRight className="h-4 w-4" />
+          <Button onClick={() => router.push('/todo')} className="rounded-lg px-6 h-10 font-bold gap-2 bg-white text-indigo-900 hover:bg-white/90 shadow-lg text-xs">
+            Build Roadmap <ArrowRight className="h-3.5 w-3.5" />
           </Button>
         </CardContent>
       </Card>
@@ -388,119 +375,79 @@ export function StudyTimer() {
   }
 
   return (
-    <Card className="rounded-[2.5rem] border-none shadow-2xl relative overflow-hidden transition-all bg-gradient-to-br from-indigo-600 via-blue-600 to-blue-800 text-white">
-      <div className="absolute top-0 right-0 p-12 opacity-5">
-        <Zap className="h-48 w-48" />
+    <Card className="rounded-xl border-none shadow-2xl relative overflow-hidden transition-all bg-gradient-to-br from-indigo-600 via-blue-600 to-blue-800 text-white">
+      <div className="absolute top-0 right-0 p-10 opacity-5">
+        <Zap className="h-40 w-40" />
       </div>
 
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-white/10 pb-4 relative z-10">
-        <div className="space-y-1 overflow-hidden">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-white/10 pb-3 relative z-10">
+        <div className="space-y-0.5 overflow-hidden">
           <div className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-blue-200" />
-            <CardTitle className="font-headline uppercase text-white">{isBreak ? 'Rest Cycle' : 'Elite Focus'}</CardTitle>
+            <Target className="h-4 w-4 text-blue-200" />
+            <CardTitle className="font-headline uppercase text-xs font-black tracking-widest">{isBreak ? 'Rest Cycle' : 'Elite Focus'}</CardTitle>
           </div>
-          <CardDescription className="text-blue-100/80 truncate font-bold text-[11px] uppercase tracking-wide">
-            {isBreak ? 'Time to recharge.' : `Strict Log: ${activeTask?.subjectName} | ${activeTask?.chapterName}`}
+          <CardDescription className="text-blue-100/70 truncate font-bold text-[9px] uppercase tracking-wide">
+            {isBreak ? 'Recharging...' : `Strict: ${activeTask?.subjectName}`}
           </CardDescription>
         </div>
         {isActive && !isBreak && (
-          <div className="flex items-center gap-1.5 bg-red-500/20 px-3 py-1 rounded-full border border-red-500/30 animate-pulse shrink-0">
-            <Wifi className="h-3 w-3 text-red-400" />
-            <span className="text-[9px] font-black uppercase text-red-400 tracking-widest">SYNCING</span>
+          <div className="flex items-center gap-1 bg-red-500/20 px-2.5 py-1 rounded-full border border-red-500/30 animate-pulse shrink-0">
+            <Wifi className="h-2.5 w-2.5 text-red-400" />
+            <span className="text-[8px] font-black uppercase text-red-400 tracking-widest">SYNC</span>
           </div>
         )}
       </CardHeader>
 
-      <div className="px-6 md:px-8 pt-4 relative z-10">
-        <div className="flex justify-between items-center mb-1.5 text-[9px] font-black uppercase tracking-widest text-blue-100/60">
-           <span>Daily Roadmap Progress</span>
-           <span className="flex items-center gap-1">
-              <span className={cn(isActive && !isBreak && "animate-pulse text-blue-300")}>
-                {Math.round(dailyStudyProgress)}%
-              </span>
-              <span>Secured</span>
-           </span>
+      <div className="px-5 pt-3 relative z-10">
+        <div className="flex justify-between items-center mb-1 text-[8px] font-black uppercase tracking-widest text-blue-100/40">
+           <span>Roadmap Progress</span>
+           <span>{Math.round(dailyStudyProgress)}%</span>
         </div>
-        <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden shadow-inner">
+        <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
            <div 
-             className={cn(
-               "h-full bg-blue-300 transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(147,197,253,0.5)]",
-               isActive && !isBreak && "animate-pulse"
-             )} 
+             className="h-full bg-blue-300 transition-all duration-1000 ease-out" 
              style={{ width: `${dailyStudyProgress}%` }}
            />
         </div>
       </div>
       
-      <CardContent className="flex flex-col items-center justify-center gap-8 py-10 relative z-10">
-        <div className="relative h-[280px] w-[280px] flex items-center justify-center scale-90 md:scale-100">
-           <div className="absolute inset-0 rounded-full bg-[#1e1e1e] shadow-[0_0_40px_rgba(0,0,0,0.5)] border-4 border-[#333333]" />
+      <CardContent className="flex flex-col items-center justify-center gap-6 py-8 relative z-10">
+        <div className="relative h-[220px] w-[220px] flex items-center justify-center">
+           <div className="absolute inset-0 rounded-full bg-[#1A1C3D] shadow-inner border-[1px] border-white/10" />
            
            <svg className="absolute inset-0" viewBox="0 0 300 300">
-              <g transform="translate(150, 150)">
-                 {Array.from({ length: 180 }).map((_, i) => (
-                    <line
-                       key={i}
-                       x1="0"
-                       y1="-135"
-                       x2="0"
-                       y2={i % 10 === 0 ? "-125" : "-130"}
-                       stroke={i % 10 === 0 ? "#ffffff" : "#666666"}
-                       strokeWidth={i % 10 === 0 ? "1.5" : "1"}
-                       transform={`rotate(${i * 2})`}
-                    />
-                 ))}
-              </g>
-
               <g transform="translate(150, 150) rotate(-90)">
                  {progress > 0 && (
                    <path
-                      d={describeArc(0, 0, 130, 0, progress * 3.6)}
-                      fill="#8866FF"
-                      fillOpacity="0.4"
+                      d={describeArc(0, 0, 110, 0, progress * 3.6)}
+                      fill="none"
+                      stroke="#8866FF"
+                      strokeWidth="4"
+                      strokeLinecap="round"
                       className="transition-all duration-1000 ease-linear"
                    />
                  )}
               </g>
-
-              <g transform="translate(150, 150)">
-                 <circle
-                    cx={130 * Math.cos(((progress * 3.6 - 90) * Math.PI) / 180)}
-                    cy={130 * Math.sin(((progress * 3.6 - 90) * Math.PI) / 180)}
-                    r="8"
-                    fill="#8866FF"
-                    className="transition-all duration-1000 ease-linear shadow-lg"
-                 />
-              </g>
            </svg>
 
            <div className="flex flex-col items-center justify-center z-10">
-            <span className={cn(
-              "text-5xl font-black font-mono tracking-tighter tabular-nums text-white transition-all",
-              isActive && "scale-105"
-            )}>
+            <span className="text-4xl font-black font-mono tracking-tighter tabular-nums text-white">
               {String(minutesDisplay).padStart(2, '0')}:{String(secondsDisplay).padStart(2, '0')}
             </span>
-            <div className="flex items-center gap-1 text-blue-100/50 mt-1">
-              <Clock className="h-3 w-3" />
-              <span className="text-[10px] font-black uppercase tracking-widest">{isBreak ? 'Resting' : 'Strict Focus'}</span>
-            </div>
+            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-blue-100/40 mt-1">{isBreak ? 'Resting' : 'Focusing'}</span>
           </div>
         </div>
         
-        <div className="flex flex-col gap-3 w-full max-w-[320px]">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-2 w-full max-w-[240px]">
+          <div className="flex items-center gap-2">
             <Button 
               onClick={isActive ? handlePause : handleStart} 
-              size="lg" 
               className={cn(
-                "flex-1 h-14 text-base font-black rounded-2xl shadow-xl transition-transform active:scale-95",
-                isBreak 
-                  ? "bg-orange-500 hover:bg-orange-600 text-white" 
-                  : "bg-white text-blue-600 hover:bg-blue-50"
+                "flex-1 h-11 text-xs font-black rounded-xl shadow-lg active:scale-95 transition-all",
+                isBreak ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-white text-indigo-900 hover:bg-blue-50"
               )} 
             >
-              {isActive ? <Pause className="mr-2 h-5 w-5" /> : <Play className="mr-2 h-5 w-5 fill-current" />}
+              {isActive ? <Pause className="mr-1.5 h-4 w-4" /> : <Play className="mr-1.5 h-4 w-4 fill-current" />}
               {isActive ? 'Pause' : 'Engage'}
             </Button>
             
@@ -508,10 +455,10 @@ export function StudyTimer() {
               <Button 
                 variant="outline" 
                 size="icon" 
-                className="h-14 w-14 rounded-2xl bg-white/10 border-white/20 text-white hover:bg-white/20"
+                className="h-11 w-11 rounded-xl bg-white/5 border-white/10 text-white"
                 onClick={handleSkip}
               >
-                <FastForward className="h-6 w-6" />
+                <FastForward className="h-4 w-4" />
               </Button>
             )}
           </div>
@@ -519,34 +466,11 @@ export function StudyTimer() {
           {!isBreak && activeTask && (
             <Button 
               variant="secondary" 
-              className="w-full h-12 rounded-xl font-bold text-[10px] uppercase tracking-widest bg-blue-400/20 text-blue-100 hover:bg-blue-400/30 border border-blue-400/20"
+              className="w-full h-10 rounded-xl font-black text-[9px] uppercase tracking-widest bg-white/10 text-white hover:bg-white/20 border border-white/10"
               onClick={markTaskDone}
             >
-              <CheckCircle2 className="mr-1.5 h-4 w-4" /> Secure Objective
+              <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Secure Task
             </Button>
-          )}
-
-          {!isBreak && upcomingTasks.length > 0 && (
-            <div className="w-full mt-6 space-y-3 pt-6 border-t border-white/10">
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-100/40 px-1">
-                <ListTodo className="h-3 w-3" />
-                Upcoming Sequence
-              </div>
-              <div className="space-y-2">
-                {upcomingTasks.map((task) => (
-                  <div key={task.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 transition-all hover:bg-white/10">
-                    <div className="flex flex-col gap-0.5 overflow-hidden">
-                      <span className="text-[11px] font-black text-white/90 leading-none truncate">{task.chapterName}</span>
-                      <span className="text-[9px] font-bold text-blue-100/40 uppercase tracking-tighter truncate">{task.subjectName}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-blue-100/50 shrink-0 ml-2">
-                       <Clock className="h-2.5 w-2.5" />
-                       <span className="text-[10px] font-black">{task.duration}m</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           )}
         </div>
       </CardContent>
@@ -559,11 +483,8 @@ function describeArc(x: number, y: number, radius: number, startAngle: number, e
   const end = polarToCartesian(x, y, radius, startAngle);
   const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
   const d = [
-    "M", x, y,
-    "L", start.x, start.y,
-    "A", radius, radius, 0, largeArcFlag, 0, end.x, end.y,
-    "L", x, y,
-    "Z"
+    "M", start.x, start.y,
+    "A", radius, radius, 0, largeArcFlag, 0, end.x, end.y
   ].join(" ");
   return d;
 }
