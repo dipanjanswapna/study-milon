@@ -79,7 +79,8 @@ import {
   Calendar,
   CheckCircle2,
   ChevronRight,
-  GripVertical
+  GripVertical,
+  AlertCircle
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -95,15 +96,25 @@ import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const profileSchema = z.object({
-  displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
+  displayName: z.string().min(2, 'Display name is required.'),
   photoURL: z.string().url('Please enter a valid URL.').or(z.literal('')),
-  category: z.enum(['SSC', 'HSC', 'Admission 1st', 'Admission 2nd', 'Job Prep', 'University']),
-  religion: z.enum(['Muslim', 'Hindu']),
+  category: z.enum(['SSC', 'HSC', 'Admission 1st', 'Admission 2nd', 'Job Prep', 'University'], {
+    required_error: "Please select a category",
+  }),
+  religion: z.enum(['Muslim', 'Hindu'], {
+    required_error: "Please select a religion",
+  }),
   batch: z.string().min(1, 'Batch is required.'),
-  institution: z.string().min(2, 'Institution name must be at least 2 characters.').or(z.literal('')),
-  phoneNumber: z.string().min(10, 'Phone number must be at least 10 digits.').or(z.literal('')),
+  institution: z.string().min(3, 'Institution name is mandatory (min 3 chars).'),
+  phoneNumber: z.string().min(11, 'Phone number must be at least 11 digits.'),
   dailyGoalHours: z.string().refine((val) => !isNaN(parseInt(val)) && parseInt(val) >= 0, 'Invalid hours'),
   dailyGoalMinutes: z.string().refine((val) => !isNaN(parseInt(val)) && parseInt(val) >= 0 && parseInt(val) < 60, 'Invalid minutes'),
+}).refine((data) => {
+  const total = (parseInt(data.dailyGoalHours) * 60) + parseInt(data.dailyGoalMinutes);
+  return total > 0;
+}, {
+  message: "Daily goal must be at least 1 minute",
+  path: ["dailyGoalHours"]
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -140,9 +151,10 @@ export default function ProfilePage() {
     handleSubmit,
     reset,
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
+    mode: 'onChange', // Enable real-time validation to control button state
     defaultValues: {
       category: 'HSC',
       religion: 'Muslim',
@@ -298,7 +310,7 @@ export default function ProfilePage() {
                              <Settings2 className="mr-1 h-3 w-3" /> Focus Mode
                           </Link>
                        </Button>
-                       <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest text-primary border-primary/20">Edit Mode</Badge>
+                       <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest text-primary border-primary/20">Required Info</Badge>
                     </div>
                   </div>
                 </CardHeader>
@@ -335,21 +347,30 @@ export default function ProfilePage() {
                         </div>
                       </div>
 
+                      {!isValid && (
+                        <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-3 flex items-start gap-3 animate-in fade-in duration-300">
+                          <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                          <p className="text-[10px] font-bold text-destructive leading-relaxed">
+                            Profile incomplete! Category, Batch, Religion, Institution, Phone Number, and a valid Study Goal must be provided to save your profile.
+                          </p>
+                        </div>
+                      )}
+
                       <div className="grid md:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Full Name</Label>
-                          <Input className="h-10 rounded-lg text-sm font-medium" {...register('displayName')} />
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Full Name *</Label>
+                          <Input className={cn("h-10 rounded-lg text-sm font-medium", errors.displayName && "border-destructive")} {...register('displayName')} />
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1.5">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Category</Label>
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Category *</Label>
                             <Controller
                               name="category"
                               control={control}
                               render={({ field }) => (
                                 <Select onValueChange={field.onChange} value={field.value}>
-                                  <SelectTrigger className="h-10 rounded-lg text-xs">
+                                  <SelectTrigger className={cn("h-10 rounded-lg text-xs", errors.category && "border-destructive")}>
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent className="rounded-xl">
@@ -365,13 +386,13 @@ export default function ProfilePage() {
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Batch</Label>
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Batch *</Label>
                             <Controller
                               name="batch"
                               control={control}
                               render={({ field }) => (
                                 <Select onValueChange={field.onChange} value={field.value}>
-                                  <SelectTrigger className="h-10 rounded-lg text-xs">
+                                  <SelectTrigger className={cn("h-10 rounded-lg text-xs", errors.batch && "border-destructive")}>
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent className="rounded-xl">
@@ -384,13 +405,13 @@ export default function ProfilePage() {
                         </div>
 
                         <div className="space-y-1.5">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Religion</Label>
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Religion *</Label>
                           <Controller
                             name="religion"
                             control={control}
                             render={({ field }) => (
                               <Select onValueChange={field.onChange} value={field.value}>
-                                <SelectTrigger className="h-10 rounded-lg text-xs">
+                                <SelectTrigger className={cn("h-10 rounded-lg text-xs", errors.religion && "border-destructive")}>
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="rounded-xl">
@@ -403,13 +424,15 @@ export default function ProfilePage() {
                         </div>
 
                         <div className="space-y-1.5">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Institution</Label>
-                          <Input className="h-10 rounded-lg text-sm font-medium" {...register('institution')} placeholder="e.g. Dhaka College" />
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Institution *</Label>
+                          <Input className={cn("h-10 rounded-lg text-sm font-medium", errors.institution && "border-destructive")} {...register('institution')} placeholder="e.g. Dhaka College" />
+                          {errors.institution && <p className="text-[8px] text-destructive font-black uppercase">{errors.institution.message}</p>}
                         </div>
 
                         <div className="space-y-1.5">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Phone Number</Label>
-                          <Input className="h-10 rounded-lg text-sm font-medium" {...register('phoneNumber')} placeholder="01XXXXXXXXX" />
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Phone Number *</Label>
+                          <Input className={cn("h-10 rounded-lg text-sm font-medium", errors.phoneNumber && "border-destructive")} {...register('phoneNumber')} placeholder="01XXXXXXXXX" />
+                          {errors.phoneNumber && <p className="text-[8px] text-destructive font-black uppercase">{errors.phoneNumber.message}</p>}
                         </div>
 
                         <div className="space-y-1.5">
@@ -421,22 +444,32 @@ export default function ProfilePage() {
                       <div className="pt-6 border-t border-secondary/30">
                         <div className="flex items-center gap-2 mb-4">
                           <Target className="h-4 w-4 text-primary" />
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Daily Study Goal</h4>
+                          <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Daily Study Goal *</h4>
                         </div>
                         <div className="grid grid-cols-2 gap-4 max-w-sm">
                           <div className="space-y-1.5">
                             <Label className="text-[8px] font-black uppercase text-muted-foreground/60 px-1">Hours</Label>
-                            <Input type="number" className="h-10 rounded-lg text-sm font-bold" {...register('dailyGoalHours')} min="0" />
+                            <Input type="number" className={cn("h-10 rounded-lg text-sm font-bold", errors.dailyGoalHours && "border-destructive")} {...register('dailyGoalHours')} min="0" />
                           </div>
                           <div className="space-y-1.5">
                             <Label className="text-[8px] font-black uppercase text-muted-foreground/60 px-1">Minutes</Label>
-                            <Input type="number" className="h-10 rounded-lg text-sm font-bold" {...register('dailyGoalMinutes')} min="0" max="59" />
+                            <Input type="number" className={cn("h-10 rounded-lg text-sm font-bold", errors.dailyGoalMinutes && "border-destructive")} {...register('dailyGoalMinutes')} min="0" max="59" />
                           </div>
                         </div>
+                        {errors.dailyGoalHours && <p className="text-[8px] text-destructive font-black uppercase mt-2">{errors.dailyGoalHours.message}</p>}
                       </div>
 
                       <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-secondary/30">
-                        <Button type="submit" disabled={isSubmitting} className="flex-1 h-12 font-black rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95">
+                        <Button 
+                          type="submit" 
+                          disabled={isSubmitting || !isValid} 
+                          className={cn(
+                            "flex-1 h-12 font-black rounded-xl shadow-lg transition-all",
+                            isValid 
+                              ? "shadow-primary/20 hover:scale-[1.02] active:scale-95" 
+                              : "opacity-50 grayscale cursor-not-allowed"
+                          )}
+                        >
                           {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Changes"}
                         </Button>
                       </div>
