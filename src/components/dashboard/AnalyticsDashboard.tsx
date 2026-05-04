@@ -7,13 +7,14 @@ import type { UserProfile } from '@/firebase/firestore/users';
 import { StudyActivityChart } from './StudyActivityChart';
 import { SubjectDistributionChart } from './SubjectDistributionChart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Clock, PieChart, BarChart, Trophy, Zap, TrendingUp, Activity, Calendar, History, BookOpen, Layers } from 'lucide-react';
+import { Clock, PieChart, BarChart, Trophy, Zap, TrendingUp, Activity, Calendar, History, BookOpen, Layers, Flame, Target, Star } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { subDays, format, isAfter, startOfMonth, eachDayOfInterval, isSameMonth, startOfDay, eachMonthOfInterval, startOfWeek, endOfMonth, endOfWeek, addDays, differenceInDays } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 type FilterType = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
@@ -70,7 +71,6 @@ export function AnalyticsDashboard() {
       chartData = Object.values(hourlyData);
     } 
     else if (filter === 'weekly') {
-      // Weekly: Starts on Friday as per "Study Milon" custom cycle
       const currentWeekStart = startOfWeek(now, { weekStartsOn: 5 });
       const interval = eachDayOfInterval({ start: currentWeekStart, end: now });
       
@@ -93,10 +93,6 @@ export function AnalyticsDashboard() {
       chartData = Object.values(dailyAgg);
     }
     else if (filter === 'monthly') {
-      // Monthly: Grouped by Weeks (Week 1, Week 2...)
-      const monthStart = startOfMonth(now);
-      const monthEnd = endOfMonth(now);
-      
       const weeksData: Record<string, any> = {
         'Week 1': { date: 'Week 1' },
         'Week 2': { date: 'Week 2' },
@@ -122,7 +118,6 @@ export function AnalyticsDashboard() {
       chartData = Object.values(weeksData);
     }
     else if (filter === 'yearly') {
-      // Yearly: Grouped by Months
       const createdAt = profile?.createdAt?.toDate() || subDays(now, 365);
       const startOfJoinMonth = startOfMonth(createdAt);
       const monthsInterval = eachMonthOfInterval({ start: startOfJoinMonth, end: now });
@@ -146,7 +141,7 @@ export function AnalyticsDashboard() {
         }
       });
 
-      chartData = Object.values(monthsAgg).slice(-12); // Show last 12 months
+      chartData = Object.values(monthsAgg).slice(-12);
     }
 
     const currentPeriodMins = filteredSessions.reduce((acc, curr) => acc + curr.duration, 0);
@@ -158,7 +153,6 @@ export function AnalyticsDashboard() {
     }
     const subjectData = Object.entries(subjectMinutes).map(([name, value]) => ({ name, value }));
 
-    // Consistency logic
     const uniqueDays = new Set(filteredSessions.map(s => s.date)).size;
     const periodDays = filter === 'daily' ? 1 : filter === 'weekly' ? 7 : filter === 'monthly' ? 30 : 365;
     const consistencyFactor = (uniqueDays / Math.max(1, Math.min(periodDays, differenceInDays(now, profile?.createdAt?.toDate() || now) + 1)));
@@ -196,76 +190,109 @@ export function AnalyticsDashboard() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-primary/10 rounded-lg">
-            <TrendingUp className="h-4 w-4 text-primary" />
+          <div className="p-1.5 bg-primary/10 rounded-lg text-primary shadow-sm border border-primary/20">
+            <TrendingUp className="h-4 w-4" />
           </div>
           <h2 className="text-xl font-black tracking-tight font-headline uppercase">Hustle Insights</h2>
         </div>
         <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)} className="w-full sm:w-auto">
-          <TabsList className="grid w-full grid-cols-4 bg-secondary/50 p-1 rounded-lg h-9">
-            <TabsTrigger value="daily" className="rounded-md font-bold text-[10px]">Daily</TabsTrigger>
-            <TabsTrigger value="weekly" className="rounded-md font-bold text-[10px]">Weekly</TabsTrigger>
-            <TabsTrigger value="monthly" className="rounded-md font-bold text-[10px]">Monthly</TabsTrigger>
-            <TabsTrigger value="yearly" className="rounded-md font-bold text-[10px]">Yearly</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 bg-secondary/50 p-1 rounded-xl h-10">
+            <TabsTrigger value="daily" className="rounded-lg font-black text-[10px] uppercase">Daily</TabsTrigger>
+            <TabsTrigger value="weekly" className="rounded-lg font-black text-[10px] uppercase">Weekly</TabsTrigger>
+            <TabsTrigger value="monthly" className="rounded-lg font-black text-[10px] uppercase">Monthly</TabsTrigger>
+            <TabsTrigger value="yearly" className="rounded-lg font-black text-[10px] uppercase">Yearly</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-        <Card className="md:col-span-3 rounded-xl border-none shadow-xl bg-primary text-primary-foreground overflow-hidden group relative">
-          <div className="absolute top-0 right-0 p-8 opacity-10">
-            <Zap className="h-20 w-20" />
+        {/* Consistency / Smart Streak Card */}
+        <Card className="md:col-span-2 rounded-[2rem] border-none shadow-xl bg-primary text-primary-foreground overflow-hidden group relative">
+          <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12 transition-transform group-hover:rotate-45 duration-1000">
+            <Flame className="h-32 w-32" />
           </div>
           <CardHeader className="pb-2">
-            <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-foreground/70">
-              {filter} Hustle Total
+            <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-foreground/70 flex items-center gap-2">
+              <Star className="h-3 w-3 fill-current" /> SMART STREAK
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-6">
             <div className="flex items-baseline gap-2">
-              <h3 className="text-4xl font-black tracking-tighter">
-                {formatStudyTime(stats.currentPeriodMins)}
+              <h3 className="text-6xl font-black tracking-tighter">
+                {profile?.currentStreak || 0}
               </h3>
+              <span className="text-xs font-black uppercase text-primary-foreground/60 tracking-widest">Days</span>
             </div>
-            <div className="pt-1">
-              <div className="flex justify-between text-[9px] font-black uppercase tracking-widest mb-1.5">
-                 <span>Consistency Score</span>
-                 <span>{stats.hustleScore}%</span>
-              </div>
-              <Progress value={stats.hustleScore} className="h-1.5 bg-white/20" />
+            
+            <div className="space-y-3 pt-2">
+               <div className="p-3 bg-white/10 rounded-2xl border border-white/10 backdrop-blur-sm">
+                  <div className="flex items-center justify-between mb-2">
+                     <span className="text-[8px] font-black uppercase tracking-widest">Daily Progress</span>
+                     <span className="text-[10px] font-black">{Math.min(100, Math.round(((profile?.daily_study_minutes || 0) / (profile?.daily_goal_minutes || 360)) * 100))}%</span>
+                  </div>
+                  <Progress value={((profile?.daily_study_minutes || 0) / (profile?.daily_goal_minutes || 360)) * 100} className="h-1 bg-white/20" />
+               </div>
+               <p className="text-[9px] font-bold text-center text-primary-foreground/60 uppercase tracking-tighter leading-relaxed">
+                  { (profile?.daily_study_minutes || 0) >= (profile?.daily_goal_minutes || 360) 
+                    ? "Goal achieved! Streak secured for today. 🔥" 
+                    : "Hustle more to keep the streak alive!" }
+               </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-3 rounded-xl border-none shadow-xl bg-card overflow-hidden border">
+        <Card className="md:col-span-2 rounded-[2rem] border-none shadow-xl bg-card overflow-hidden border">
           <CardHeader className="pb-2">
-            <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-              <Trophy className="inline-block h-3 w-3 mr-1 text-primary" /> Million Quest
+            <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+              <Clock className="h-3 w-3 text-primary" /> {filter} Hustle
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-6">
             <div className="flex items-baseline gap-2">
-              <h3 className="text-3xl font-black tracking-tighter">
+              <h3 className="text-5xl font-black tracking-tighter">
+                {formatStudyTime(stats.currentPeriodMins)}
+              </h3>
+            </div>
+            <div className="pt-2">
+              <div className="flex justify-between text-[9px] font-black uppercase tracking-widest mb-1.5 text-primary">
+                 <span>Hustle Score</span>
+                 <span>{stats.hustleScore}%</span>
+              </div>
+              <Progress value={stats.hustleScore} className="h-1.5 bg-secondary" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2 rounded-[2rem] border-none shadow-xl bg-card overflow-hidden border">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+              <Trophy className="h-3 w-3 text-primary" /> Million Quest
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-baseline gap-2">
+              <h3 className="text-4xl font-black tracking-tighter">
                 {(profile?.total_study_minutes || 0).toLocaleString()}
               </h3>
               <span className="text-[9px] font-black text-muted-foreground uppercase">Min</span>
             </div>
-            <div className="pt-1">
-              <div className="flex justify-between text-[9px] font-black uppercase tracking-widest mb-1.5 text-primary">
-                 <span>Lifetime Progress</span>
+            <div className="pt-2">
+              <div className="flex justify-between text-[9px] font-black uppercase tracking-widest mb-1.5 text-indigo-500">
+                 <span>Mastery Path</span>
                  <span>{((profile?.total_study_minutes || 0) / 1000000 * 100).toFixed(4)}%</span>
               </div>
               <Progress value={((profile?.total_study_minutes || 0) / 1000000 * 100)} className="h-1.5 bg-secondary" />
             </div>
+            <p className="text-[8px] font-bold text-muted-foreground/60 text-center uppercase tracking-widest">Longest Streak: {profile?.longestStreak || 0} Days</p>
           </CardContent>
         </Card>
 
         <div className="md:col-span-6 space-y-6">
-          <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 bg-secondary/10 border-b">
+          <Card className="rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 bg-secondary/10 border-b p-6">
               <div>
-                <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-tight">
-                  <BarChart className="h-4 w-4 text-primary" /> Session Mapping
+                <CardTitle className="text-base font-black flex items-center gap-2 uppercase tracking-tight">
+                  <BarChart className="h-5 w-5 text-primary" /> Session Mapping
                 </CardTitle>
                 <CardDescription className="text-[10px] font-bold uppercase tracking-widest mt-1">
                   {filter === 'daily' ? 'Hourly Focus Analysis' : 
@@ -273,11 +300,11 @@ export function AnalyticsDashboard() {
                    filter === 'monthly' ? 'Weekly Output Breakdown' : 'Monthly Performance Tracking'}
                 </CardDescription>
               </div>
-              <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
-                 <Layers className="h-2.5 w-2.5" /> Stacked Subjects
+              <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest flex items-center gap-1 h-7 rounded-full bg-white">
+                 <Layers className="h-3 w-3" /> Stacked Subjects
               </Badge>
             </CardHeader>
-            <CardContent className="p-4 pt-4">
+            <CardContent className="p-4 pt-6">
               <StudyActivityChart 
                 data={stats.chartData} 
                 showTargetLine={filter === 'daily' || filter === 'weekly'} 
@@ -289,55 +316,57 @@ export function AnalyticsDashboard() {
           </Card>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
-              <CardHeader className="bg-secondary/10 border-b pb-3">
-                <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-tight">
-                  <PieChart className="h-4 w-4 text-primary" /> Focus Areas
+            <Card className="rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
+              <CardHeader className="bg-secondary/10 border-b p-6 pb-4">
+                <CardTitle className="text-base font-black flex items-center gap-2 uppercase tracking-tight">
+                  <PieChart className="h-5 w-5 text-primary" /> Focus Areas
                 </CardTitle>
-                <CardDescription className="text-[10px] font-bold uppercase tracking-widest">
+                <CardDescription className="text-[10px] font-bold uppercase tracking-widest mt-1">
                   Subject Distribution for this {filter}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-4">
+              <CardContent className="p-6">
                 <SubjectDistributionChart data={stats.subjectData} />
               </CardContent>
             </Card>
 
-            <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
-               <CardHeader className="bg-secondary/10 border-b pb-3 flex flex-row items-center justify-between">
-                <CardTitle className="text-sm font-black flex items-center gap-2 uppercase tracking-tight">
-                  <History className="h-4 w-4 text-primary" /> Recent Logs
+            <Card className="rounded-[2.5rem] border-none shadow-xl bg-card overflow-hidden">
+               <CardHeader className="bg-secondary/10 border-b p-6 pb-4 flex flex-row items-center justify-between">
+                <CardTitle className="text-base font-black flex items-center gap-2 uppercase tracking-tight">
+                  <History className="h-5 w-5 text-primary" /> Recent Logs
                 </CardTitle>
-                <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest">{stats.filteredSessions.length} Logs</Badge>
+                <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest bg-white h-7 px-3 rounded-full">{stats.filteredSessions.length} Logs</Badge>
               </CardHeader>
               <CardContent className="p-0">
-                <ScrollArea className="h-[350px]">
+                <ScrollArea className="h-[400px]">
                   {stats.filteredSessions.length > 0 ? (
-                    <div className="divide-y">
+                    <div className="divide-y divide-secondary/30">
                       {stats.filteredSessions.slice(0, 20).map((session, idx) => (
-                        <div key={idx} className="p-4 hover:bg-secondary/10 transition-colors flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-3">
-                             <div className="w-10 h-10 rounded-lg bg-primary/5 flex items-center justify-center text-primary shadow-sm border border-primary/10">
-                                <BookOpen className="h-5 w-5" />
+                        <div key={idx} className="p-5 hover:bg-secondary/10 transition-colors flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-4">
+                             <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary shadow-inner border border-primary/10 transition-transform hover:scale-110">
+                                <BookOpen className="h-6 w-6" />
                              </div>
                              <div className="min-w-0">
-                                <p className="text-sm font-bold truncate">{session.subject || 'Focus Session'}</p>
-                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">
-                                   <Calendar className="h-2.5 w-2.5" /> {session.date}
+                                <p className="text-sm font-black truncate tracking-tight">{session.subject || 'Focus Session'}</p>
+                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1">
+                                   <Calendar className="h-3 w-3 text-primary/50" /> {session.date}
                                 </div>
                              </div>
                           </div>
                           <div className="text-right">
-                             <p className="text-sm font-black text-primary tabular-nums">{formatStudyTime(session.duration)}</p>
-                             <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Focused</p>
+                             <p className="text-base font-black text-primary tabular-nums tracking-tighter">{formatStudyTime(session.duration)}</p>
+                             <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground mt-1">Focused</p>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
-                       <Zap className="h-10 w-10 text-muted-foreground/20" />
-                       <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">No Sessions Found</p>
+                    <div className="py-24 text-center flex flex-col items-center justify-center gap-4">
+                       <div className="bg-secondary/50 p-6 rounded-full">
+                          <Zap className="h-10 w-10 text-muted-foreground/20" />
+                       </div>
+                       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">No Sessions Logged</p>
                     </div>
                   )}
                 </ScrollArea>

@@ -32,7 +32,8 @@ import {
   Zap,
   BookOpen,
   List,
-  Layers
+  Layers,
+  Flame
 } from 'lucide-react';
 import { 
   format, 
@@ -91,10 +92,6 @@ export default function PublicProfilePage() {
     const calculateRanks = async () => {
       const periods = ['daily', 'weekly', 'monthly', 'yearly'] as const;
       const newRanks: any = { daily: null, weekly: null, monthly: null, yearly: null };
-      const now = new Date();
-      
-      // Simulation of rank fetching to avoid heavy multi-query on profile load
-      // Real implementation would fetch from Leaderboard collection
       for (const p of periods) {
         const val = profile[`${p}_study_minutes`] || 0;
         if (val > 0) newRanks[p] = "Secured";
@@ -319,7 +316,14 @@ export default function PublicProfilePage() {
                         </Badge>
                       )}
                     </div>
-                    <h1 className="text-xl md:text-3xl font-black tracking-tighter leading-tight">{profile.displayName}</h1>
+                    <div className="flex items-center justify-center lg:justify-start gap-2">
+                       <h1 className="text-xl md:text-3xl font-black tracking-tighter leading-tight uppercase">{profile.displayName}</h1>
+                       {profile.currentStreak > 0 && (
+                          <Badge className="bg-orange-600 text-white border-none font-black text-[10px] px-2 h-5 flex items-center gap-1">
+                             <Flame className="h-3 w-3 fill-current" /> {profile.currentStreak}
+                          </Badge>
+                       )}
+                    </div>
                     <div className="flex flex-col space-y-1 text-[10px] font-medium text-white/40">
                       <div className="flex items-center justify-center lg:justify-start gap-1.5">
                         <Mail className="h-3 w-3 text-primary" /> {profile.email}
@@ -373,7 +377,7 @@ export default function PublicProfilePage() {
                   </div>
                </div>
                <Tabs value={filter} onValueChange={(v: any) => setFilter(v)} className="w-full sm:w-auto">
-                  <TabsList className="grid grid-cols-4 bg-secondary/50 h-9 p-1 rounded-xl">
+                  <TabsList className="grid grid-cols-4 bg-secondary/50 h-10 p-1 rounded-xl">
                     <TabsTrigger value="daily" className="rounded-lg font-black text-[9px] uppercase tracking-wider">Daily</TabsTrigger>
                     <TabsTrigger value="weekly" className="rounded-lg font-black text-[9px] uppercase tracking-wider">Weekly</TabsTrigger>
                     <TabsTrigger value="monthly" className="rounded-lg font-black text-[9px] uppercase tracking-wider">Monthly</TabsTrigger>
@@ -431,7 +435,7 @@ export default function PublicProfilePage() {
                <div className="lg:col-span-5 space-y-4">
                   <StatSummaryCard label="Daily Target" value={formatTime(profile.daily_goal_minutes)} icon={<Target className="h-4 w-4" />} color="primary" />
                   <StatSummaryCard label={`${filter} Hustle`} value={formatTime(stats.currentPeriodMins)} icon={<Clock className="h-4 w-4" />} color="orange" />
-                  <StatSummaryCard label="Academic Status" value={isLive ? 'Studying Now' : 'Online'} icon={isLive ? <Wifi className="h-4 w-4 animate-pulse" /> : <Trophy className="h-4 w-4" />} color="indigo" />
+                  <StatSummaryCard label="Current Streak" value={`${profile.currentStreak || 0} Days`} icon={<Flame className="h-4 w-4 animate-pulse" />} color="indigo" />
                </div>
             </div>
           </div>

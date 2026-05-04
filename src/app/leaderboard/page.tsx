@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Trophy, Medal, Crown, Zap, Filter, Loader2, RefreshCw, Wifi } from 'lucide-react';
+import { Trophy, Medal, Crown, Zap, Filter, Loader2, RefreshCw, Wifi, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -251,7 +251,14 @@ export default function LeaderboardPage() {
                              )}
                           </div>
                           <div className="min-w-0 space-y-0.5">
-                              <p className="font-black text-sm md:text-base truncate tracking-tight group-hover:text-primary transition-colors">{contender.displayName}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-black text-sm md:text-base truncate tracking-tight group-hover:text-primary transition-colors uppercase">{contender.displayName}</p>
+                                {contender.currentStreak > 0 && (
+                                  <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-none font-black text-[9px] px-1.5 h-4 flex items-center gap-0.5">
+                                    <Flame className="h-2.5 w-2.5 fill-current" /> {contender.currentStreak}
+                                  </Badge>
+                                )}
+                              </div>
                               <div className="flex flex-wrap items-center gap-2">
                                   <Badge variant="secondary" className="text-[8px] font-black uppercase h-4 px-1.5 bg-primary/5 text-primary border-none">
                                     {contender.category} {contender.batch}
@@ -324,7 +331,7 @@ function PodiumMember({ user, rank, time }: { user: any; rank: number; time: str
   };
 
   return (
-    <Link href={`/profile/${user.uid}`} className="flex flex-col items-center group relative flex-1">
+    <div className="flex flex-col items-center group relative flex-1">
        {isWinner && (
          <div className="absolute -top-16 flex flex-col items-center animate-bounce">
             <Crown className="h-12 w-12 text-yellow-400 fill-current drop-shadow-lg" />
@@ -332,28 +339,36 @@ function PodiumMember({ user, rank, time }: { user: any; rank: number; time: str
          </div>
        )}
        
-       <div className={cn(
-         "relative rounded-full transition-all duration-700 group-hover:scale-110", 
-         isWinner ? "h-28 w-28 md:h-40 md:w-40 border-[6px]" : "h-20 w-20 md:h-28 md:w-28 border-[4px]",
-         rankColors[rank as keyof typeof rankColors]
-       )}>
-          <div className="absolute inset-0 rounded-full bg-white/5 backdrop-blur-sm" />
-          <Avatar className="h-full w-full">
-             <AvatarImage src={user.photoURL || undefined} className="object-cover" />
-             <AvatarFallback className={cn("font-black bg-secondary", isWinner ? "text-2xl" : "text-lg")}>{user.displayName?.[0]}</AvatarFallback>
-          </Avatar>
-          
+       <Link href={`/profile/${user.uid}`} className="relative">
           <div className={cn(
-            "absolute -bottom-2 left-1/2 -translate-x-1/2 h-6 px-3 rounded-full flex items-center justify-center text-[10px] font-black shadow-lg",
-            rank === 1 ? "bg-yellow-400 text-yellow-900" : rank === 2 ? "bg-slate-300 text-slate-700" : "bg-orange-400 text-white"
+            "relative rounded-full transition-all duration-700 group-hover:scale-110", 
+            isWinner ? "h-28 w-28 md:h-40 md:w-40 border-[6px]" : "h-20 w-20 md:h-28 md:w-28 border-[4px]",
+            rankColors[rank as keyof typeof rankColors]
           )}>
-            RANK {rank}
+             <div className="absolute inset-0 rounded-full bg-white/5 backdrop-blur-sm" />
+             <Avatar className="h-full w-full">
+                <AvatarImage src={user.photoURL || undefined} className="object-cover" />
+                <AvatarFallback className={cn("font-black bg-secondary", isWinner ? "text-2xl" : "text-lg")}>{user.displayName?.[0]}</AvatarFallback>
+             </Avatar>
+             
+             <div className={cn(
+               "absolute -bottom-2 left-1/2 -translate-x-1/2 h-6 px-3 rounded-full flex items-center justify-center text-[10px] font-black shadow-lg",
+               rank === 1 ? "bg-yellow-400 text-yellow-900" : rank === 2 ? "bg-slate-300 text-slate-700" : "bg-orange-400 text-white"
+             )}>
+               RANK {rank}
+             </div>
+             
+             {user.isLive && (
+               <div className="absolute top-2 right-2 bg-red-600 text-white text-[7px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-lg ring-2 ring-white">LIVE</div>
+             )}
+
+             {user.currentStreak > 0 && (
+                <div className="absolute -top-1 -right-2 bg-orange-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-lg flex items-center gap-0.5 border border-white/20">
+                  <Flame className="h-2.5 w-2.5 fill-current" /> {user.currentStreak}
+                </div>
+             )}
           </div>
-          
-          {user.isLive && (
-            <div className="absolute top-2 right-2 bg-red-600 text-white text-[7px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-lg ring-2 ring-white">LIVE</div>
-          )}
-       </div>
+       </Link>
        
        <div className="mt-6 text-center space-y-1 w-full max-w-[120px]">
           <h3 className="font-black tracking-tight truncate text-xs md:text-base group-hover:text-primary transition-colors uppercase">{user.displayName}</h3>
@@ -363,6 +378,6 @@ function PodiumMember({ user, rank, time }: { user: any; rank: number; time: str
           </div>
           <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">{user.category} {user.batch}</p>
        </div>
-    </Link>
+    </div>
   );
 }

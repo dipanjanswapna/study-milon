@@ -70,6 +70,10 @@ export type UserProfile = {
   pinnedExamId?: string | null;
   isStudying?: boolean;
   currentSession?: CurrentSession;
+  // Streak System
+  currentStreak?: number;
+  longestStreak?: number;
+  lastGoalMetDate?: string; // YYYY-MM-DD
 };
 
 export async function createUserProfile(
@@ -116,6 +120,9 @@ export async function createUserProfile(
         focusPoints: 0,
         pinnedExamId: null,
         isStudying: false,
+        currentStreak: 0,
+        longestStreak: 0,
+        lastGoalMetDate: null,
         currentSession: {
           startTime: null,
           lastSyncTime: null,

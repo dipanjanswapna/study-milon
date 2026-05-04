@@ -11,7 +11,7 @@ import {
   getDoc,
   increment,
 } from 'firebase/firestore';
-import { format, startOfWeek } from 'date-fns';
+import { format, startOfWeek, subDays } from 'date-fns';
 
 // Subject CRUD
 export async function addSubject(db: Firestore, userId: string, name: string) {
@@ -129,8 +129,7 @@ export async function updateChapterStatus(
 }
 
 /**
- * Robust precision logging system with full period boundary protection (Daily, Weekly, Monthly, Yearly).
- * Saves to users/{uid} and creates session maps in users/{uid}/studySessions with hourly breakdown.
+ * Robust precision logging system with full period boundary protection and Smart Streak Tracking.
  */
 export async function logStudyTime(
     db: Firestore,
@@ -147,6 +146,7 @@ export async function logStudyTime(
     
     const now = new Date();
     const dateStr = format(now, 'yyyy-MM-dd');
+    const yesterdayStr = format(subDays(now, 1), 'yyyy-MM-dd');
     const monthStr = format(now, 'yyyy-MM');
     const yearStr = format(now, 'yyyy');
     const weekStart = startOfWeek(now, { weekStartsOn: 5 }); // Friday start
@@ -164,6 +164,8 @@ export async function logStudyTime(
         
         const userData = userSnap.data();
         const currentPartialSeconds = userData.partial_study_seconds || 0;
+        const totalMinutesToday = (userData.daily_study_minutes || 0);
+        const dailyGoal = (userData.daily_goal_minutes || 360);
         
         const subSnap = await getDoc(subjectRef);
         const subjectName = subSnap.exists() ? subSnap.data().name : 'Focus Session';
@@ -173,7 +175,7 @@ export async function logStudyTime(
             isStudying: false,
         };
 
-        // Resets for permanent Firestore counters based on period handover
+        // Resets for permanent Firestore counters
         const isNewDay = userData.last_study_day !== dateStr;
         const isNewWeek = userData.last_study_week !== weekStr;
         const isNewMonth = userData.last_study_month !== monthStr;
@@ -183,26 +185,41 @@ export async function logStudyTime(
         const minutesToAdd = Math.floor(totalSeconds / 60);
         const finalPartialSeconds = totalSeconds % 60;
 
-        // Reset logic for each period in Firestore Profile
         userUpdate.daily_study_minutes = isNewDay ? minutesToAdd : increment(minutesToAdd);
         userUpdate.last_study_day = dateStr;
-        
         userUpdate.weekly_study_minutes = isNewWeek ? minutesToAdd : increment(minutesToAdd);
         userUpdate.last_study_week = weekStr;
-
         userUpdate.monthly_study_minutes = isNewMonth ? minutesToAdd : increment(minutesToAdd);
         userUpdate.last_study_month = monthStr;
-
         userUpdate.yearly_study_minutes = isNewYear ? minutesToAdd : increment(minutesToAdd);
         userUpdate.last_study_year = yearStr;
-
         userUpdate.partial_study_seconds = finalPartialSeconds;
+
+        // Smart Streak Logic
+        const newDailyTotal = (isNewDay ? 0 : totalMinutesToday) + minutesToAdd;
+        if (newDailyTotal >= dailyGoal && userData.lastGoalMetDate !== dateStr) {
+            // Check if streak continues from yesterday
+            const lastMet = userData.lastGoalMetDate;
+            const currentStreak = userData.currentStreak || 0;
+            const longestStreak = userData.longestStreak || 0;
+            
+            if (lastMet === yesterdayStr) {
+                userUpdate.currentStreak = currentStreak + 1;
+            } else {
+                userUpdate.currentStreak = 1;
+            }
+            
+            if ((userUpdate.currentStreak || currentStreak) > longestStreak) {
+                userUpdate.longestStreak = userUpdate.currentStreak || currentStreak;
+            }
+            
+            userUpdate.lastGoalMetDate = dateStr;
+        }
 
         if (minutesToAdd > 0) {
             userUpdate.total_study_minutes = increment(minutesToAdd);
             batch.update(chapterRef, { time_spent: increment(minutesToAdd) });
             
-            // Precision Session Logging with Hourly Breakdown for the Insights Graph
             batch.set(sessionRef, {
               duration: increment(minutesToAdd),
               [`hourlyBreakdown.${hour}`]: increment(minutesToAdd),
