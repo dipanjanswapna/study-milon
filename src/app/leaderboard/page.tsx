@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Trophy, Medal, Crown, Zap, Filter, Loader2, RefreshCw, Wifi, Flame, Layout } from 'lucide-react';
+import { Trophy, Medal, Crown, Zap, Filter, Loader2, RefreshCw, Wifi, Flame, Layout, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -35,11 +35,9 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  // Fetch my profile for highlight
   const myRef = useMemo(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: myProfile } = useDoc<any>(myRef as any);
 
-  // RTDB: Fetch rankings
   useEffect(() => {
     setLoading(true);
     let path = `leaderboards/${timeFilter}`;
@@ -105,38 +103,38 @@ export default function LeaderboardPage() {
         <main className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
           <ProfileSetupGate>
             
-            {/* Elite Hero Banner - Same as Study Planner */}
-            <Card className="rounded-[2rem] border-none shadow-2xl overflow-hidden bg-[#1A1C3D] text-white relative group">
-              <div className="absolute top-0 right-0 p-10 opacity-5 rotate-12 transition-transform group-hover:rotate-45 duration-1000">
-                <Layout className="h-32 w-32" />
+            {/* Elite Hero Banner - Same as Study Planner with rounded-xl */}
+            <Card className="rounded-xl border-none shadow-xl overflow-hidden bg-[#1A1C3D] text-white relative group">
+              <div className="absolute top-0 right-0 p-8 opacity-5 rotate-12 transition-transform group-hover:rotate-45 duration-1000">
+                <Layout className="h-24 w-24" />
               </div>
-              <CardContent className="p-8 md:p-12 relative z-10">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-                  <div className="space-y-3 text-center md:text-left">
-                    <div className="inline-flex items-center gap-2 bg-primary/20 backdrop-blur-lg px-3 py-1 rounded-full border border-white/10 text-[10px] font-black text-primary-foreground uppercase tracking-[0.2em]">
+              <CardContent className="p-6 md:p-8 relative z-10">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                  <div className="space-y-2 text-center md:text-left">
+                    <div className="inline-flex items-center gap-2 bg-primary/20 px-3 py-1 rounded-full border border-white/10 text-[9px] font-black text-primary-foreground uppercase tracking-widest">
                        <Zap className="h-3 w-3 fill-current" />
                        Hustle Standings
                     </div>
-                    <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-none">Global Contenders</h1>
-                    <p className="text-white/60 font-medium text-sm md:text-base max-w-lg">
-                      Synchronize your effort with the elite community. Rankings reset automatically based on the selected cycle.
+                    <h1 className="text-3xl md:text-5xl font-black tracking-tighter leading-none">Global Contenders</h1>
+                    <p className="text-white/60 font-medium text-xs md:text-sm max-w-lg">
+                      Synchronize your effort with the elite community. Rankings reset automatically.
                     </p>
                   </div>
                   <div className="flex flex-col items-center md:items-end gap-3">
-                     <div className="bg-white/5 backdrop-blur-md p-4 rounded-3xl border border-white/10 shadow-inner flex items-center gap-4">
+                     <div className="bg-white/5 p-3 rounded-xl border border-white/10 flex items-center gap-4">
                         <div className="text-center">
                            <p className="text-[8px] font-black uppercase text-white/30 tracking-widest">Sync Status</p>
                            <div className="flex items-center gap-1.5 mt-1 justify-center">
                               <RefreshCw className={cn("h-3 w-3 text-primary", loading && "animate-spin")} />
-                              <span className="text-[10px] font-black uppercase">{lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              <span className="text-[9px] font-black uppercase">{lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                            </div>
                         </div>
-                        <div className="w-px h-8 bg-white/10" />
+                        <div className="w-px h-6 bg-white/10" />
                         <div className="text-center">
                            <p className="text-[8px] font-black uppercase text-white/30 tracking-widest">Live Feed</p>
                            <div className="flex items-center gap-1 mt-1 justify-center">
-                              <Wifi className="h-2.5 w-2.5 text-red-500 animate-pulse" />
-                              <span className="text-[10px] font-black text-red-500 uppercase">ACTIVE</span>
+                              <Wifi className="h-2 w-2 text-red-500 animate-pulse" />
+                              <span className="text-[9px] font-black text-red-500 uppercase">ACTIVE</span>
                            </div>
                         </div>
                      </div>
@@ -146,45 +144,45 @@ export default function LeaderboardPage() {
             </Card>
 
             {/* Compact Podium Section */}
-            <div className="w-full flex justify-center py-4 relative z-20 overflow-hidden">
+            <div className="w-full flex justify-center py-2 relative z-20 overflow-hidden">
               {loading && rankings.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 gap-4">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Mapping Contenders...</p>
+                <div className="flex flex-col items-center justify-center py-8 gap-3">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Mapping Contenders...</p>
                 </div>
               ) : top3.length > 0 ? (
-                <div className="flex items-end justify-center gap-2 sm:gap-8 md:gap-12 px-2 w-full max-w-4xl">
+                <div className="flex items-end justify-center gap-3 sm:gap-8 md:gap-12 px-2 w-full max-w-3xl">
                   {top3[1] && <PodiumMember user={top3[1]} rank={2} time={formatTime(top3[1].minutes)} />}
                   {top3[0] && <PodiumMember user={top3[0]} rank={1} time={formatTime(top3[0].minutes)} />}
                   {top3[2] && <PodiumMember user={top3[2]} rank={3} time={formatTime(top3[2].minutes)} />}
                 </div>
               ) : (
-                <div className="py-12 text-center space-y-4 bg-secondary/5 rounded-[2rem] border-2 border-dashed w-full max-w-lg mx-auto">
-                   <Zap className="h-8 w-8 mx-auto text-muted-foreground/20" />
-                   <p className="text-[10px] font-black uppercase text-muted-foreground/40 tracking-[0.2em]">Waiting for deep focus sessions...</p>
+                <div className="py-10 text-center space-y-4 bg-secondary/5 rounded-xl border-2 border-dashed w-full max-w-lg mx-auto">
+                   <Zap className="h-6 w-6 mx-auto text-muted-foreground/20" />
+                   <p className="text-[9px] font-black uppercase text-muted-foreground/40 tracking-[0.2em]">Waiting for focus sessions...</p>
                 </div>
               )}
             </div>
 
-            {/* Nav & Filters - Desktop Header Style */}
-            <div className="flex flex-col xl:flex-row items-center justify-between gap-6 px-1">
+            {/* Nav & Filters - Study Planner style controls */}
+            <div className="flex flex-col xl:flex-row items-center justify-between gap-4 px-1">
                <Tabs value={timeFilter} onValueChange={(v) => setTimeFilter(v as any)} className="w-full xl:w-auto">
-                  <TabsList className="grid grid-cols-4 bg-secondary/50 p-1 rounded-2xl h-12 w-full sm:w-[480px]">
-                    <TabsTrigger value="daily" className="rounded-xl font-black text-[10px] uppercase tracking-widest">Daily</TabsTrigger>
-                    <TabsTrigger value="weekly" className="rounded-xl font-black text-[10px] uppercase tracking-widest">Weekly</TabsTrigger>
-                    <TabsTrigger value="monthly" className="rounded-xl font-black text-[10px] uppercase tracking-widest">Monthly</TabsTrigger>
-                    <TabsTrigger value="yearly" className="rounded-xl font-black text-[10px] uppercase tracking-widest">Yearly</TabsTrigger>
+                  <TabsList className="grid grid-cols-4 bg-secondary/50 p-1 rounded-xl h-10 w-full sm:w-[400px]">
+                    <TabsTrigger value="daily" className="rounded-lg font-black text-[9px] uppercase">Daily</TabsTrigger>
+                    <TabsTrigger value="weekly" className="rounded-lg font-black text-[9px] uppercase">Weekly</TabsTrigger>
+                    <TabsTrigger value="monthly" className="rounded-lg font-black text-[9px] uppercase">Monthly</TabsTrigger>
+                    <TabsTrigger value="yearly" className="rounded-lg font-black text-[9px] uppercase">Yearly</TabsTrigger>
                   </TabsList>
                </Tabs>
 
-               <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-center xl:justify-end">
-                  <div className="bg-secondary/50 p-1 rounded-2xl flex items-center w-[160px]">
+               <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto justify-center xl:justify-end">
+                  <div className="bg-secondary/50 p-1 rounded-xl flex items-center w-[150px]">
                     <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as any)}>
-                      <SelectTrigger className="h-10 w-full rounded-xl border-none bg-transparent font-black uppercase text-[10px] tracking-widest">
-                        <Filter className="h-3.5 w-3.5 mr-2 text-primary shrink-0" />
+                      <SelectTrigger className="h-8 w-full rounded-lg border-none bg-transparent font-black uppercase text-[9px] tracking-widest">
+                        <Filter className="h-3 w-3 mr-2 text-primary shrink-0" />
                         <SelectValue placeholder="Category" />
                       </SelectTrigger>
-                      <SelectContent className="rounded-2xl">
+                      <SelectContent className="rounded-xl">
                         <SelectItem value="All">All Categories</SelectItem>
                         <SelectItem value="SSC">SSC</SelectItem>
                         <SelectItem value="HSC">HSC</SelectItem>
@@ -195,12 +193,12 @@ export default function LeaderboardPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="bg-secondary/50 p-1 rounded-2xl flex items-center w-[120px]">
+                  <div className="bg-secondary/50 p-1 rounded-xl flex items-center w-[110px]">
                     <Select value={batchFilter} onValueChange={setBatchFilter}>
-                      <SelectTrigger className="h-10 w-full rounded-xl border-none bg-transparent font-black text-[10px] tracking-widest">
+                      <SelectTrigger className="h-8 w-full rounded-lg border-none bg-transparent font-black text-[9px] tracking-widest">
                         <SelectValue placeholder="Batch" />
                       </SelectTrigger>
-                      <SelectContent className="rounded-2xl">
+                      <SelectContent className="rounded-xl">
                         <SelectItem value="All">All Batches</SelectItem>
                         {YEARS.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
                       </SelectContent>
@@ -209,21 +207,21 @@ export default function LeaderboardPage() {
                </div>
             </div>
 
-            {/* Rankings List - Table Style matching Todo's Active Queue */}
-            <Card className="rounded-[2.5rem] border-none shadow-2xl bg-card overflow-hidden">
-              <div className="p-6 border-b bg-secondary/10 flex items-center justify-between px-8">
-                <div className="space-y-1">
-                   <h3 className="text-sm font-black flex items-center gap-2 uppercase tracking-tight">
+            {/* Rankings List - Active Queue Style with rounded-xl */}
+            <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
+              <div className="p-4 border-b bg-secondary/10 flex items-center justify-between px-6">
+                <div className="space-y-0.5">
+                   <h3 className="text-xs font-black flex items-center gap-2 uppercase tracking-tight">
                      <Medal className="h-4 w-4 text-primary" /> Rankings Queue
                    </h3>
-                   <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Sorted by active study minutes</p>
+                   <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">Sorted by active study minutes</p>
                 </div>
-                <Badge variant="outline" className="font-black text-[10px] uppercase tracking-[0.2em] border-primary/20 text-primary h-8 px-4 rounded-full bg-white">
+                <Badge variant="outline" className="font-black text-[9px] uppercase tracking-widest border-primary/20 text-primary h-7 px-3 rounded-full bg-white">
                   {filteredRankings.length} Active
                 </Badge>
               </div>
               
-              <ScrollArea className="h-[600px]">
+              <ScrollArea className="h-[500px]">
                 <div className="divide-y divide-secondary/30">
                   {filteredRankings.map((contender: any, idx) => {
                     const isMe = contender.uid === user?.uid;
@@ -232,51 +230,51 @@ export default function LeaderboardPage() {
                         key={contender.uid} 
                         href={`/profile/${contender.uid}`} 
                         className={cn(
-                          "flex items-center justify-between p-5 sm:p-6 px-6 sm:px-10 transition-all group border-l-4 border-transparent", 
-                          isMe ? "bg-primary/[0.05] border-l-primary" : "hover:bg-primary/[0.02]"
+                          "flex items-center justify-between p-4 sm:p-5 px-6 sm:px-8 transition-all group border-l-4 border-transparent", 
+                          isMe ? "bg-primary/[0.05] border-l-primary" : "hover:bg-primary/[0.02] border-l-primary/10"
                         )}
                       >
-                        <div className="flex items-center gap-4 sm:gap-6 min-w-0">
+                        <div className="flex items-center gap-4 sm:gap-5 min-w-0">
                           <span className={cn(
-                            "w-8 text-center font-black text-base sm:text-xl italic", 
+                            "w-6 text-center font-black text-sm sm:text-base italic", 
                             idx === 0 ? "text-yellow-500" : idx === 1 ? "text-slate-400" : idx === 2 ? "text-orange-500" : "text-muted-foreground/20"
                           )}>
                             {idx < 9 ? `0${idx + 1}` : idx + 1}
                           </span>
                           <div className="relative shrink-0">
-                             <Avatar className="h-12 w-12 sm:h-14 sm:w-14 border-2 border-background shadow-lg transition-transform group-hover:scale-105">
+                             <Avatar className="h-10 w-10 sm:h-12 sm:w-12 border-2 border-background shadow-md transition-transform group-hover:scale-105">
                                 <AvatarImage src={contender.photoURL || undefined} className="object-cover" />
-                                <AvatarFallback className="font-black text-sm bg-secondary">{contender.displayName?.[0]}</AvatarFallback>
+                                <AvatarFallback className="font-black text-[10px] bg-secondary">{contender.displayName?.[0]}</AvatarFallback>
                              </Avatar>
                              {contender.isLive && (
-                               <div className="absolute -top-1 -right-1 bg-red-600 h-3.5 w-3.5 rounded-full border-2 border-white animate-pulse" />
+                               <div className="absolute -top-0.5 -right-0.5 bg-red-600 h-3 w-3 rounded-full border-2 border-white animate-pulse" />
                              )}
                           </div>
                           <div className="min-w-0 space-y-1">
                               <div className="flex items-center gap-2">
-                                <p className="font-black text-sm sm:text-base truncate tracking-tight group-hover:text-primary transition-colors uppercase leading-none">{contender.displayName}</p>
+                                <p className="font-black text-xs sm:text-sm truncate tracking-tight group-hover:text-primary transition-colors uppercase leading-none">{contender.displayName}</p>
                                 {contender.currentStreak > 0 && (
-                                  <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-none font-black text-[9px] px-1.5 h-4 flex items-center gap-0.5">
-                                    <Flame className="h-2.5 w-2.5 fill-current" /> {contender.currentStreak}
+                                  <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-none font-black text-[8px] px-1 h-3.5 flex items-center gap-0.5">
+                                    <Flame className="h-2 w-2 fill-current" /> {contender.currentStreak}
                                   </Badge>
                                 )}
                               </div>
-                              <div className="flex flex-wrap items-center gap-3">
-                                  <div className="flex items-center gap-1.5 text-primary">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-primary/20" />
-                                    <span className="text-[9px] font-black uppercase tracking-widest">{contender.category} {contender.batch}</span>
+                              <div className="flex flex-wrap items-center gap-2">
+                                  <div className="flex items-center gap-1 text-primary">
+                                    <div className="w-1 h-1 rounded-full bg-primary/20" />
+                                    <span className="text-[8px] font-black uppercase tracking-widest">{contender.category} {contender.batch}</span>
                                   </div>
                                   {contender.isLive && (
-                                    <span className="text-[8px] font-black bg-red-600 text-white px-2 py-0.5 rounded-full animate-pulse shadow-sm">LIVE</span>
+                                    <span className="text-[7px] font-black bg-red-600 text-white px-1.5 py-0.5 rounded-full animate-pulse">LIVE</span>
                                   )}
                               </div>
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                            <p className="font-black text-lg sm:text-2xl text-primary leading-none tabular-nums tracking-tighter">
+                            <p className="font-black text-base sm:text-xl text-primary leading-none tabular-nums tracking-tighter">
                                {formatTime(contender.minutes)}
                             </p>
-                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground mt-1.5">Focus Log</p>
+                            <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground mt-1">Focus Log</p>
                         </div>
                       </Link>
                     );
@@ -285,27 +283,25 @@ export default function LeaderboardPage() {
               </ScrollArea>
             </Card>
 
-            {/* My Rank Sticky - Redesigned to match Todo Add Dialog style */}
+            {/* My Rank Sticky - No Glass, rounded-xl */}
             {filteredRankings.some(u => u.uid === user?.uid) === false && myProfile && (
-              <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-[92%] max-w-4xl z-50 animate-in slide-in-from-bottom-10 duration-700">
-                 <Card className="rounded-[1.5rem] bg-[#1A1C3D] text-white shadow-2xl border-none p-4 flex items-center justify-between px-8 ring-1 ring-white/10 backdrop-blur-xl bg-opacity-95">
-                    <div className="flex items-center gap-4">
-                       <div className="relative">
-                          <Avatar className="h-10 w-10 border-2 border-primary/40">
-                             <AvatarImage src={myProfile.photoURL} />
-                             <AvatarFallback className="text-primary font-black bg-white">{myProfile.displayName?.[0]}</AvatarFallback>
-                          </Avatar>
-                       </div>
+              <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-[90%] max-w-3xl z-50 animate-in slide-in-from-bottom-10 duration-700">
+                 <Card className="rounded-xl bg-[#1A1C3D] text-white shadow-2xl border-none p-4 flex items-center justify-between px-6 ring-1 ring-white/10">
+                    <div className="flex items-center gap-3">
+                       <Avatar className="h-9 w-9 border-2 border-primary/40">
+                          <AvatarImage src={myProfile.photoURL} />
+                          <AvatarFallback className="text-primary font-black bg-white text-[10px]">{myProfile.displayName?.[0]}</AvatarFallback>
+                       </Avatar>
                        <div>
-                          <p className="text-[9px] font-black uppercase tracking-widest text-white/40">Personal Standing</p>
-                          <p className="font-black text-sm uppercase tracking-tight">Outside Top 100</p>
+                          <p className="text-[8px] font-black uppercase tracking-widest text-white/40">Your Standing</p>
+                          <p className="font-black text-xs uppercase tracking-tight">Outside Top 100</p>
                        </div>
                     </div>
                     <div className="text-right">
-                       <p className="text-[9px] font-black uppercase tracking-widest text-primary">
-                         Current {timeFilter}
+                       <p className="text-[8px] font-black uppercase tracking-widest text-primary">
+                         {timeFilter} Log
                        </p>
-                       <p className="font-black text-xl tracking-tighter tabular-nums">
+                       <p className="font-black text-lg tracking-tighter tabular-nums">
                          {formatTime(
                            timeFilter === 'daily' ? myProfile.daily_study_minutes :
                            timeFilter === 'weekly' ? myProfile.weekly_study_minutes :
@@ -336,42 +332,36 @@ function PodiumMember({ user, rank, time }: { user: any; rank: number; time: str
   return (
     <div className="flex flex-col items-center group relative flex-1">
        {isWinner && (
-         <div className="absolute -top-12 flex flex-col items-center animate-bounce">
-            <Crown className="h-8 w-8 text-yellow-400 fill-current drop-shadow-lg" />
-            <div className="h-3 w-0.5 bg-yellow-400 rounded-full opacity-50" />
+         <div className="absolute -top-10 flex flex-col items-center animate-bounce">
+            <Crown className="h-5 w-5 text-yellow-400 fill-current drop-shadow-lg" />
          </div>
        )}
        
        <Link href={`/profile/${user.uid}`} className="relative">
           <div className={cn(
             "relative rounded-full transition-all duration-700 group-hover:scale-110", 
-            isWinner ? "h-20 w-20 sm:h-32 sm:w-32 border-[4px] sm:border-[6px]" : "h-16 w-16 sm:h-24 sm:w-24 border-[3px] sm:border-[4px]",
+            isWinner ? "h-16 w-16 sm:h-24 sm:w-24 border-[3px] sm:border-[5px]" : "h-12 w-12 sm:h-20 sm:w-20 border-[2px] sm:border-[4px]",
             rankColors[rank as keyof typeof rankColors]
           )}>
-             <div className="absolute inset-0 rounded-full bg-white/5 backdrop-blur-sm" />
              <Avatar className="h-full w-full">
                 <AvatarImage src={user.photoURL || undefined} className="object-cover" />
-                <AvatarFallback className={cn("font-black bg-secondary", isWinner ? "text-xl sm:text-2xl" : "text-sm sm:text-lg")}>{user.displayName?.[0]}</AvatarFallback>
+                <AvatarFallback className={cn("font-black bg-secondary", isWinner ? "text-base sm:text-xl" : "text-xs sm:text-base")}>{user.displayName?.[0]}</AvatarFallback>
              </Avatar>
              
              <div className={cn(
-               "absolute -bottom-2 left-1/2 -translate-x-1/2 h-5 px-2.5 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] font-black shadow-lg uppercase tracking-widest",
+               "absolute -bottom-1.5 left-1/2 -translate-x-1/2 h-4 px-2 rounded-full flex items-center justify-center text-[7px] sm:text-[9px] font-black shadow-lg uppercase tracking-widest",
                rank === 1 ? "bg-yellow-400 text-yellow-900" : rank === 2 ? "bg-slate-300 text-slate-700" : "bg-orange-400 text-white"
              )}>
                R{rank}
              </div>
-             
-             {user.isLive && (
-               <div className="absolute top-1 right-1 bg-red-600 text-white text-[6px] sm:text-[7px] font-black px-1.5 py-0.5 rounded-full animate-pulse shadow-lg ring-2 ring-white">LIVE</div>
-             )}
           </div>
        </Link>
        
-       <div className="mt-4 text-center space-y-1 w-full max-w-[90px] sm:max-w-[140px]">
-          <h3 className="font-black tracking-tight truncate text-[10px] sm:text-sm group-hover:text-primary transition-colors uppercase leading-none">{user.displayName}</h3>
-          <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/5 rounded-full">
-            <Zap className="h-2.5 w-2.5 text-primary fill-current" />
-            <span className="text-primary font-black text-[9px] sm:text-xs tracking-tighter">{time}</span>
+       <div className="mt-3 text-center space-y-0.5 w-full max-w-[80px] sm:max-w-[120px]">
+          <h3 className="font-black tracking-tight truncate text-[9px] sm:text-xs group-hover:text-primary transition-colors uppercase leading-none">{user.displayName}</h3>
+          <div className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-primary/5 rounded-full">
+            <Zap className="h-2 w-2 text-primary fill-current" />
+            <span className="text-primary font-black text-[8px] sm:text-[10px] tracking-tighter">{time}</span>
           </div>
        </div>
     </div>
