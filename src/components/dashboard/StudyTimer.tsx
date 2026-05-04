@@ -23,7 +23,7 @@ import { format } from 'date-fns';
 const BREAK_MINUTES = 5;
 const SILENT_AUDIO_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
 const ALARM_AUDIO_PATH = "/WhatsApp Audio 2026-05-02 at 4.38.00 PM.mp3";
-const SYNC_INTERVAL_SECONDS = 10; 
+const SYNC_INTERVAL_SECONDS = 60; // Optimized: Sync every 60s to save Firebase Quota
 
 export function StudyTimer() {
   const { user } = useUser();
@@ -52,9 +52,7 @@ export function StudyTimer() {
       .sort((a, b) => (a.order || 0) - (b.order || 0));
   }, [rawTasks]);
 
-  // Timer always follows the FIRST incomplete task from the Roadmap
   const activeTask = incompleteTasks[0] || null;
-  const upcomingTasks = incompleteTasks.slice(1, 3);
 
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
@@ -65,40 +63,11 @@ export function StudyTimer() {
   
   const lastSyncTimestampRef = useRef<number>(0);
   const initializedFromCloud = useRef(false);
-  const todayStrRef = useRef<string>(format(new Date(), 'yyyy-MM-dd'));
 
-  useEffect(() => {
-    if (activeTask && !isActive && !isBreak && profile?.currentSession?.status === 'idle') {
-      setTimeLeft(activeTask.duration * 60);
-    }
-  }, [activeTask, isActive, isBreak, profile?.currentSession?.status]);
-
-  const progress = useMemo(() => {
-    const originalTotal = isBreak ? BREAK_MINUTES * 60 : (activeTask?.duration || 25) * 60;
-    return ((originalTotal - timeLeft) / originalTotal) * 100;
-  }, [timeLeft, isBreak, activeTask]);
-
-  const dailyStudyProgress = useMemo(() => {
-    if (!profile) return 0;
-    let currentSeconds = (profile.daily_study_minutes || 0) * 60 + (profile.partial_study_seconds || 0);
-    
-    if (isActive && !isBreak && profile.currentSession?.startTime) {
-      const now = Date.now();
-      const sessionElapsed = Math.floor((now - profile.currentSession.startTime) / 1000);
-      const sessionSyncedSoFar = Math.floor((lastSyncTimestampRef.current - profile.currentSession.startTime) / 1000);
-      const uncommittedSeconds = Math.max(0, sessionElapsed - (sessionSyncedSoFar > 0 ? sessionSyncedSoFar : 0));
-      currentSeconds += uncommittedSeconds;
-    }
-
-    const goalSeconds = (profile.daily_goal_minutes || 360) * 60;
-    return Math.min(100, (currentSeconds / goalSeconds) * 100);
-  }, [profile, isActive, isBreak]); 
-
+  // Sync Logic: Anchor-based calculations to minimize writes
   const performSync = useCallback(async (secondsToSync: number) => {
     if (!user || !activeTask || isBreak || secondsToSync <= 0) return;
     
-    if (!activeTask.subjectId || !activeTask.chapterId) return;
-
     try {
       await logStudyTime(firestore, user.uid, activeTask.subjectId, activeTask.chapterId, secondsToSync);
       lastSyncTimestampRef.current = Date.now();
@@ -114,10 +83,12 @@ export function StudyTimer() {
       lastSyncTimestampRef.current = now;
       audioRef.current?.play().catch(() => {});
       
+      const sessionDuration = isBreak ? BREAK_MINUTES * 60 : (activeTask?.duration || 25) * 60;
+      
       const newSession: CurrentSession = {
         startTime: now,
         lastSyncTime: now,
-        duration: timeLeft, 
+        duration: isBreak ? timeLeft : sessionDuration, 
         status: 'active',
         taskId: isBreak ? null : activeTask!.id,
         subjectId: isBreak ? null : activeTask!.subjectId,
@@ -142,9 +113,9 @@ export function StudyTimer() {
   const handlePause = async () => {
     if (user && profile?.currentSession?.startTime) {
       const now = Date.now();
-      const totalElapsedThisRun = Math.floor((now - profile.currentSession.startTime) / 1000);
-      const alreadySyncedThisRun = Math.floor((lastSyncTimestampRef.current - profile.currentSession.startTime) / 1000);
-      const remainingToSync = Math.max(0, totalElapsedThisRun - (alreadySyncedThisRun > 0 ? alreadySyncedThisRun : 0));
+      const sessionElapsed = Math.floor((now - profile.currentSession.startTime) / 1000);
+      const sessionSyncedSoFar = Math.floor((lastSyncTimestampRef.current - profile.currentSession.startTime) / 1000);
+      const remainingToSync = Math.max(0, sessionElapsed - (sessionSyncedSoFar > 0 ? sessionSyncedSoFar : 0));
       
       setIsActive(false);
       audioRef.current?.pause();
@@ -165,16 +136,8 @@ export function StudyTimer() {
 
   const startBreak = useCallback(async () => {
     if (user && activeTask) {
-      if (profile?.currentSession?.startTime) {
-        const now = Date.now();
-        const totalElapsed = Math.floor((now - profile.currentSession.startTime) / 1000);
-        const alreadySynced = Math.floor((lastSyncTimestampRef.current - profile.currentSession.startTime) / 1000);
-        const remaining = Math.max(0, totalElapsed - (alreadySynced > 0 ? alreadySynced : 0));
-        if (remaining > 0) await performSync(remaining);
-      }
-
-      const breakSeconds = BREAK_MINUTES * 60;
       const now = Date.now();
+      const breakSeconds = BREAK_MINUTES * 60;
       setTimeLeft(breakSeconds);
       setIsBreak(true);
       setIsActive(true);
@@ -195,23 +158,7 @@ export function StudyTimer() {
       });
       if (alarmRef.current) alarmRef.current.play().catch(() => {});
     }
-  }, [user, activeTask, firestore, profile, performSync]);
-
-  const handleSkip = async () => {
-    if (!user) return;
-    if (isBreak) {
-      setIsActive(false);
-      setIsBreak(false);
-      updateUserProfile(firestore, user.uid, { 
-        isStudying: false,
-        "currentSession.status": "idle",
-        "currentSession.startTime": null,
-        "currentSession.lastSyncTime": null,
-        "currentSession.taskId": null
-      });
-      toast({ title: "Rest Cycle Skipped", description: "Ready for the next mission." });
-    }
-  };
+  }, [user, activeTask, firestore]);
 
   const markTaskDone = async () => {
     if (user && activeTask) {
@@ -238,39 +185,29 @@ export function StudyTimer() {
     }
   };
 
+  // UNSTOPPABLE Logic: Auto-recovery from stored Timestamps
   useEffect(() => {
     if (profile?.currentSession && !initializedFromCloud.current && user) {
-      const { startTime, lastSyncTime, duration, status, isBreak: cloudIsBreak, subjectId, chapterId, taskId } = profile.currentSession;
+      const { startTime, duration, status, isBreak: cloudIsBreak, subjectId, chapterId, taskId } = profile.currentSession;
       
       if (status === 'active' && startTime) {
         const now = Date.now();
         const expectedEndTime = startTime + (duration * 1000);
-        const effectiveLastSync = lastSyncTime || startTime;
+        const elapsedSinceStart = Math.floor((now - startTime) / 1000);
         
         if (now < expectedEndTime) {
-          const elapsedSinceStart = Math.floor((now - startTime) / 1000);
-          const totalElapsedSinceLastSync = Math.floor((now - effectiveLastSync) / 1000);
-          
+          // Resume ongoing session
           setTimeLeft(duration - elapsedSinceStart);
           setIsBreak(cloudIsBreak);
           setIsActive(true);
-          
-          if (totalElapsedSinceLastSync > 0 && !cloudIsBreak && subjectId && chapterId) {
-            logStudyTime(firestore, user.uid, subjectId, chapterId, totalElapsedSinceLastSync);
-          }
-          
           lastSyncTimestampRef.current = now;
           audioRef.current?.play().catch(() => {});
         } else {
-          const totalRemainingToSync = Math.max(0, Math.floor((expectedEndTime - effectiveLastSync) / 1000));
-          
+          // AUTO-FINISH: If time passed while app was closed
+          const totalRemainingToSync = duration; // Sync the full intended duration
           if (!cloudIsBreak && subjectId && chapterId) {
-            if (totalRemainingToSync > 0) {
-              logStudyTime(firestore, user.uid, subjectId, chapterId, totalRemainingToSync);
-            }
-            if (taskId) {
-              updateTaskStatus(firestore, user.uid, taskId, true);
-            }
+            logStudyTime(firestore, user.uid, subjectId, chapterId, totalRemainingToSync);
+            if (taskId) updateTaskStatus(firestore, user.uid, taskId, true);
           }
           
           setIsActive(false);
@@ -279,9 +216,9 @@ export function StudyTimer() {
             isStudying: false,
             "currentSession.status": "idle",
             "currentSession.startTime": null,
-            "currentSession.lastSyncTime": null,
             "currentSession.taskId": null
           });
+          toast({ title: "Welcome Back!", description: "Your study session was completed and logged while you were away." });
         }
       } else if (status === 'paused') {
         setTimeLeft(duration);
@@ -290,7 +227,7 @@ export function StudyTimer() {
       }
       initializedFromCloud.current = true;
     }
-  }, [profile, firestore, user]);
+  }, [profile, firestore, user, toast]);
 
   useEffect(() => {
     audioRef.current = new Audio(SILENT_AUDIO_URI);
@@ -298,28 +235,21 @@ export function StudyTimer() {
     alarmRef.current = new Audio(ALARM_AUDIO_PATH);
   }, []);
 
+  // Precise local interval logic
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
       interval = setInterval(() => {
         const startTime = profile.currentSession!.startTime!;
         const totalDuration = profile.currentSession!.duration;
-        const now = new Date();
-        const nowTime = now.getTime();
+        const now = Date.now();
         
-        const elapsedSinceStart = Math.floor((nowTime - startTime) / 1000);
+        const elapsedSinceStart = Math.floor((now - startTime) / 1000);
         const newTimeLeft = Math.max(0, totalDuration - elapsedSinceStart);
         setTimeLeft(newTimeLeft);
 
-        const currentDayStr = format(now, 'yyyy-MM-dd');
-        if (currentDayStr !== todayStrRef.current && !isBreak) {
-          const elapsed = Math.floor((nowTime - lastSyncTimestampRef.current) / 1000);
-          if (elapsed > 0) performSync(elapsed);
-          todayStrRef.current = currentDayStr;
-          return;
-        }
-
-        const elapsedSinceLastSync = Math.floor((nowTime - lastSyncTimestampRef.current) / 1000);
+        // Quota Management: Optimized periodic sync
+        const elapsedSinceLastSync = Math.floor((now - lastSyncTimestampRef.current) / 1000);
         if (elapsedSinceLastSync >= SYNC_INTERVAL_SECONDS && !isBreak) {
           performSync(elapsedSinceLastSync);
         }
@@ -339,6 +269,11 @@ export function StudyTimer() {
     }
     return () => { if (interval) clearInterval(interval); };
   }, [isActive, isBreak, activeTask, profile?.currentSession, user, firestore, startBreak, performSync]);
+
+  const progress = useMemo(() => {
+    const originalTotal = isBreak ? BREAK_MINUTES * 60 : (activeTask?.duration || 25) * 60;
+    return ((originalTotal - timeLeft) / originalTotal) * 100;
+  }, [timeLeft, isBreak, activeTask]);
 
   const minutesDisplay = Math.floor(timeLeft / 60);
   const secondsDisplay = timeLeft % 60;
@@ -398,19 +333,6 @@ export function StudyTimer() {
         )}
       </CardHeader>
 
-      <div className="px-5 pt-3 relative z-10">
-        <div className="flex justify-between items-center mb-1 text-[8px] font-black uppercase tracking-widest text-blue-100/40">
-           <span>Roadmap Progress</span>
-           <span>{Math.round(dailyStudyProgress)}%</span>
-        </div>
-        <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
-           <div 
-             className="h-full bg-blue-300 transition-all duration-1000 ease-out" 
-             style={{ width: `${dailyStudyProgress}%` }}
-           />
-        </div>
-      </div>
-      
       <CardContent className="flex flex-col items-center justify-center gap-6 py-8 relative z-10">
         <div className="relative h-[220px] w-[220px] flex items-center justify-center">
            <div className="absolute inset-0 rounded-full bg-[#1A1C3D] shadow-inner border-[1px] border-white/10" />
@@ -418,11 +340,15 @@ export function StudyTimer() {
            <svg className="absolute inset-0" viewBox="0 0 300 300">
               <g transform="translate(150, 150) rotate(-90)">
                  {progress > 0 && (
-                   <path
-                      d={describeArc(0, 0, 110, 0, progress * 3.6)}
+                   <circle
+                      cx="0"
+                      cy="0"
+                      r="110"
                       fill="none"
                       stroke="#8866FF"
-                      strokeWidth="4"
+                      strokeWidth="6"
+                      strokeDasharray={2 * Math.PI * 110}
+                      strokeDashoffset={2 * Math.PI * 110 * (1 - progress / 100)}
                       strokeLinecap="round"
                       className="transition-all duration-1000 ease-linear"
                    />
@@ -456,7 +382,11 @@ export function StudyTimer() {
                 variant="outline" 
                 size="icon" 
                 className="h-11 w-11 rounded-xl bg-white/5 border-white/10 text-white"
-                onClick={handleSkip}
+                onClick={() => {
+                  setIsActive(false);
+                  setIsBreak(false);
+                  updateUserProfile(firestore, user!.uid, { "currentSession.status": "idle", isStudying: false });
+                }}
               >
                 <FastForward className="h-4 w-4" />
               </Button>
@@ -476,23 +406,4 @@ export function StudyTimer() {
       </CardContent>
     </Card>
   );
-}
-
-function describeArc(x: number, y: number, radius: number, startAngle: number, endAngle: number) {
-  const start = polarToCartesian(x, y, radius, endAngle);
-  const end = polarToCartesian(x, y, radius, startAngle);
-  const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
-  const d = [
-    "M", start.x, start.y,
-    "A", radius, radius, 0, largeArcFlag, 0, end.x, end.y
-  ].join(" ");
-  return d;
-}
-
-function polarToCartesian(centerX: number, centerY: number, radius: number, angleInDegrees: number) {
-  const angleInRadians = (angleInDegrees * Math.PI) / 180.0;
-  return {
-    x: centerX + (radius * Math.cos(angleInRadians)),
-    y: centerY + (radius * Math.sin(angleInRadians))
-  };
 }

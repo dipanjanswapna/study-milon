@@ -129,8 +129,7 @@ export async function updateChapterStatus(
 }
 
 /**
- * Precision logging system with Focus Roadmap Enforcement.
- * Time is ONLY saved if valid subjectId and chapterId are provided from the roadmap.
+ * Optimized precision logging system.
  */
 export async function logStudyTime(
     db: Firestore,
@@ -139,23 +138,16 @@ export async function logStudyTime(
     chapterId: string,
     seconds: number
 ) {
-    // Enforcement: Reject time if identifiers are missing
     if (seconds <= 0 || !subjectId || !chapterId) return;
 
-    const isGroupTask = subjectId === 'group-task' || chapterId.startsWith('group-task');
     const userRef = doc(db, 'users', userId);
-    
-    const chapterRef = !isGroupTask ? doc(db, 'users', userId, 'subjects', subjectId, 'chapters', chapterId) : null;
-    const subjectRef = !isGroupTask ? doc(db, 'users', userId, 'subjects', subjectId) : null;
+    const chapterRef = doc(db, 'users', userId, 'subjects', subjectId, 'chapters', chapterId);
+    const subjectRef = doc(db, 'users', userId, 'subjects', subjectId);
     
     const now = new Date();
-    
-    // --- TIME PERIOD KEYS ---
     const dateStr = format(now, 'yyyy-MM-dd');
     const monthStr = format(now, 'yyyy-MM');
     const yearStr = format(now, 'yyyy');
-    
-    // Custom Study Week: Starts on Friday (weekStartsOn: 5)
     const weekStart = startOfWeek(now, { weekStartsOn: 5 }); 
     const weekStr = `Friday_${format(weekStart, 'yyyy-MM-dd')}`;
     
@@ -172,13 +164,8 @@ export async function logStudyTime(
         const userData = userSnap.data();
         const currentPartialSeconds = userData.partial_study_seconds || 0;
         
-        let subjectName = isGroupTask ? 'Guild Task' : 'Focus Session';
-        if (!isGroupTask && subjectRef) {
-          const subjectSnap = await getDoc(subjectRef);
-          if (subjectSnap.exists()) {
-            subjectName = subjectSnap.data().name;
-          }
-        }
+        const subSnap = await getDoc(subjectRef);
+        const subjectName = subSnap.exists() ? subSnap.data().name : 'Focus Session';
 
         const userUpdate: any = {
             last_active_date: serverTimestamp(),
@@ -186,7 +173,6 @@ export async function logStudyTime(
             "currentSession.lastSyncTime": Date.now() 
         };
 
-        // --- BOUNDARY DETECTION (Auto-Reset Protection) ---
         const isNewDay = userData.last_study_day !== dateStr;
         const isNewWeek = userData.last_study_week !== weekStr;
         const isNewMonth = userData.last_study_month !== monthStr;
@@ -211,40 +197,30 @@ export async function logStudyTime(
 
         userUpdate.partial_study_seconds = finalPartialSeconds;
 
-        // 2. Weekly Reset (Friday)
         if (isNewWeek) {
-            userUpdate.weekly_study_minutes = Math.floor(seconds / 60);
+            userUpdate.weekly_study_minutes = minutesToAdd;
             userUpdate.last_study_week = weekStr;
         } else if (minutesToAdd > 0) {
             userUpdate.weekly_study_minutes = increment(minutesToAdd);
         }
 
-        // 3. Monthly Reset
         if (isNewMonth) {
-            userUpdate.monthly_study_minutes = Math.floor(seconds / 60);
+            userUpdate.monthly_study_minutes = minutesToAdd;
             userUpdate.last_study_month = monthStr;
         } else if (minutesToAdd > 0) {
             userUpdate.monthly_study_minutes = increment(minutesToAdd);
         }
 
-        // 4. Yearly Reset
         if (isNewYear) {
-            userUpdate.yearly_study_minutes = Math.floor(seconds / 60);
+            userUpdate.yearly_study_minutes = minutesToAdd;
             userUpdate.last_study_year = yearStr;
         } else if (minutesToAdd > 0) {
             userUpdate.yearly_study_minutes = increment(minutesToAdd);
         }
 
-        // --- TOTALS & ANALYTICS ---
         if (minutesToAdd > 0) {
             userUpdate.total_study_minutes = increment(minutesToAdd);
-
-            if (chapterRef) {
-                batch.update(chapterRef, {
-                    time_spent: increment(minutesToAdd)
-                });
-            }
-            
+            batch.update(chapterRef, { time_spent: increment(minutesToAdd) });
             batch.set(sessionRef, {
               duration: increment(minutesToAdd),
               [`hourlyBreakdown.${hour}`]: increment(minutesToAdd),
@@ -259,6 +235,6 @@ export async function logStudyTime(
         await batch.commit();
 
     } catch (error) {
-        console.error("Strict Logging Error: ", error);
+        console.error("Optimized Logging Error: ", error);
     }
 }
