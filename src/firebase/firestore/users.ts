@@ -1,4 +1,3 @@
-
 import {
   doc,
   setDoc,
@@ -85,9 +84,7 @@ export async function createUserProfile(
     const createdAt = serverTimestamp();
     const now = new Date();
     
-    // Custom Week Logic: Starts on Friday (weekStartsOn: 5)
     const weekStart = startOfWeek(now, { weekStartsOn: 5 }); 
-    
     const todayStr = format(now, 'yyyy-MM-dd');
     const weekStr = `Friday_${format(weekStart, 'yyyy-MM-dd')}`;
     const monthStr = format(now, 'yyyy-MM');

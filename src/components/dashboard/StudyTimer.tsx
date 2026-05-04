@@ -23,7 +23,7 @@ import { format } from 'date-fns';
 const BREAK_MINUTES = 5;
 const SILENT_AUDIO_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
 const ALARM_AUDIO_PATH = "/WhatsApp Audio 2026-05-02 at 4.38.00 PM.mp3";
-const SYNC_INTERVAL_SECONDS = 60; // Optimized: Sync every 60s to save Firebase Quota
+const HEARTBEAT_INTERVAL = 60; // Quota Protection: Sync every 60s
 
 export function StudyTimer() {
   const { user } = useUser();
@@ -60,30 +60,29 @@ export function StudyTimer() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const alarmRef = useRef<HTMLAudioElement | null>(null);
-  
   const lastSyncTimestampRef = useRef<number>(0);
-  const initializedFromCloud = useRef(false);
+  const recoveryHandledRef = useRef(false);
 
-  // Sync Logic: Optimized to minimize writes
+  // Precision Sync: Updates total minutes and leaderboards
   const performSync = useCallback(async (secondsToSync: number) => {
-    if (!user || !activeTask || isBreak || secondsToSync <= 0) return;
+    if (!user || !activeTask || isBreak || secondsToSync < 1) return;
     
     try {
       await logStudyTime(firestore, user.uid, activeTask.subjectId, activeTask.chapterId, secondsToSync);
       lastSyncTimestampRef.current = Date.now();
     } catch (e) {
-      console.error("Roadmap Sync failed:", e);
+      console.error("Critical Sync Failure:", e);
     }
   }, [user, activeTask, isBreak, firestore]);
 
   const handleStart = async () => {
     if (!isActive && user && (activeTask || isBreak)) {
       const now = Date.now();
+      const sessionDuration = isBreak ? BREAK_MINUTES * 60 : (activeTask?.duration || 25) * 60;
+      
       setIsActive(true);
       lastSyncTimestampRef.current = now;
       audioRef.current?.play().catch(() => {});
-      
-      const sessionDuration = isBreak ? BREAK_MINUTES * 60 : (activeTask?.duration || 25) * 60;
       
       const newSession: CurrentSession = {
         startTime: now,
@@ -102,26 +101,22 @@ export function StudyTimer() {
         last_active_date: serverTimestamp()
       });
     } else if (!activeTask && !isBreak) {
-      toast({
-        variant: 'destructive',
-        title: "Roadmap Empty",
-        description: "Please add a task to your planner before engaging focus mode."
-      });
+      toast({ variant: 'destructive', title: "Roadmap Empty", description: "Build your roadmap before starting focus mode." });
     }
   };
 
   const handlePause = async () => {
     if (user && profile?.currentSession?.startTime) {
       const now = Date.now();
-      const sessionElapsed = Math.floor((now - profile.currentSession.startTime) / 1000);
-      const sessionSyncedSoFar = Math.floor((lastSyncTimestampRef.current - profile.currentSession.startTime) / 1000);
-      const remainingToSync = Math.max(0, sessionElapsed - (sessionSyncedSoFar > 0 ? sessionSyncedSoFar : 0));
+      const elapsedTotal = Math.floor((now - profile.currentSession.startTime) / 1000);
+      const alreadySynced = Math.floor((lastSyncTimestampRef.current - profile.currentSession.startTime) / 1000);
+      const remainder = Math.max(0, elapsedTotal - (alreadySynced > 0 ? alreadySynced : 0));
       
       setIsActive(false);
       audioRef.current?.pause();
 
-      if (remainingToSync > 0 && !isBreak) {
-        await performSync(remainingToSync);
+      if (remainder > 0 && !isBreak) {
+        await performSync(remainder);
       }
 
       updateUserProfile(firestore, user.uid, { 
@@ -134,149 +129,125 @@ export function StudyTimer() {
     }
   };
 
-  const startBreak = useCallback(async () => {
-    if (user && activeTask) {
-      const now = Date.now();
-      const breakSeconds = BREAK_MINUTES * 60;
-      setTimeLeft(breakSeconds);
-      setIsBreak(true);
-      setIsActive(true);
-      lastSyncTimestampRef.current = now;
-      
-      updateUserProfile(firestore, user.uid, {
-        isStudying: false,
-        currentSession: {
-          startTime: now,
-          lastSyncTime: now,
-          duration: breakSeconds,
-          status: 'active',
-          taskId: null,
-          subjectId: activeTask.subjectId,
-          chapterId: activeTask.chapterId,
-          isBreak: true
-        } as any
-      });
-      if (alarmRef.current) alarmRef.current.play().catch(() => {});
+  const handleAutoFinish = useCallback(async (session: any) => {
+    if (!user || recoveryHandledRef.current) return;
+    recoveryHandledRef.current = true;
+    
+    const { duration, isBreak: cloudIsBreak, subjectId, chapterId, taskId } = session;
+    
+    // Quota Efficient: Final single write for the whole background session
+    if (!cloudIsBreak && subjectId && chapterId) {
+      await logStudyTime(firestore, user.uid, subjectId, chapterId, duration);
+      if (taskId) await updateTaskStatus(firestore, user.uid, taskId, true);
     }
-  }, [user, activeTask, firestore]);
+    
+    setIsActive(false);
+    setIsBreak(false);
+    await updateUserProfile(firestore, user.uid, { 
+      isStudying: false,
+      "currentSession.status": "idle",
+      "currentSession.startTime": null,
+      "currentSession.taskId": null
+    });
+    
+    toast({ title: "Roadmap Synced", description: "Background focus session verified and logged." });
+  }, [user, firestore, toast]);
 
-  const markTaskDone = async () => {
-    if (user && activeTask) {
-       if (isActive && profile?.currentSession?.startTime) {
-         const now = Date.now();
-         const totalElapsed = Math.floor((now - profile.currentSession.startTime) / 1000);
-         const alreadySynced = Math.floor((lastSyncTimestampRef.current - profile.currentSession.startTime) / 1000);
-         const remaining = Math.max(0, totalElapsed - (alreadySynced > 0 ? alreadySynced : 0));
-         if (remaining > 0) await performSync(remaining);
-       }
-       
-       await updateTaskStatus(firestore, user.uid, activeTask.id, true);
-       toast({ title: "Objective Secured!", description: `${activeTask.chapterName} has been completed.` });
-       
-       setIsActive(false);
-       setIsBreak(false);
-       updateUserProfile(firestore, user.uid, { 
-         isStudying: false,
-         "currentSession.status": "idle",
-         "currentSession.startTime": null,
-         "currentSession.lastSyncTime": null,
-         "currentSession.taskId": null
-       });
-    }
-  };
-
-  // UNSTOPPABLE Logic: Auto-recovery and Auto-completion
+  // UNSTOPPABLE RECOVERY LOGIC
   useEffect(() => {
-    if (profile?.currentSession && !initializedFromCloud.current && user) {
-      const { startTime, duration, status, isBreak: cloudIsBreak, subjectId, chapterId, taskId } = profile.currentSession;
+    if (profile?.currentSession && !recoveryHandledRef.current && user) {
+      const { startTime, duration, status, isBreak: cloudIsBreak } = profile.currentSession;
       
       if (status === 'active' && startTime) {
         const now = Date.now();
         const expectedEndTime = startTime + (duration * 1000);
-        const elapsedSinceStart = Math.floor((now - startTime) / 1000);
         
         if (now < expectedEndTime) {
-          // Resume ongoing session
-          setTimeLeft(duration - elapsedSinceStart);
+          // Resume ongoing session perfectly
+          const elapsed = Math.floor((now - startTime) / 1000);
+          setTimeLeft(duration - elapsed);
           setIsBreak(cloudIsBreak);
           setIsActive(true);
           lastSyncTimestampRef.current = now;
           audioRef.current?.play().catch(() => {});
+          recoveryHandledRef.current = true;
         } else {
-          // AUTO-FINISH: App reopened after timer elapsed
-          const totalRemainingToSync = duration; 
-          if (!cloudIsBreak && subjectId && chapterId) {
-            logStudyTime(firestore, user.uid, subjectId, chapterId, totalRemainingToSync);
-            if (taskId) updateTaskStatus(firestore, user.uid, taskId, true);
-          }
-          
-          setIsActive(false);
-          setIsBreak(false);
-          updateUserProfile(firestore, user.uid, { 
-            isStudying: false,
-            "currentSession.status": "idle",
-            "currentSession.startTime": null,
-            "currentSession.taskId": null
-          });
-          toast({ title: "Session Synchronized", description: "Your background study session was completed and logged." });
+          // AUTO-FINISH: Background session ended while app was closed
+          handleAutoFinish(profile.currentSession);
         }
       } else if (status === 'paused') {
         setTimeLeft(duration);
         setIsBreak(cloudIsBreak);
         setIsActive(false);
+        recoveryHandledRef.current = true;
       }
-      initializedFromCloud.current = true;
     }
-  }, [profile, firestore, user, toast]);
+  }, [profile, user, handleAutoFinish]);
 
+  // ALARM & SILENT PLAYER INIT
   useEffect(() => {
     audioRef.current = new Audio(SILENT_AUDIO_URI);
     audioRef.current.loop = true;
     alarmRef.current = new Audio(ALARM_AUDIO_PATH);
   }, []);
 
-  // Precise Interval Logic
+  // TICKER & HEARTBEAT SYNC
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
+    let ticker: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
-      interval = setInterval(() => {
-        const startTime = profile.currentSession!.startTime!;
-        const totalDuration = profile.currentSession!.duration;
+      ticker = setInterval(() => {
+        const { startTime, duration } = profile.currentSession!;
         const now = Date.now();
+        const elapsed = Math.floor((now - startTime!) / 1000);
+        const remaining = Math.max(0, duration - elapsed);
         
-        const elapsedSinceStart = Math.floor((now - startTime) / 1000);
-        const newTimeLeft = Math.max(0, totalDuration - elapsedSinceStart);
-        setTimeLeft(newTimeLeft);
+        setTimeLeft(remaining);
 
-        // Periodically sync every 60 seconds to save quota
+        // Quota Protector: Periodically sync to keep progress safe but minimize writes
         const elapsedSinceLastSync = Math.floor((now - lastSyncTimestampRef.current) / 1000);
-        if (elapsedSinceLastSync >= SYNC_INTERVAL_SECONDS && !isBreak) {
+        if (elapsedSinceLastSync >= HEARTBEAT_INTERVAL && !isBreak) {
           performSync(elapsedSinceLastSync);
         }
 
-        if (newTimeLeft === 0) {
-          clearInterval(interval!);
+        if (remaining === 0) {
+          clearInterval(ticker!);
           if (isBreak) {
             if (alarmRef.current) alarmRef.current.play().catch(() => {});
             setIsActive(false);
             setIsBreak(false);
             updateUserProfile(firestore, user!.uid, { "currentSession.status": "idle", isStudying: false });
           } else {
-            startBreak();
+            // Auto-transition to break to maintain momentum
+            const breakSecs = BREAK_MINUTES * 60;
+            setTimeLeft(breakSecs);
+            setIsBreak(true);
+            setIsActive(true);
+            lastSyncTimestampRef.current = Date.now();
+            updateUserProfile(firestore, user!.uid, {
+              isStudying: false,
+              currentSession: {
+                startTime: Date.now(),
+                lastSyncTime: Date.now(),
+                duration: breakSecs,
+                status: 'active',
+                isBreak: true
+              } as any
+            });
+            if (alarmRef.current) alarmRef.current.play().catch(() => {});
           }
         }
       }, 1000);
     }
-    return () => { if (interval) clearInterval(interval); };
-  }, [isActive, isBreak, activeTask, profile?.currentSession, user, firestore, startBreak, performSync]);
+    return () => { if (ticker) clearInterval(ticker); };
+  }, [isActive, isBreak, profile?.currentSession, user, firestore, performSync]);
 
   const progress = useMemo(() => {
     const originalTotal = isBreak ? BREAK_MINUTES * 60 : (activeTask?.duration || 25) * 60;
     return ((originalTotal - timeLeft) / originalTotal) * 100;
   }, [timeLeft, isBreak, activeTask]);
 
-  const minutesDisplay = Math.floor(timeLeft / 60);
-  const secondsDisplay = timeLeft % 60;
+  const min = Math.floor(timeLeft / 60);
+  const sec = timeLeft % 60;
 
   if (tasksLoading) return <Card className="w-full h-80 animate-pulse rounded-xl" />;
 
@@ -287,7 +258,7 @@ export function StudyTimer() {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Target className="h-5 w-5 text-primary" />
-              <CardTitle className="font-headline uppercase text-sm font-black tracking-tight">Focus Roadmap</CardTitle>
+              <CardTitle className="font-headline uppercase text-sm font-black tracking-tight">Focus Engine</CardTitle>
             </div>
           </div>
         </CardHeader>
@@ -296,9 +267,9 @@ export function StudyTimer() {
             <ListTodo className="h-8 w-8 text-white/20" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-lg font-black font-headline">Empty Roadmap</h3>
+            <h3 className="text-lg font-black font-headline">Engine Locked</h3>
             <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest max-w-xs mx-auto">
-              Please build your sequence to begin logging.
+              You must deploy an objective to the roadmap to engage focus mode.
             </p>
           </div>
           <Button onClick={() => router.push('/todo')} className="rounded-lg px-6 h-10 font-bold gap-2 bg-white text-indigo-900 hover:bg-white/90 shadow-lg text-xs">
@@ -322,13 +293,13 @@ export function StudyTimer() {
             <CardTitle className="font-headline uppercase text-xs font-black tracking-widest">{isBreak ? 'Rest Cycle' : 'Elite Focus'}</CardTitle>
           </div>
           <CardDescription className="text-blue-100/70 truncate font-bold text-[9px] uppercase tracking-wide">
-            {isBreak ? 'Recharging...' : `Strict: ${activeTask?.subjectName}`}
+            {isBreak ? 'Deep Recharge...' : `Strict: ${activeTask?.subjectName}`}
           </CardDescription>
         </div>
         {isActive && !isBreak && (
           <div className="flex items-center gap-1 bg-red-500/20 px-2.5 py-1 rounded-full border border-red-500/30 animate-pulse shrink-0">
             <Wifi className="h-2.5 w-2.5 text-red-400" />
-            <span className="text-[8px] font-black uppercase text-red-400 tracking-widest">SYNC</span>
+            <span className="text-[8px] font-black uppercase text-red-400 tracking-widest">LIVE SYNC</span>
           </div>
         )}
       </CardHeader>
@@ -358,7 +329,7 @@ export function StudyTimer() {
 
            <div className="flex flex-col items-center justify-center z-10">
             <span className="text-4xl font-black font-mono tracking-tighter tabular-nums text-white">
-              {String(minutesDisplay).padStart(2, '0')}:{String(secondsDisplay).padStart(2, '0')}
+              {String(min).padStart(2, '0')}:{String(sec).padStart(2, '0')}
             </span>
             <span className="text-[8px] font-black uppercase tracking-[0.2em] text-blue-100/40 mt-1">{isBreak ? 'Resting' : 'Focusing'}</span>
           </div>
@@ -397,7 +368,24 @@ export function StudyTimer() {
             <Button 
               variant="secondary" 
               className="w-full h-10 rounded-xl font-black text-[9px] uppercase tracking-widest bg-white/10 text-white hover:bg-white/20 border border-white/10"
-              onClick={markTaskDone}
+              onClick={async () => {
+                const now = Date.now();
+                const elapsedTotal = Math.floor((now - profile.currentSession?.startTime) / 1000);
+                const alreadySynced = Math.floor((lastSyncTimestampRef.current - profile.currentSession?.startTime) / 1000);
+                const remainder = Math.max(0, elapsedTotal - (alreadySynced > 0 ? alreadySynced : 0));
+                
+                if (isActive && remainder > 0) await performSync(remainder);
+                
+                await updateTaskStatus(firestore, user!.uid, activeTask.id, true);
+                toast({ title: "Objective Secured!", description: `${activeTask.chapterName} finished.` });
+                
+                setIsActive(false);
+                updateUserProfile(firestore, user!.uid, { 
+                  isStudying: false,
+                  "currentSession.status": "idle",
+                  "currentSession.startTime": null
+                });
+              }}
             >
               <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Secure Task
             </Button>
