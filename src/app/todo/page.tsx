@@ -51,7 +51,10 @@ import {
   BookOpen,
   Users2,
   Calendar as CalendarIcon,
-  List
+  List,
+  Target,
+  Flame,
+  Layout
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -251,10 +254,10 @@ export default function TodoPage() {
             key={day.toString()}
             className={cn(
               "relative h-12 sm:h-16 flex flex-col items-center justify-center rounded-xl transition-all cursor-pointer border-2",
-              !isCurrentMonth ? "opacity-10 pointer-events-none" : "",
+              !isCurrentMonth ? "opacity-5 pointer-events-none" : "",
               isSelected 
-                ? "bg-primary border-primary text-white shadow-lg z-10" 
-                : "bg-white/5 border-transparent text-white/70 hover:border-white/20"
+                ? "bg-primary border-primary text-white shadow-lg scale-105 z-10" 
+                : "bg-white/5 border-transparent text-white/70 hover:border-white/10"
             )}
             onClick={() => setSelectedDate(cloneDay)}
           >
@@ -262,7 +265,7 @@ export default function TodoPage() {
               {format(day, 'd')}
             </span>
             {hasTasks && !isSelected && (
-              <div className={cn("w-1.5 h-1.5 rounded-full mt-1", allCompleted ? "bg-success" : someCompleted ? "bg-orange-500" : "bg-primary")} />
+              <div className={cn("w-1.5 h-1.5 rounded-full mt-1 shadow-[0_0_5px_rgba(255,255,255,0.5)]", allCompleted ? "bg-success" : someCompleted ? "bg-orange-500" : "bg-primary")} />
             )}
           </div>
         );
@@ -278,112 +281,144 @@ export default function TodoPage() {
     <ProtectedRoute>
       <div className="min-h-screen bg-background text-foreground pb-24 md:pb-10">
         <Header />
-        <main className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-4">
+        <main className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
           <ProfileSetupGate>
             
-            {/* Hero Banner */}
-            <Card className="rounded-xl border-none shadow-xl overflow-hidden bg-[#1A1C3D] text-white relative group">
-              <div className="absolute top-0 right-0 p-8 opacity-5">
-                <CalendarIcon className="h-20 w-20 transition-transform group-hover:scale-110 duration-1000" />
+            {/* Hero Banner - Elite Design */}
+            <Card className="rounded-[2rem] border-none shadow-2xl overflow-hidden bg-[#1A1C3D] text-white relative group">
+              <div className="absolute top-0 right-0 p-10 opacity-5 rotate-12 transition-transform group-hover:rotate-45 duration-1000">
+                <Layout className="h-32 w-32" />
               </div>
-              <CardContent className="p-4 md:p-6 relative z-10 space-y-1">
-                <div className="space-y-0.5 text-center md:text-left">
-                  <h1 className="text-lg md:text-xl font-black tracking-tighter leading-none">Study Roadmap</h1>
-                  <p className="text-white/60 font-medium max-w-xl text-[9px] md:text-xs">
-                    Plan your sessions, track chapter progress, and synchronize with your goals.
-                  </p>
+              <CardContent className="p-8 md:p-12 relative z-10">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+                  <div className="space-y-3 text-center md:text-left">
+                    <div className="inline-flex items-center gap-2 bg-primary/20 backdrop-blur-lg px-3 py-1 rounded-full border border-white/10 text-[10px] font-black text-primary-foreground uppercase tracking-[0.2em]">
+                       <Zap className="h-3 w-3 fill-current" />
+                       Strategic Planner
+                    </div>
+                    <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-none">Your Study Roadmap</h1>
+                    <p className="text-white/60 font-medium text-sm md:text-base max-w-lg">
+                      Plan your sessions, track chapter progress, and synchronize your hustle with the Million Minute Quest.
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-center md:items-end gap-3">
+                     <div className="bg-white/5 backdrop-blur-md p-4 rounded-3xl border border-white/10 shadow-inner flex items-center gap-4">
+                        <div className="text-center">
+                           <p className="text-[8px] font-black uppercase text-white/30 tracking-widest">Tasks Today</p>
+                           <p className="text-2xl font-black">{localTasks.length}</p>
+                        </div>
+                        <div className="w-px h-8 bg-white/10" />
+                        <div className="text-center">
+                           <p className="text-[8px] font-black uppercase text-white/30 tracking-widest">Done</p>
+                           <p className="text-2xl font-black text-primary">{localTasks.filter(t => t.completed).length}</p>
+                        </div>
+                     </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
+            {/* Expired Tasks Warning */}
             {expiredTasks && expiredTasks.length > 0 && isSameDay(selectedDate, new Date()) && (
-              <Card className="rounded-xl border-none shadow-lg bg-orange-500 text-white overflow-hidden animate-in slide-in-from-top duration-500">
-                <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/20 rounded-lg">
-                      <History className="h-5 w-5" />
+              <Card className="rounded-[1.5rem] border-none shadow-xl bg-gradient-to-r from-orange-500 to-red-600 text-white overflow-hidden animate-in slide-in-from-top duration-700">
+                <CardContent className="p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md shadow-lg">
+                      <History className="h-6 w-6" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-black tracking-tight">Unfinished Hustle Detected</h3>
-                      <p className="text-white/80 font-medium text-[10px]">You have {expiredTasks.length} objectives from previous days.</p>
+                      <h3 className="text-lg font-black tracking-tight leading-none uppercase">Pending Objectives</h3>
+                      <p className="text-white/80 font-medium text-xs mt-1">You have {expiredTasks.length} unfinished tasks from previous days.</p>
                     </div>
                   </div>
                   <Button 
                     onClick={handleRestoreAll} 
                     disabled={loading}
                     variant="secondary" 
-                    className="rounded-lg px-4 h-9 font-black uppercase tracking-widest text-[9px] bg-white text-orange-600 hover:bg-white/90 shadow-sm w-full sm:w-auto"
+                    className="rounded-xl px-6 h-11 font-black uppercase tracking-widest text-[10px] bg-white text-orange-600 hover:bg-white/90 shadow-2xl w-full sm:w-auto transition-transform hover:scale-105 active:scale-95"
                   >
-                    {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="mr-1.5 h-3 w-3 fill-current" />}
-                    Restore All
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4 fill-current" />}
+                    Move to Today
                   </Button>
                 </CardContent>
               </Card>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               
-              {/* Left Column: Calendar */}
+              {/* Left Column: Calendar Card */}
               <div className="lg:col-span-7 xl:col-span-8">
-                <Card className="bg-[#1A1C3D] border-none shadow-xl rounded-xl p-4 md:p-6">
-                  <div className="flex justify-between items-center mb-6">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-primary/20 rounded-lg">
-                        <CalendarCheck className="h-5 w-5 text-primary" />
+                <Card className="bg-[#1A1C3D] border-none shadow-2xl rounded-[2.5rem] p-6 md:p-10 relative overflow-hidden">
+                  <div className="absolute -bottom-10 -left-10 opacity-5">
+                     <CalendarIcon className="h-48 w-48" />
+                  </div>
+                  
+                  <div className="flex justify-between items-center mb-8 relative z-10">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-primary/20 rounded-2xl shadow-inner border border-white/5">
+                        <CalendarCheck className="h-6 w-6 text-primary" />
                       </div>
-                      <h2 className="text-sm md:text-base font-black text-white tracking-tighter uppercase">
-                        {format(currentMonth, 'MMMM yyyy')}
-                      </h2>
+                      <div>
+                        <h2 className="text-lg md:text-2xl font-black text-white tracking-tighter uppercase leading-none">
+                          {format(currentMonth, 'MMMM yyyy')}
+                        </h2>
+                        <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mt-1">Calendar Feed</p>
+                      </div>
                     </div>
-                    <div className="flex gap-1.5 bg-white/5 p-1 rounded-lg">
-                      <Button variant="ghost" size="icon" onClick={prevMonth} className="text-white hover:bg-white/10 h-8 w-8">
-                        <ChevronLeft className="h-4 w-4" />
+                    <div className="flex gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/10">
+                      <Button variant="ghost" size="icon" onClick={prevMonth} className="text-white hover:bg-white/10 rounded-xl h-10 w-10">
+                        <ChevronLeft className="h-5 w-5" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={nextMonth} className="text-white hover:bg-white/10 h-8 w-8">
-                        <ChevronRight className="h-4 w-4" />
+                      <Button variant="ghost" size="icon" onClick={nextMonth} className="text-white hover:bg-white/10 rounded-xl h-10 w-10">
+                        <ChevronRight className="h-5 w-5" />
                       </Button>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-7 mb-2 text-center">
+                  <div className="grid grid-cols-7 mb-4 text-center relative z-10">
                     {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => (
-                      <div key={idx} className="text-[8px] font-black uppercase tracking-widest text-white/40">
+                      <div key={idx} className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">
                         {day}
                       </div>
                     ))}
                   </div>
-                  {renderCells()}
+                  <div className="relative z-10">
+                    {renderCells()}
+                  </div>
                 </Card>
               </div>
 
-              {/* Right Column: Task List */}
-              <div className="lg:col-span-5 xl:col-span-4 space-y-4">
+              {/* Right Column: Task List Management */}
+              <div className="lg:col-span-5 xl:col-span-4 space-y-6">
                 
-                <div className="flex items-center justify-between gap-2 px-1">
+                <div className="flex items-center justify-between gap-3 px-2">
                   <div className="min-w-0">
-                    <h2 className="text-base font-black tracking-tighter uppercase leading-none">
-                      {isSameDay(selectedDate, new Date()) ? "Today's Roadmap" : format(selectedDate, 'MMM do')}
+                    <h2 className="text-xl font-black tracking-tighter uppercase leading-none">
+                      {isSameDay(selectedDate, new Date()) ? "Today's Grind" : format(selectedDate, 'MMM do')}
                     </h2>
-                    <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mt-1">
-                      {localTasks.length} Objectives Assigned
+                    <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
+                      <List className="h-3 w-3 text-primary" /> {localTasks.length} Objectives Active
                     </p>
                   </div>
                   <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
-                      <Button size="sm" className="rounded-lg shadow-md h-9 px-4 font-black uppercase tracking-widest text-[9px]">
-                        <Plus className="mr-1 h-3 w-3" /> New Task
+                      <Button className="rounded-xl shadow-xl shadow-primary/20 h-11 px-6 font-black uppercase tracking-widest text-[10px] hover:scale-105 active:scale-95 transition-all">
+                        <Plus className="mr-1.5 h-4 w-4" /> New Task
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-md rounded-xl border-none shadow-2xl p-6">
-                      <DialogHeader className="pb-4">
-                        <DialogTitle className="text-xl font-black tracking-tighter uppercase">New Objective</DialogTitle>
-                      </DialogHeader>
-                      <ScrollArea className="max-h-[60vh] pr-2">
-                        <div className="space-y-4 py-2">
-                          <div className="space-y-1.5">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Subject</Label>
+                    <DialogContent className="max-w-md rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden">
+                      <div className="bg-primary p-8 text-white">
+                         <DialogHeader>
+                           <DialogTitle className="text-3xl font-black tracking-tighter uppercase">New Objective</DialogTitle>
+                           <DialogDescription className="text-white/70 font-medium text-xs">Define your target for {format(selectedDate, 'MMMM do')}.</DialogDescription>
+                         </DialogHeader>
+                      </div>
+                      <ScrollArea className="max-h-[60vh] p-8 pt-6">
+                        <div className="space-y-6">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Select Subject</Label>
                             <Select onValueChange={(val) => {setSelectedSubject(val); setSelectedChapter(null);}}>
-                              <SelectTrigger className="h-10 rounded-lg">
+                              <SelectTrigger className="h-12 rounded-xl border-2 bg-secondary/20 border-transparent focus:border-primary transition-all">
                                 <SelectValue placeholder="Choose subject..." />
                               </SelectTrigger>
                               <SelectContent className="rounded-xl">
@@ -391,10 +426,10 @@ export default function TodoPage() {
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Chapter</Label>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Select Chapter</Label>
                             <Select onValueChange={setSelectedChapter} disabled={!selectedSubject}>
-                              <SelectTrigger className="h-10 rounded-lg">
+                              <SelectTrigger className="h-12 rounded-xl border-2 bg-secondary/20 border-transparent focus:border-primary transition-all">
                                 <SelectValue placeholder="Choose chapter..." />
                               </SelectTrigger>
                               <SelectContent className="rounded-xl">
@@ -402,56 +437,57 @@ export default function TodoPage() {
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Instructions</Label>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Focus Points / Notes</Label>
                             <Textarea 
-                              placeholder="Focus points..." 
-                              className="min-h-[80px] rounded-lg resize-none text-sm"
+                              placeholder="e.g. Complete exercise 3.1 & MCQ" 
+                              className="min-h-[100px] rounded-xl border-2 bg-secondary/20 border-transparent focus:border-primary transition-all resize-none text-sm font-medium"
                               value={taskNote}
                               onChange={(e) => setTaskNote(e.target.value)}
                             />
                           </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Planned Duration</Label>
-                            <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Target Duration</Label>
+                            <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-1">
-                                <Label className="text-[8px] font-black uppercase text-muted-foreground/60 px-1">Hours</Label>
-                                <Input type="number" min="0" value={plannedHours} onChange={(e) => setPlannedHours(e.target.value)} className="h-10 rounded-lg" />
+                                <Label className="text-[8px] font-black uppercase text-muted-foreground/60 px-2">Hours</Label>
+                                <Input type="number" min="0" value={plannedHours} onChange={(e) => setPlannedHours(e.target.value)} className="h-12 rounded-xl border-2 bg-secondary/20 border-transparent focus:border-primary transition-all font-black text-center" />
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-[8px] font-black uppercase text-muted-foreground/60 px-1">Minutes</Label>
-                                <Input type="number" min="0" max="59" value={plannedMinutes} onChange={(e) => setPlannedMinutes(e.target.value)} className="h-10 rounded-lg" />
+                                <Label className="text-[8px] font-black uppercase text-muted-foreground/60 px-2">Minutes</Label>
+                                <Input type="number" min="0" max="59" value={plannedMinutes} onChange={(e) => setPlannedMinutes(e.target.value)} className="h-12 rounded-xl border-2 bg-secondary/20 border-transparent focus:border-primary transition-all font-black text-center" />
                               </div>
                             </div>
                           </div>
                         </div>
                       </ScrollArea>
-                      <DialogFooter className="pt-4 border-t mt-4">
-                        <Button onClick={handleAddTask} disabled={loading || !selectedChapter} className="w-full h-11 font-black rounded-lg shadow-lg">
-                          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Deploy Task"}
+                      <div className="p-8 pt-0">
+                        <Button onClick={handleAddTask} disabled={loading || !selectedChapter} className="w-full h-14 font-black rounded-2xl shadow-xl shadow-primary/20 text-lg">
+                          {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Deploy Objective"}
                         </Button>
-                      </DialogFooter>
+                      </div>
                     </DialogContent>
                   </Dialog>
                 </div>
 
-                <Card className="rounded-xl border-none shadow-xl bg-card overflow-hidden">
-                  <div className="p-3 border-b bg-secondary/10 flex items-center justify-between">
+                <Card className="rounded-[2.5rem] border-none shadow-2xl bg-card overflow-hidden">
+                  <div className="p-5 border-b bg-secondary/10 flex items-center justify-between px-6">
                     <h3 className="text-[10px] font-black flex items-center gap-2 tracking-tight uppercase">
-                       <List className="h-3 w-3 text-primary" /> Objective Queue
+                       <Target className="h-4 w-4 text-primary" /> Active Queue
                     </h3>
+                    <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest bg-white border-primary/20 text-primary">Sortable</Badge>
                   </div>
                   
-                  <ScrollArea className="h-[450px]">
+                  <ScrollArea className="h-[520px]">
                     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                       <div className="divide-y divide-secondary/30">
                         {tasksLoading ? (
                           Array.from({ length: 4 }).map((_, i) => (
-                            <div key={i} className="p-4 flex items-center gap-3">
-                              <div className="w-8 h-8 bg-muted animate-pulse rounded-lg" />
+                            <div key={i} className="p-6 flex items-center gap-4">
+                              <Skeleton className="w-8 h-8 rounded-xl" />
                               <div className="flex-1 space-y-2">
-                                <div className="h-3 w-1/2 bg-muted animate-pulse rounded" />
-                                <div className="h-2 w-1/3 bg-muted animate-pulse rounded" />
+                                <Skeleton className="h-4 w-3/4 rounded" />
+                                <Skeleton className="h-3 w-1/2 rounded" />
                               </div>
                             </div>
                           ))
@@ -467,12 +503,16 @@ export default function TodoPage() {
                             ))}
                           </SortableContext>
                         ) : (
-                          <div className="py-20 text-center space-y-4 px-6">
-                            <div className="bg-secondary/50 w-12 h-12 rounded-full flex items-center justify-center mx-auto">
-                                <Zap className="h-6 w-6 text-muted-foreground/30" />
+                          <div className="py-24 text-center space-y-6 px-10">
+                            <div className="bg-secondary/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                                <Zap className="h-10 w-10 text-muted-foreground/20" />
                             </div>
-                            <h3 className="text-sm font-black tracking-tighter uppercase text-muted-foreground">Empty Roadmap</h3>
-                            <p className="text-[10px] text-muted-foreground font-medium">Select a date and add objectives to begin tracking.</p>
+                            <div className="space-y-2">
+                               <h3 className="text-lg font-black tracking-tighter uppercase text-muted-foreground/60">Roadmap Empty</h3>
+                               <p className="text-xs text-muted-foreground/40 font-medium leading-relaxed">
+                                  No objectives mapped for this date. Add a task to begin your focus session.
+                               </p>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -495,7 +535,7 @@ function SortableTaskItem({ task, onToggle, onDelete }: {
   onDelete: (id: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
-  const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : undefined, opacity: isDragging ? 0.5 : 1 };
+  const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : undefined, opacity: isDragging ? 0.6 : 1 };
 
   const formatDuration = (mins: number) => {
     const h = Math.floor(mins / 60);
@@ -509,54 +549,62 @@ function SortableTaskItem({ task, onToggle, onDelete }: {
       ref={setNodeRef} 
       style={style} 
       className={cn(
-        "flex items-center justify-between p-3 sm:p-4 hover:bg-primary/[0.03] transition-all group", 
-        task.completed && "bg-secondary/10"
+        "flex items-center justify-between p-5 sm:p-6 transition-all group border-l-4 border-transparent", 
+        task.completed ? "bg-secondary/5 border-l-success" : "hover:bg-primary/[0.02] border-l-primary/10"
       )}
     >
-      <div className="flex items-center gap-3 min-w-0">
-        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground/20 hover:text-primary transition-colors p-1">
-          <GripVertical className="h-4 w-4" />
+      <div className="flex items-center gap-4 min-w-0">
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground/20 hover:text-primary transition-colors p-1 shrink-0">
+          <GripVertical className="h-5 w-5" />
         </div>
         
-        <Checkbox 
-          checked={task.completed} 
-          onCheckedChange={() => onToggle(task.id, task.completed)} 
-          className="h-5 w-5 rounded-full border-primary shrink-0" 
-        />
+        <div className="relative shrink-0">
+           <Checkbox 
+             checked={task.completed} 
+             onCheckedChange={() => onToggle(task.id, task.completed)} 
+             className="h-6 w-6 rounded-full border-primary/20 data-[state=checked]:bg-success data-[state=checked]:border-success transition-all shadow-sm" 
+           />
+        </div>
         
-        <div className="min-w-0 space-y-0.5">
-          <div className="flex items-center gap-1.5">
+        <div className="min-w-0 space-y-1">
+          <div className="flex items-center gap-2">
             <h4 className={cn(
-              "font-bold text-[11px] sm:text-sm truncate transition-colors tracking-tight", 
-              task.completed && "line-through text-muted-foreground"
+              "font-black text-sm sm:text-base truncate transition-colors tracking-tight uppercase leading-none", 
+              task.completed && "line-through text-muted-foreground opacity-50"
             )}>
               {task.chapterName}
             </h4>
             {task.source === 'group' && (
-              <Badge className="text-[6px] font-black uppercase px-1 h-3 bg-primary text-white border-none">GUILD</Badge>
+              <Badge className="text-[7px] font-black uppercase px-2 h-4 bg-primary text-white border-none shadow-sm">GUILD</Badge>
             )}
           </div>
           
-          <div className="flex flex-wrap items-center gap-2">
-             <div className="flex items-center gap-1 text-primary">
-                <BookOpen className="h-2 w-2" />
-                <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-tight">{task.subjectName}</span>
+          <div className="flex flex-wrap items-center gap-3">
+             <div className="flex items-center gap-1.5 text-primary">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary/20" />
+                <span className="text-[9px] font-black uppercase tracking-widest">{task.subjectName}</span>
              </div>
-             <div className="flex items-center gap-1 text-muted-foreground">
-                <Clock className="h-2 w-2" />
-                <span className="text-[7px] sm:text-[8px] font-bold uppercase tracking-tight">{formatDuration(task.duration)}</span>
+             <div className="flex items-center gap-1.5 text-muted-foreground bg-secondary/30 px-2 py-0.5 rounded-md">
+                <Clock className="h-3 w-3" />
+                <span className="text-[9px] font-bold uppercase tracking-tight">{formatDuration(task.duration)}</span>
              </div>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button variant="ghost" size="icon" asChild className="text-primary rounded-full hover:bg-primary/10 h-7 w-7">
-          <Link href="/dashboard"><Play className="h-3 w-3 fill-current" /></Link>
-        </Button>
-        <Button variant="ghost" size="icon" onClick={() => onDelete(task.id)} className="text-destructive rounded-full hover:bg-destructive/10 h-7 w-7">
-          <Trash2 className="h-3 w-3" />
-        </Button>
+      <div className="flex items-center gap-1 ml-4">
+        {isDragging ? null : (
+          <>
+            {!task.completed && (
+              <Button variant="ghost" size="icon" asChild className="text-primary rounded-full hover:bg-primary/10 h-9 w-9 shadow-sm hover:shadow-md transition-all">
+                <Link href="/dashboard"><Play className="h-4 w-4 fill-current" /></Link>
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" onClick={() => onDelete(task.id)} className="text-destructive/30 hover:text-destructive rounded-full hover:bg-destructive/10 h-9 w-9 transition-all">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );
