@@ -46,23 +46,18 @@ export default function LeaderboardPage() {
     let path = `leaderboards/${timeFilter}`;
     const now = new Date();
 
-    // Reset Logic Implementation
     if (timeFilter === 'daily') {
-      // 12 AM Reset: Date specific path
       path = `leaderboards/daily/${format(now, 'yyyy-MM-dd')}`;
     } else if (timeFilter === 'weekly') {
-      // Friday-to-Thursday Reset: Anchor to previous Friday
-      const weekStart = startOfWeek(now, { weekStartsOn: 5 }); 
+      const weekStart = startOfWeek(now, { weekStartsOn: 5 }); // Friday start
       path = `leaderboards/weekly/Friday_${format(weekStart, 'yyyy-MM-dd')}`;
     } else if (timeFilter === 'monthly') {
-      // 1st of Month Reset: Month specific path
       path = `leaderboards/monthly/${format(now, 'yyyy-MM')}`;
     } else if (timeFilter === 'yearly') {
       path = `leaderboards/yearly/${format(now, 'yyyy')}`;
     }
 
     const leaderboardRef = ref(database, path);
-    // Sort by minutes. RTDB gives ascending, so we handle reverse in state
     const topRankingsQuery = rtdbQuery(leaderboardRef, orderByChild('minutes'), limitToLast(100));
 
     const unsubscribe = onValue(topRankingsQuery, (snapshot) => {
@@ -124,21 +119,21 @@ export default function LeaderboardPage() {
                     <h1 className="text-3xl md:text-5xl font-black tracking-tighter leading-none">Global Contenders</h1>
                     <p className="text-white/60 font-medium text-xs md:text-sm max-w-md">
                       {timeFilter === 'daily' && "Resets every night at 12:00 AM."}
-                      {timeFilter === 'weekly' && "Resets every Friday morning."}
-                      {timeFilter === 'monthly' && "Resets on the 1st of every month."}
-                      {timeFilter === 'yearly' && "Annual hustle performance."}
+                      {timeFilter === 'weekly' && "New weeks begin every Friday morning."}
+                      {timeFilter === 'monthly' && "Monthly cycle resets on the 1st day."}
+                      {timeFilter === 'yearly' && "Annual hustle cycle reset on Jan 1st."}
                     </p>
                   </div>
                   <div className="flex flex-col items-center md:items-end gap-2">
                     <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-xl border border-white/10 shadow-inner">
                        <RefreshCw className={cn("h-4 w-4 text-primary", loading && "animate-spin")} />
                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest tabular-nums">
-                          Last Sync: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          Sync: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                        </span>
                     </div>
                     <div className="flex items-center gap-1.5 bg-red-600/10 px-3 py-1 rounded-full border border-red-600/20">
                        <Wifi className="h-2.5 w-2.5 text-red-500 animate-pulse" />
-                       <span className="text-[8px] font-black text-red-500 uppercase tracking-widest">Live Updates Active</span>
+                       <span className="text-[8px] font-black text-red-500 uppercase tracking-widest">Live Updates</span>
                     </div>
                   </div>
                 </div>
@@ -161,7 +156,7 @@ export default function LeaderboardPage() {
               ) : (
                 <div className="py-20 text-center space-y-4 bg-secondary/5 rounded-xl border-2 border-dashed w-full max-w-lg mx-auto">
                    <Zap className="h-10 w-10 mx-auto text-muted-foreground/20" />
-                   <p className="text-xs font-black uppercase text-muted-foreground/40 tracking-[0.2em]">Waiting for today's hustle to begin...</p>
+                   <p className="text-xs font-black uppercase text-muted-foreground/40 tracking-[0.2em]">Waiting for deep focus sessions...</p>
                 </div>
               )}
             </div>

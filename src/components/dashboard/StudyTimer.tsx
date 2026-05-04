@@ -88,14 +88,14 @@ export function StudyTimer() {
       lastActive: Date.now()
     };
 
-    const paths = {
+    const updates: Record<string, any> = {
       [`leaderboards/daily/${currentDateStr}/${user.uid}`]: { ...baseData, minutes: studyMins.daily },
       [`leaderboards/weekly/${weekStr}/${user.uid}`]: { ...baseData, minutes: studyMins.weekly },
       [`leaderboards/monthly/${monthStr}/${user.uid}`]: { ...baseData, minutes: studyMins.monthly },
       [`leaderboards/yearly/${yearStr}/${user.uid}`]: { ...baseData, minutes: studyMins.yearly },
     };
 
-    update(ref(database), paths);
+    update(ref(database), updates);
   }, [user, profile, database]);
 
   // Persistent Unix Timestamp Logic
@@ -200,7 +200,7 @@ export function StudyTimer() {
         
         setTimeLeft(remaining);
 
-        // Period Reset Detection
+        // Period Reset Detection (Midnight Handover)
         const currentTodayStr = format(new Date(), 'yyyy-MM-dd');
         if (currentTodayStr !== sessionDate) {
           clearInterval(ticker!);
@@ -208,7 +208,7 @@ export function StudyTimer() {
           return;
         }
 
-        // Heartbeat Sync
+        // Heartbeat Sync to RTDB for Live Leaderboard
         if (elapsed > 0 && elapsed % RTDB_HEARTBEAT_INTERVAL === 0 && elapsed !== lastRTDBSyncRef.current) {
            lastRTDBSyncRef.current = elapsed;
            const currentMins = Math.floor(elapsed / 60);
@@ -232,6 +232,7 @@ export function StudyTimer() {
   const handleMidnightReset = async (elapsedSeconds: number) => {
     if (!user || !profile?.currentSession) return;
     
+    // Save partial progress to Firestore before reload
     if (!isBreak && elapsedSeconds > 0) {
       await logStudyTime(firestore, user.uid, profile.currentSession.subjectId, profile.currentSession.chapterId, elapsedSeconds);
     }
@@ -245,8 +246,8 @@ export function StudyTimer() {
     
     setIsActive(false);
     toast({ 
-      title: "Period Handover", 
-      description: "Leaderboards are transitioning to the next cycle. Your progress is secured.",
+      title: "New Period Started", 
+      description: "Hustle cycles have been reset. Your progress is secured.",
       duration: 5000
     });
     
@@ -284,8 +285,8 @@ export function StudyTimer() {
     });
     
     toast({ 
-      title: isBreak ? "Break Over!" : "Session Complete!", 
-      description: isBreak ? "Time to resume focus." : "Objective secured and marked as Done.",
+      title: isBreak ? "Break Over!" : "Objective Secured!", 
+      description: isBreak ? "Time to resume deep focus." : "Roadmap task marked as Done.",
     });
   };
 
@@ -339,7 +340,6 @@ export function StudyTimer() {
       <div className="absolute top-0 right-0 p-10 opacity-5 rotate-12 transition-transform group-hover/timer:rotate-45 duration-1000">
         <Zap className="h-48 w-48" />
       </div>
-      <div className="absolute -bottom-10 -left-10 h-40 w-40 bg-white/5 rounded-full blur-3xl" />
 
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-white/10 pb-4 p-6 md:p-8 relative z-10">
         <div className="space-y-1 overflow-hidden flex-1">
@@ -348,11 +348,11 @@ export function StudyTimer() {
                <Clock className="h-4 w-4 text-blue-200" />
             </div>
             <CardTitle className="font-headline uppercase text-[10px] font-black tracking-[0.2em] text-blue-100/60">
-               {isBreak ? 'Rest Cycle' : 'Elite Focus'}
+               {isBreak ? 'Deep Recharge' : 'Elite Focus'}
             </CardTitle>
           </div>
           <CardDescription className="text-white font-black text-xs md:text-sm truncate pr-4">
-            {isBreak ? 'Deep Recharge' : activeTask?.chapterName}
+            {isBreak ? 'Rest Cycle' : activeTask?.chapterName}
           </CardDescription>
         </div>
         {isActive && !isBreak && (
@@ -380,7 +380,7 @@ export function StudyTimer() {
                       strokeDasharray={2 * Math.PI * 125}
                       strokeDashoffset={2 * Math.PI * 125 * (1 - progress / 100)}
                       strokeLinecap="round"
-                      className="transition-all duration-1000 ease-linear shadow-[0_0_15px_rgba(136,102,255,0.5)]"
+                      className="transition-all duration-1000 ease-linear"
                    />
                  )}
               </g>
@@ -391,7 +391,7 @@ export function StudyTimer() {
             </span>
             <div className="flex items-center gap-2 mt-2">
                <div className={cn("h-1.5 w-1.5 rounded-full", isBreak ? "bg-orange-400" : "bg-primary animate-pulse")} />
-               <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">{isBreak ? 'Deep Rest' : 'Hustle'}</span>
+               <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">{isBreak ? 'Resting' : 'Studying'}</span>
             </div>
           </div>
         </div>
@@ -406,7 +406,7 @@ export function StudyTimer() {
               )} 
             >
               {isActive ? <Pause className="mr-2 h-5 w-5 fill-current" /> : <Play className="mr-2 h-5 w-5 fill-current" />}
-              {isActive ? 'PAUSE' : 'DEPLOY'}
+              {isActive ? 'PAUSE' : 'START'}
             </Button>
             
             {isBreak && (
@@ -448,15 +448,15 @@ export function StudyTimer() {
                 
                 const currentTotalMins = (profile?.daily_study_minutes || 0) + Math.floor(elapsedSeconds / 60);
                 updateRTDBLiveStats(false, {
-                  daily: (profile?.daily_study_minutes || 0) + Math.floor(elapsedSeconds / 60),
+                  daily: currentTotalMins,
                   weekly: (profile?.weekly_study_minutes || 0) + Math.floor(elapsedSeconds / 60),
                   monthly: (profile?.monthly_study_minutes || 0) + Math.floor(elapsedSeconds / 60),
                   yearly: (profile?.yearly_study_minutes || 0) + Math.floor(elapsedSeconds / 60)
                 });
-                toast({ title: "Objective Secured!", description: "Progress synced to global rankings." });
+                toast({ title: "Objective Secured!", description: "Progress synced to global standings." });
               }}
             >
-              <CheckCircle2 className="mr-2 h-4 w-4" /> Finalize Objective
+              <CheckCircle2 className="mr-2 h-4 w-4" /> Finish Early
             </Button>
           )}
         </div>

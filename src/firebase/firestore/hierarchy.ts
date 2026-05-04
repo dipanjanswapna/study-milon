@@ -129,7 +129,7 @@ export async function updateChapterStatus(
 }
 
 /**
- * Robust precison logging system with midnight boundary protection.
+ * Robust precision logging system with full period boundary protection (Daily, Weekly, Monthly, Yearly).
  */
 export async function logStudyTime(
     db: Firestore,
@@ -148,7 +148,7 @@ export async function logStudyTime(
     const dateStr = format(now, 'yyyy-MM-dd');
     const monthStr = format(now, 'yyyy-MM');
     const yearStr = format(now, 'yyyy');
-    const weekStart = startOfWeek(now, { weekStartsOn: 5 }); 
+    const weekStart = startOfWeek(now, { weekStartsOn: 5 }); // Friday start
     const weekStr = `Friday_${format(weekStart, 'yyyy-MM-dd')}`;
     
     const hour = now.getHours().toString();
@@ -172,7 +172,7 @@ export async function logStudyTime(
             isStudying: false,
         };
 
-        // Determine if resets are needed
+        // Determine if resets are needed for permanent Firestore counters
         const isNewDay = userData.last_study_day !== dateStr;
         const isNewWeek = userData.last_study_week !== weekStr;
         const isNewMonth = userData.last_study_month !== monthStr;
@@ -185,7 +185,7 @@ export async function logStudyTime(
         minutesToAdd = Math.floor(totalSeconds / 60);
         finalPartialSeconds = totalSeconds % 60;
 
-        // Daily Reset/Increment
+        // Daily Update
         if (isNewDay) {
             userUpdate.daily_study_minutes = minutesToAdd;
             userUpdate.last_study_day = dateStr;
@@ -195,7 +195,7 @@ export async function logStudyTime(
 
         userUpdate.partial_study_seconds = finalPartialSeconds;
 
-        // Weekly Reset/Increment
+        // Weekly Update
         if (isNewWeek) {
             userUpdate.weekly_study_minutes = minutesToAdd;
             userUpdate.last_study_week = weekStr;
@@ -203,7 +203,7 @@ export async function logStudyTime(
             userUpdate.weekly_study_minutes = increment(minutesToAdd);
         }
 
-        // Monthly Reset/Increment
+        // Monthly Update
         if (isNewMonth) {
             userUpdate.monthly_study_minutes = minutesToAdd;
             userUpdate.last_study_month = monthStr;
@@ -211,7 +211,7 @@ export async function logStudyTime(
             userUpdate.monthly_study_minutes = increment(minutesToAdd);
         }
 
-        // Yearly Reset/Increment
+        // Yearly Update
         if (isNewYear) {
             userUpdate.yearly_study_minutes = minutesToAdd;
             userUpdate.last_study_year = yearStr;
@@ -219,6 +219,7 @@ export async function logStudyTime(
             userUpdate.yearly_study_minutes = increment(minutesToAdd);
         }
 
+        // Apply shared increments if minutes are earned
         if (minutesToAdd > 0) {
             userUpdate.total_study_minutes = increment(minutesToAdd);
             batch.update(chapterRef, { time_spent: increment(minutesToAdd) });
@@ -236,6 +237,6 @@ export async function logStudyTime(
         await batch.commit();
 
     } catch (error) {
-        console.error("Optimized Logging Error: ", error);
+        console.error("Optimized Time Logging Error: ", error);
     }
 }
