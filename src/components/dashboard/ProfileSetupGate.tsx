@@ -47,73 +47,73 @@ export function ProfileSetupGate({ children }: ProfileSetupGateProps) {
   if (!isProfileComplete || !isRoadmapComplete) {
     return (
       <div className="flex items-center justify-center min-h-[70vh] p-4">
-        <Card className="max-w-md w-full border-none shadow-2xl rounded-[2.5rem] overflow-hidden bg-card transition-all">
-          <CardHeader className="bg-[#1A1C3D] text-white text-center py-12 relative overflow-hidden">
+        <Card className="max-w-md w-full border-none shadow-2xl rounded-xl overflow-hidden bg-card transition-all">
+          <CardHeader className="bg-[#1A1C3D] text-white text-center py-10 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-5 rotate-12">
               <BrainCircuit className="h-32 w-32" />
             </div>
             <div className="relative z-10 space-y-4">
-              <div className="mx-auto bg-primary/20 backdrop-blur-lg p-4 rounded-3xl w-fit shadow-xl border border-white/10">
+              <div className="mx-auto bg-primary/20 backdrop-blur-lg p-4 rounded-2xl w-fit shadow-xl border border-white/10">
                 <BrainCircuit className="h-10 w-10 text-primary" />
               </div>
               <div className="space-y-1">
-                <CardTitle className="text-3xl font-black tracking-tighter uppercase">Setup Required</CardTitle>
-                <CardDescription className="text-white/60 font-medium text-sm">
+                <CardTitle className="text-2xl font-black tracking-tighter uppercase">Setup Required</CardTitle>
+                <CardDescription className="text-white/60 font-medium text-xs">
                   Complete your academic sequence to unlock the full potential of Study Milon.
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
           
-          <CardContent className="p-8 space-y-8">
-            <div className="space-y-4">
+          <CardContent className="p-6 space-y-6">
+            <div className="space-y-3">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Initialization Checklist</p>
               
               <div className={cn(
-                "flex items-center gap-4 p-5 rounded-2xl border-2 transition-all duration-500",
+                "flex items-center gap-4 p-4 rounded-xl border transition-all duration-500",
                 isProfileComplete 
                   ? "bg-primary/[0.03] border-primary/20 shadow-sm" 
                   : "bg-secondary/20 border-dashed border-muted-foreground/20"
               )}>
                 <div className={cn(
-                  "p-3 rounded-xl transition-colors",
+                  "p-2.5 rounded-lg transition-colors",
                   isProfileComplete ? "bg-primary text-white" : "bg-muted text-muted-foreground/40"
                 )}>
-                  <UserCircle className="h-6 w-6" />
+                  <UserCircle className="h-5 w-5" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className={cn("font-black text-sm uppercase tracking-tight", isProfileComplete ? "text-primary" : "text-muted-foreground")}>
+                    <p className={cn("font-black text-xs uppercase tracking-tight", isProfileComplete ? "text-primary" : "text-muted-foreground")}>
                       Academic Profile
                     </p>
-                    {isProfileComplete && <CheckCircle2 className="h-3.5 w-3.5 text-primary" />}
+                    {isProfileComplete && <CheckCircle2 className="h-3 w-3 text-primary" />}
                   </div>
-                  <p className="text-xs font-medium text-muted-foreground truncate">
+                  <p className="text-[10px] font-medium text-muted-foreground truncate">
                     {isProfileComplete ? 'Identity Secured' : 'Set your category and batch'}
                   </p>
                 </div>
               </div>
 
               <div className={cn(
-                "flex items-center gap-4 p-5 rounded-2xl border-2 transition-all duration-500",
+                "flex items-center gap-4 p-4 rounded-xl border transition-all duration-500",
                 isRoadmapComplete 
                   ? "bg-primary/[0.03] border-primary/20 shadow-sm" 
                   : "bg-secondary/20 border-dashed border-muted-foreground/20"
               )}>
                 <div className={cn(
-                  "p-3 rounded-xl transition-colors",
+                  "p-2.5 rounded-lg transition-colors",
                   isRoadmapComplete ? "bg-primary text-white" : "bg-muted text-muted-foreground/40"
                 )}>
-                  <BookOpen className="h-6 w-6" />
+                  <BookOpen className="h-5 w-5" />
                 </div>
                 <div className="flex-1 min-w-0">
                    <div className="flex items-center gap-2">
-                    <p className={cn("font-black text-sm uppercase tracking-tight", isRoadmapComplete ? "text-primary" : "text-muted-foreground")}>
+                    <p className={cn("font-black text-xs uppercase tracking-tight", isRoadmapComplete ? "text-primary" : "text-muted-foreground")}>
                       Academic Roadmap
                     </p>
-                    {isRoadmapComplete && <CheckCircle2 className="h-3.5 w-3.5 text-primary" />}
+                    {isRoadmapComplete && <CheckCircle2 className="h-3 w-3 text-primary" />}
                   </div>
-                  <p className="text-xs font-medium text-muted-foreground truncate">
+                  <p className="text-[10px] font-medium text-muted-foreground truncate">
                     {isRoadmapComplete ? 'Syllabus Mapping Done' : 'Add at least one subject'}
                   </p>
                 </div>
@@ -122,16 +122,16 @@ export function ProfileSetupGate({ children }: ProfileSetupGateProps) {
 
             <div className="space-y-4">
               <Button 
-                className="w-full h-14 rounded-2xl text-base font-black uppercase tracking-widest shadow-xl shadow-primary/20 group hover:scale-[1.02] active:scale-95 transition-all"
+                className="w-full h-12 rounded-xl text-sm font-black uppercase tracking-widest shadow-xl shadow-primary/20 group hover:scale-[1.02] active:scale-95 transition-all"
                 onClick={() => router.push('/profile')}
               >
                 Finish Setup
-                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
               
               <div className="flex items-center justify-center gap-2 text-muted-foreground/40">
                 <Zap className="h-3 w-3 fill-current" />
-                <span className="text-[9px] font-black uppercase tracking-[0.2em]">The Million Minute Quest</span>
+                <span className="text-[8px] font-black uppercase tracking-[0.2em]">The Million Minute Quest</span>
               </div>
             </div>
           </CardContent>
