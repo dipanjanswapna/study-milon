@@ -130,6 +130,7 @@ export async function updateChapterStatus(
 
 /**
  * Robust precision logging system with full period boundary protection (Daily, Weekly, Monthly, Yearly).
+ * Saves to users/{uid} and creates session maps in users/{uid}/studySessions.
  */
 export async function logStudyTime(
     db: Firestore,
@@ -178,12 +179,9 @@ export async function logStudyTime(
         const isNewMonth = userData.last_study_month !== monthStr;
         const isNewYear = userData.last_study_year !== yearStr;
 
-        let minutesToAdd = 0;
-        let finalPartialSeconds = 0;
-
         const totalSeconds = currentPartialSeconds + seconds;
-        minutesToAdd = Math.floor(totalSeconds / 60);
-        finalPartialSeconds = totalSeconds % 60;
+        const minutesToAdd = Math.floor(totalSeconds / 60);
+        const finalPartialSeconds = totalSeconds % 60;
 
         // Reset logic for each period in Firestore Profile
         userUpdate.daily_study_minutes = isNewDay ? minutesToAdd : increment(minutesToAdd);
@@ -217,6 +215,6 @@ export async function logStudyTime(
         await batch.commit();
 
     } catch (error) {
-        console.error("Optimized Time Logging Error: ", error);
+        console.error("Precision Time Logging Error: ", error);
     }
 }

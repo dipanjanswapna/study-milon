@@ -34,9 +34,11 @@ export function StudyTimer() {
   const { toast } = useToast();
   const router = useRouter();
 
+  // Get user profile to check existing session status
   const userRef = useMemo(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: profile } = useDoc<any>(userRef as any);
 
+  // Fetch today's tasks to auto-link the first one
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const tasksQuery = useMemo(() => {
     if (!user) return null;
@@ -55,6 +57,7 @@ export function StudyTimer() {
       .sort((a, b) => (a.order || 0) - (b.order || 0));
   }, [rawTasks]);
 
+  // Elite Focus Logic: Auto-grab the first incomplete task
   const activeTask = incompleteTasks[0] || null;
 
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -66,7 +69,7 @@ export function StudyTimer() {
   const alarmRef = useRef<HTMLAudioElement | null>(null);
   const lastRTDBSyncRef = useRef<number>(0);
 
-  // RTDB Live Sync: Multi-Period Paths with Auto-Reset Logic (Monthly & Yearly included)
+  // RTDB Multi-Period Sync: Daily, Weekly, Monthly, Yearly
   const updateRTDBLiveStats = useCallback(async (isStudying: boolean, studyMins: { daily: number, weekly: number, monthly: number, yearly: number }) => {
     if (!user || !profile) return;
     
@@ -96,6 +99,7 @@ export function StudyTimer() {
     update(ref(database), updates);
   }, [user, profile, database]);
 
+  // Unix Timestamp Recovery Logic
   useEffect(() => {
     if (profile?.currentSession?.status === 'active' && profile.currentSession.startTime) {
       const now = Date.now();
@@ -115,6 +119,7 @@ export function StudyTimer() {
       setTimeLeft(profile.currentSession.duration);
       setIsBreak(profile.currentSession.isBreak);
     } else {
+      // Idle state: set timer to active task duration
       if (activeTask && !isActive && !isBreak) {
         setTimeLeft(activeTask.duration * 60);
       }
@@ -185,6 +190,7 @@ export function StudyTimer() {
     });
   };
 
+  // Main Ticker Loop
   useEffect(() => {
     let ticker: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
@@ -196,7 +202,7 @@ export function StudyTimer() {
         
         setTimeLeft(remaining);
 
-        // Midnight/Period Reset Detection
+        // Midnight Reset Protection
         const currentTodayStr = format(new Date(), 'yyyy-MM-dd');
         if (currentTodayStr !== sessionDate) {
           clearInterval(ticker!);
@@ -204,7 +210,7 @@ export function StudyTimer() {
           return;
         }
 
-        // Live Heartbeat Sync
+        // Live Heartbeat Sync (every 60s)
         if (elapsed > 0 && elapsed % RTDB_HEARTBEAT_INTERVAL === 0 && elapsed !== lastRTDBSyncRef.current) {
            lastRTDBSyncRef.current = elapsed;
            const currentMins = Math.floor(elapsed / 60);
@@ -242,7 +248,7 @@ export function StudyTimer() {
     setIsActive(false);
     toast({ 
       title: "New Period Started", 
-      description: "Daily, Weekly, and Monthly cycles have been synchronized.",
+      description: "Hustle cycles have been synchronized.",
       duration: 5000
     });
     
@@ -255,6 +261,7 @@ export function StudyTimer() {
 
     if (!cloudIsBreak && subjectId && chapterId) {
        await logStudyTime(firestore, user.uid, subjectId, chapterId, duration);
+       // Auto-Task Completion
        if (taskId) await updateTaskStatus(firestore, user.uid, taskId, true);
     }
 
@@ -281,7 +288,7 @@ export function StudyTimer() {
     
     toast({ 
       title: isBreak ? "Break Over!" : "Objective Secured!", 
-      description: isBreak ? "Time to resume deep focus." : "Hustle points added to leaderboard.",
+      description: isBreak ? "Time to resume deep focus." : "Task marked as Done. Next objective loaded.",
     });
   };
 
@@ -301,6 +308,7 @@ export function StudyTimer() {
 
   if (tasksLoading) return <Card className="w-full h-80 animate-pulse rounded-xl bg-secondary/20" />;
 
+  // Display standby mode if no tasks for today
   if (!activeTask && !isBreak) {
     return (
       <Card className="rounded-xl border-none shadow-xl bg-[#1A1C3D] text-white overflow-hidden">
@@ -441,14 +449,7 @@ export function StudyTimer() {
                   "currentSession.startTime": null
                 });
                 
-                const currentTotalMins = (profile?.daily_study_minutes || 0) + Math.floor(elapsedSeconds / 60);
-                updateRTDBLiveStats(false, {
-                  daily: currentTotalMins,
-                  weekly: (profile?.weekly_study_minutes || 0) + Math.floor(elapsedSeconds / 60),
-                  monthly: (profile?.monthly_study_minutes || 0) + Math.floor(elapsedSeconds / 60),
-                  yearly: (profile?.yearly_study_minutes || 0) + Math.floor(elapsedSeconds / 60)
-                });
-                toast({ title: "Objective Secured!", description: "Progress synced across all leaderboards." });
+                toast({ title: "Objective Secured!", description: "Next task will be automatically loaded." });
               }}
             >
               <CheckCircle2 className="mr-2 h-4 w-4" /> Finish Early
