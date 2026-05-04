@@ -16,18 +16,16 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, ArrowRight, ListTodo, CheckCircle2, Target, Zap, Wifi, FastForward } from 'lucide-react';
+import { Play, Pause, ArrowRight, ListTodo, CheckCircle2, Target, Zap, Wifi, FastForward, Clock } from 'lucide-react';
 import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, isSameDay, startOfTomorrow } from 'date-fns';
 import { useCollection } from '@/firebase';
 
 const BREAK_MINUTES = 5;
 const SILENT_AUDIO_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
 const ALARM_AUDIO_PATH = "/WhatsApp Audio 2026-05-02 at 4.38.00 PM.mp3";
-
-// QUOTA PROTECTION LIMITS
-const RTDB_HEARTBEAT_INTERVAL = 60; // Update RTDB every 60s (Low cost, high speed)
+const RTDB_HEARTBEAT_INTERVAL = 60; // Sync every 60s
 
 export function StudyTimer() {
   const { user } = useUser();
@@ -39,7 +37,7 @@ export function StudyTimer() {
   const userRef = useMemo(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: profile } = useDoc<any>(userRef as any);
 
-  const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
   const tasksQuery = useMemo(() => {
     if (!user) return null;
     return query(
@@ -62,12 +60,13 @@ export function StudyTimer() {
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
+  const [sessionDate, setSessionDate] = useState<string>(todayStr);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const alarmRef = useRef<HTMLAudioElement | null>(null);
   const lastRTDBSyncRef = useRef<number>(0);
 
-  // RTDB Update: Optimized for high-frequency live leaderboard
+  // RTDB Live Sync: Quota Optimized
   const updateRTDBLiveStats = useCallback(async (isStudying: boolean, currentMinutes: number) => {
     if (!user || !profile) return;
     
@@ -85,18 +84,19 @@ export function StudyTimer() {
     update(rtdbRef, updatePayload);
   }, [user, profile, database]);
 
-  // ANCHOR LOGIC: Persist through refresh/app closure
+  // Persistent Unix Timestamp Logic
   useEffect(() => {
     if (profile?.currentSession?.status === 'active' && profile.currentSession.startTime) {
-      const elapsed = Math.floor((Date.now() - profile.currentSession.startTime) / 1000);
+      const now = Date.now();
+      const elapsed = Math.floor((now - profile.currentSession.startTime) / 1000);
       const remaining = Math.max(0, profile.currentSession.duration - elapsed);
       
       if (remaining > 0) {
         setIsActive(true);
         setIsBreak(profile.currentSession.isBreak);
         setTimeLeft(remaining);
+        setSessionDate(profile.last_study_day || todayStr);
       } else {
-        // If it finished while we were away, handle auto-complete
         handleSessionComplete();
       }
     } else if (profile?.currentSession?.status === 'paused') {
@@ -108,21 +108,18 @@ export function StudyTimer() {
         setTimeLeft(activeTask.duration * 60);
       }
     }
-  }, [profile?.currentSession, activeTask]);
+  }, [profile?.currentSession, activeTask, todayStr]);
 
   const handleStart = async () => {
     if (!user || (!activeTask && !isBreak)) {
-      if (!isBreak) toast({ variant: 'destructive', title: "Roadmap Empty", description: "Please add a task first." });
+      if (!isBreak) toast({ variant: 'destructive', title: "Roadmap Empty", description: "Please add a task to begin focus." });
       return;
     }
 
     const now = Date.now();
-    const sessionDuration = isBreak ? (BREAK_MINUTES * 60) : (activeTask?.duration || 25) * 60;
-    
     setIsActive(true);
     audioRef.current?.play().catch(() => {});
     
-    // FIRESTORE BATCH: Only 1 write to start the anchor
     const newSession: Partial<CurrentSession> = {
       startTime: now,
       lastSyncTime: now,
@@ -152,7 +149,6 @@ export function StudyTimer() {
     setIsActive(false);
     audioRef.current?.pause();
 
-    // FIRESTORE BATCH: Final sync on pause
     if (elapsedSeconds > 0 && !isBreak) {
       await logStudyTime(firestore, user.uid, profile.currentSession.subjectId, profile.currentSession.chapterId, elapsedSeconds);
     }
@@ -167,7 +163,7 @@ export function StudyTimer() {
     updateRTDBLiveStats(false, (profile?.daily_study_minutes || 0) + Math.floor(elapsedSeconds / 60));
   };
 
-  // TICKER & HEARTBEAT
+  // Main Ticker Interval (1s)
   useEffect(() => {
     let ticker: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
@@ -179,7 +175,15 @@ export function StudyTimer() {
         
         setTimeLeft(remaining);
 
-        // RTDB Heartbeat: High frequency live ranking without Firestore cost
+        // 12 AM Reset Protection
+        const currentTodayStr = format(new Date(), 'yyyy-MM-dd');
+        if (currentTodayStr !== sessionDate) {
+          clearInterval(ticker!);
+          handleMidnightReset(elapsed);
+          return;
+        }
+
+        // RTDB Heartbeat
         if (elapsed > 0 && elapsed % RTDB_HEARTBEAT_INTERVAL === 0 && elapsed !== lastRTDBSyncRef.current) {
            lastRTDBSyncRef.current = elapsed;
            const currentTotalMins = (profile?.daily_study_minutes || 0) + Math.floor(elapsed / 60);
@@ -193,15 +197,36 @@ export function StudyTimer() {
       }, 1000);
     }
     return () => { if (ticker) clearInterval(ticker); };
-  }, [isActive, isBreak, profile?.currentSession, updateRTDBLiveStats]);
+  }, [isActive, isBreak, profile?.currentSession, updateRTDBLiveStats, sessionDate]);
+
+  const handleMidnightReset = async (elapsedSeconds: number) => {
+    if (!user || !profile?.currentSession) return;
+    
+    // Save work for the day that just ended
+    if (!isBreak && elapsedSeconds > 0) {
+      await logStudyTime(firestore, user.uid, profile.currentSession.subjectId, profile.currentSession.chapterId, elapsedSeconds);
+    }
+
+    // Force close and refresh
+    updateUserProfile(firestore, user.uid, { 
+      "currentSession.status": "idle",
+      "currentSession.startTime": null,
+      isStudying: false
+    });
+    
+    setIsActive(false);
+    toast({ title: "New Day Started", description: "Hustle points for yesterday have been secured. Starting fresh." });
+    setTimeout(() => window.location.reload(), 2000);
+  };
 
   const handleSessionComplete = async () => {
     if (!user || !profile?.currentSession) return;
     const { subjectId, chapterId, taskId, isBreak: cloudIsBreak, duration } = profile.currentSession;
 
-    // FIRESTORE BATCH: Final log
+    // Log the final accumulated time
     if (!cloudIsBreak && subjectId && chapterId) {
        await logStudyTime(firestore, user.uid, subjectId, chapterId, duration);
+       // Auto-Task Completion
        if (taskId) await updateTaskStatus(firestore, user.uid, taskId, true);
     }
 
@@ -216,7 +241,11 @@ export function StudyTimer() {
     });
     
     updateRTDBLiveStats(false, (profile?.daily_study_minutes || 0) + Math.floor(duration / 60));
-    toast({ title: isBreak ? "Rest Over!" : "Session Complete!", description: "Hustle points secured." });
+    toast({ 
+      title: isBreak ? "Break Over!" : "Focus Session Complete!", 
+      description: isBreak ? "Time to get back to the hustle." : "Objective achieved and marked as Done.",
+      variant: "default"
+    });
   };
 
   useEffect(() => {
@@ -241,18 +270,18 @@ export function StudyTimer() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-white/10 pb-4">
           <div className="flex items-center gap-2">
             <Target className="h-5 w-5 text-primary" />
-            <CardTitle className="font-headline uppercase text-sm font-black tracking-tight">Focus Engine</CardTitle>
+            <CardTitle className="font-headline uppercase text-sm font-black tracking-tight">Elite Focus Engine</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center p-10 text-center space-y-5">
           <div className="p-5 bg-white/5 rounded-full">
             <ListTodo className="h-8 w-8 text-white/20" />
           </div>
-          <h3 className="text-lg font-black">Engine Locked</h3>
+          <h3 className="text-lg font-black">Engine Standby</h3>
           <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest max-w-xs mx-auto">
-            Deployment of an objective is mandatory to engage focus mode.
+            Add a study task to your roadmap to engage the focus sequence.
           </p>
-          <Button onClick={() => router.push('/todo')} className="rounded-xl px-6 h-10 font-bold gap-2 bg-white text-indigo-900 shadow-lg text-xs">
+          <Button onClick={() => router.push('/todo')} className="rounded-xl px-6 h-10 font-bold gap-2 bg-white text-indigo-900 shadow-lg text-xs hover:scale-105 transition-transform">
             Build Roadmap <ArrowRight className="h-3.5 w-3.5" />
           </Button>
         </CardContent>
@@ -269,17 +298,17 @@ export function StudyTimer() {
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-white/10 pb-3 relative z-10">
         <div className="space-y-0.5 overflow-hidden">
           <div className="flex items-center gap-2">
-            <Target className="h-4 w-4 text-blue-200" />
+            <Clock className="h-4 w-4 text-blue-200" />
             <CardTitle className="font-headline uppercase text-xs font-black tracking-widest">{isBreak ? 'Rest Cycle' : 'Elite Focus'}</CardTitle>
           </div>
           <CardDescription className="text-blue-100/70 truncate font-bold text-[9px] uppercase tracking-wide">
-            {isBreak ? 'Deep Recharge...' : `Strict: ${activeTask?.subjectName}`}
+            {isBreak ? 'Deep Recharge Mode' : `Task: ${activeTask?.subjectName}`}
           </CardDescription>
         </div>
         {isActive && !isBreak && (
           <div className="flex items-center gap-1 bg-red-500/20 px-2.5 py-1 rounded-full border border-red-500/30 animate-pulse shrink-0">
             <Wifi className="h-2.5 w-2.5 text-red-400" />
-            <span className="text-[8px] font-black uppercase text-red-400 tracking-widest">LIVE SYNC</span>
+            <span className="text-[8px] font-black uppercase text-red-400 tracking-widest">UNSTOPPABLE</span>
           </div>
         )}
       </CardHeader>
@@ -296,7 +325,7 @@ export function StudyTimer() {
                       cy="0"
                       r="110"
                       fill="none"
-                      stroke="#8866FF"
+                      stroke={isBreak ? "#F97316" : "#8866FF"}
                       strokeWidth="6"
                       strokeDasharray={2 * Math.PI * 110}
                       strokeDashoffset={2 * Math.PI * 110 * (1 - progress / 100)}
@@ -310,7 +339,7 @@ export function StudyTimer() {
             <span className="text-4xl font-black font-mono tracking-tighter tabular-nums text-white">
               {String(min).padStart(2, '0')}:{String(sec).padStart(2, '0')}
             </span>
-            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-blue-100/40 mt-1">{isBreak ? 'Resting' : 'Focusing'}</span>
+            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-blue-100/40 mt-1">{isBreak ? 'RECOVERY' : 'FOCUSING'}</span>
           </div>
         </div>
         
@@ -324,7 +353,7 @@ export function StudyTimer() {
               )} 
             >
               {isActive ? <Pause className="mr-1.5 h-4 w-4" /> : <Play className="mr-1.5 h-4 w-4 fill-current" />}
-              {isActive ? 'Pause' : 'Engage'}
+              {isActive ? 'PAUSE' : 'DEPLOY'}
             </Button>
             
             {isBreak && (
@@ -365,10 +394,10 @@ export function StudyTimer() {
                   "currentSession.startTime": null
                 });
                 updateRTDBLiveStats(false, (profile?.daily_study_minutes || 0) + Math.floor(elapsedSeconds / 60));
-                toast({ title: "Task Secured!", description: "Objective complete." });
+                toast({ title: "Objective Secured!", description: "Task has been marked as Done." });
               }}
             >
-              <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Secure Task
+              <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> SECURE TASK
             </Button>
           )}
         </div>
