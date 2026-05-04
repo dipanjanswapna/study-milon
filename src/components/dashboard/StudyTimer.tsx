@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Play, Pause, ArrowRight, ListTodo, CheckCircle2, Target, Zap, Wifi, FastForward, Clock } from 'lucide-react';
 import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
-import { format, isSameDay, startOfTomorrow } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { useCollection } from '@/firebase';
 
 const BREAK_MINUTES = 5;
@@ -84,7 +84,7 @@ export function StudyTimer() {
     update(rtdbRef, updatePayload);
   }, [user, profile, database]);
 
-  // Persistent Unix Timestamp Logic
+  // Persistent Unix Timestamp Logic (Unstoppable Timer)
   useEffect(() => {
     if (profile?.currentSession?.status === 'active' && profile.currentSession.startTime) {
       const now = Date.now();
@@ -95,8 +95,10 @@ export function StudyTimer() {
         setIsActive(true);
         setIsBreak(profile.currentSession.isBreak);
         setTimeLeft(remaining);
+        // Track the date this session belongs to for midnight protection
         setSessionDate(profile.last_study_day || todayStr);
       } else {
+        // If elapsed >= duration, it means it completed while the user was away
         handleSessionComplete();
       }
     } else if (profile?.currentSession?.status === 'paused') {
@@ -183,7 +185,7 @@ export function StudyTimer() {
           return;
         }
 
-        // RTDB Heartbeat
+        // RTDB Heartbeat (Sync every minute)
         if (elapsed > 0 && elapsed % RTDB_HEARTBEAT_INTERVAL === 0 && elapsed !== lastRTDBSyncRef.current) {
            lastRTDBSyncRef.current = elapsed;
            const currentTotalMins = (profile?.daily_study_minutes || 0) + Math.floor(elapsed / 60);
@@ -226,7 +228,7 @@ export function StudyTimer() {
     // Log the final accumulated time
     if (!cloudIsBreak && subjectId && chapterId) {
        await logStudyTime(firestore, user.uid, subjectId, chapterId, duration);
-       // Auto-Task Completion
+       // Auto-Task Completion (Auto-Task Completion logic)
        if (taskId) await updateTaskStatus(firestore, user.uid, taskId, true);
     }
 

@@ -172,6 +172,7 @@ export async function logStudyTime(
             isStudying: false,
         };
 
+        // Determine if resets are needed
         const isNewDay = userData.last_study_day !== dateStr;
         const isNewWeek = userData.last_study_week !== weekStr;
         const isNewMonth = userData.last_study_month !== monthStr;
@@ -184,6 +185,7 @@ export async function logStudyTime(
         minutesToAdd = Math.floor(totalSeconds / 60);
         finalPartialSeconds = totalSeconds % 60;
 
+        // Daily Reset/Increment
         if (isNewDay) {
             userUpdate.daily_study_minutes = minutesToAdd;
             userUpdate.last_study_day = dateStr;
@@ -193,6 +195,7 @@ export async function logStudyTime(
 
         userUpdate.partial_study_seconds = finalPartialSeconds;
 
+        // Weekly Reset/Increment
         if (isNewWeek) {
             userUpdate.weekly_study_minutes = minutesToAdd;
             userUpdate.last_study_week = weekStr;
@@ -200,6 +203,7 @@ export async function logStudyTime(
             userUpdate.weekly_study_minutes = increment(minutesToAdd);
         }
 
+        // Monthly Reset/Increment
         if (isNewMonth) {
             userUpdate.monthly_study_minutes = minutesToAdd;
             userUpdate.last_study_month = monthStr;
@@ -207,6 +211,7 @@ export async function logStudyTime(
             userUpdate.monthly_study_minutes = increment(minutesToAdd);
         }
 
+        // Yearly Reset/Increment
         if (isNewYear) {
             userUpdate.yearly_study_minutes = minutesToAdd;
             userUpdate.last_study_year = yearStr;
