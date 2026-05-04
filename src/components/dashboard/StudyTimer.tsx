@@ -64,7 +64,7 @@ export function StudyTimer() {
   const lastSyncTimestampRef = useRef<number>(0);
   const initializedFromCloud = useRef(false);
 
-  // Sync Logic: Anchor-based calculations to minimize writes
+  // Sync Logic: Optimized to minimize writes
   const performSync = useCallback(async (secondsToSync: number) => {
     if (!user || !activeTask || isBreak || secondsToSync <= 0) return;
     
@@ -185,7 +185,7 @@ export function StudyTimer() {
     }
   };
 
-  // UNSTOPPABLE Logic: Auto-recovery from stored Timestamps
+  // UNSTOPPABLE Logic: Auto-recovery and Auto-completion
   useEffect(() => {
     if (profile?.currentSession && !initializedFromCloud.current && user) {
       const { startTime, duration, status, isBreak: cloudIsBreak, subjectId, chapterId, taskId } = profile.currentSession;
@@ -203,8 +203,8 @@ export function StudyTimer() {
           lastSyncTimestampRef.current = now;
           audioRef.current?.play().catch(() => {});
         } else {
-          // AUTO-FINISH: If time passed while app was closed
-          const totalRemainingToSync = duration; // Sync the full intended duration
+          // AUTO-FINISH: App reopened after timer elapsed
+          const totalRemainingToSync = duration; 
           if (!cloudIsBreak && subjectId && chapterId) {
             logStudyTime(firestore, user.uid, subjectId, chapterId, totalRemainingToSync);
             if (taskId) updateTaskStatus(firestore, user.uid, taskId, true);
@@ -218,7 +218,7 @@ export function StudyTimer() {
             "currentSession.startTime": null,
             "currentSession.taskId": null
           });
-          toast({ title: "Welcome Back!", description: "Your study session was completed and logged while you were away." });
+          toast({ title: "Session Synchronized", description: "Your background study session was completed and logged." });
         }
       } else if (status === 'paused') {
         setTimeLeft(duration);
@@ -235,7 +235,7 @@ export function StudyTimer() {
     alarmRef.current = new Audio(ALARM_AUDIO_PATH);
   }, []);
 
-  // Precise local interval logic
+  // Precise Interval Logic
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isActive && profile?.currentSession?.startTime) {
@@ -248,7 +248,7 @@ export function StudyTimer() {
         const newTimeLeft = Math.max(0, totalDuration - elapsedSinceStart);
         setTimeLeft(newTimeLeft);
 
-        // Quota Management: Optimized periodic sync
+        // Periodically sync every 60 seconds to save quota
         const elapsedSinceLastSync = Math.floor((now - lastSyncTimestampRef.current) / 1000);
         if (elapsedSinceLastSync >= SYNC_INTERVAL_SECONDS && !isBreak) {
           performSync(elapsedSinceLastSync);

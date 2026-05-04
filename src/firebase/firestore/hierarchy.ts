@@ -130,6 +130,7 @@ export async function updateChapterStatus(
 
 /**
  * Optimized precision logging system.
+ * Uses increments to save Firebase writes and handles time overflows.
  */
 export async function logStudyTime(
     db: Firestore,
@@ -181,18 +182,16 @@ export async function logStudyTime(
         let minutesToAdd = 0;
         let finalPartialSeconds = 0;
 
+        // Calculate total seconds to handle fractional minutes
+        const totalSeconds = currentPartialSeconds + seconds;
+        minutesToAdd = Math.floor(totalSeconds / 60);
+        finalPartialSeconds = totalSeconds % 60;
+
         if (isNewDay) {
-            minutesToAdd = Math.floor(seconds / 60);
-            finalPartialSeconds = seconds % 60;
             userUpdate.daily_study_minutes = minutesToAdd;
             userUpdate.last_study_day = dateStr;
-        } else {
-            const totalSeconds = currentPartialSeconds + seconds;
-            minutesToAdd = Math.floor(totalSeconds / 60);
-            finalPartialSeconds = totalSeconds % 60;
-            if (minutesToAdd > 0) {
-                userUpdate.daily_study_minutes = increment(minutesToAdd);
-            }
+        } else if (minutesToAdd > 0) {
+            userUpdate.daily_study_minutes = increment(minutesToAdd);
         }
 
         userUpdate.partial_study_seconds = finalPartialSeconds;
